@@ -825,7 +825,7 @@ const DEFAULT_DATA = {
   notes: [],
   snippets: [],
   aiSessions: [],
-  aiSettings: { apiKey: '', model: 'gpt-4o-mini', baseUrl: '', systemPrompt: '', corsProxy: 'https://cors-anywhere.herokuapp.com/' },
+  aiSettings: { apiKey: '', model: 'glm-4-flash', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', systemPrompt: '', corsProxy: '' },
   todos: [],
   timerRecords: [],
   vault: [],
@@ -1274,7 +1274,7 @@ function renderAI() {
         </div>
       </div>
     </div>
-    <div class="text-xs text-gray mt-2">⚠️ 公共代理仅用于个人调试，请勿对外公开。API-Key仅存本地LocalStorage。</div>
+    <div class="text-xs text-gray mt-2">💡 智谱AI原生支持浏览器CORS，无需代理。API-Key仅存本地LocalStorage。</div>
   `;
   renderAISessions();
   if (!currentAISession && appData.aiSessions.length > 0) selectAISession(appData.aiSessions[0].id);
@@ -1357,8 +1357,8 @@ async function sendAIMessage() {
   try {
     const apiKey = appData.aiSettings.apiKey;
     const model = appData.aiSettings.model;
-    const baseUrl = appData.aiSettings.baseUrl || 'https://api.openai.com/v1';
-    const systemPrompt = appData.aiSettings.systemPrompt || '你是一个专业的全栈开发助手。';
+    const baseUrl = appData.aiSettings.baseUrl || 'https://open.bigmodel.cn/api/paas/v4';
+    const systemPrompt = appData.aiSettings.systemPrompt || '你是智谱AI助手，一个专业可靠的全栈开发和商业顾问。';
     
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -1386,7 +1386,7 @@ async function sendAIMessage() {
   } catch (e) {
     const idx = currentAISession.messages.findIndex(m => m.loading);
     if (idx >= 0) currentAISession.messages.splice(idx, 1);
-    currentAISession.messages.push({ role: 'ai', content: `❌ 请求失败：${e.message}\n\n可能原因：1.API-Key无效 2.网络问题 3.CORS限制（可尝试开启代理）` });
+    currentAISession.messages.push({ role: 'ai', content: `❌ 请求失败：${e.message}\n\n可能原因：1.API-Key无效 2.网络问题 3.模型名称错误 4.接口地址不正确` });
   }
   saveData();
   renderAIMessages();
@@ -1410,20 +1410,20 @@ function openAISettings() {
         <div class="modal-header">API 设置</div>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="label">API-Key</label>
-            <input class="input" id="ais_key" type="password" value="${escapeHtml(s.apiKey)}" placeholder="sk-...">
+            <label class="label">API-Key（智谱AI）</label>
+            <input class="input" id="ais_key" type="password" value="${escapeHtml(s.apiKey)}" placeholder="在此粘贴您的智谱AI API Key">
           </div>
           <div class="mb-3">
             <label class="label">模型</label>
-            <input class="input" id="ais_model" value="${escapeHtml(s.model)}" placeholder="gpt-4o-mini / silicon-flow模型">
+            <input class="input" id="ais_model" value="${escapeHtml(s.model)}" placeholder="glm-4-flash / glm-4 / glm-4-plus / glm-4-air">
           </div>
           <div class="mb-3">
             <label class="label">接口地址（Base URL）</label>
-            <input class="input" id="ais_base" value="${escapeHtml(s.baseUrl)}" placeholder="硅基流动：https://api.siliconflow.cn/v1">
+            <input class="input" id="ais_base" value="${escapeHtml(s.baseUrl)}" placeholder="https://open.bigmodel.cn/api/paas/v4">
           </div>
           <div class="mb-3">
-            <label class="label">CORS代理（留空则不使用）</label>
-            <input class="input" id="ais_proxy" value="${escapeHtml(s.corsProxy)}" placeholder="https://cors-anywhere.herokuapp.com/">
+            <label class="label">CORS代理（智谱AI无需代理，可留空）</label>
+            <input class="input" id="ais_proxy" value="${escapeHtml(s.corsProxy)}" placeholder="留空即可">
           </div>
           <div class="mb-3">
             <label class="label">系统提示词</label>
