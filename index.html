@@ -315,6 +315,169 @@
     opacity: 1;
   }
 
+  /* ===== 文件夹卡片叠加滑动 ===== */
+  .folder-stack-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    perspective: 1200px;
+  }
+  .folder-stack {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    touch-action: none;
+  }
+  .folder-card-item {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    will-change: transform;
+  }
+  .folder-card-item:active { cursor: grabbing; }
+  .folder-card-inner {
+    width: 100%; height: 100%;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+  .folder-card-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+  }
+  .folder-card-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    margin-bottom: 4px;
+  }
+  .folder-card-count {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+  }
+  .folder-card-items {
+    flex: 1;
+    overflow-y: auto;
+    margin: 16px 0;
+    padding-right: 4px;
+  }
+  .folder-card-items::-webkit-scrollbar { width: 3px; }
+  .folder-card-items::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+  .folder-item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .folder-item-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .folder-item-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .folder-card-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .folder-nav-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .folder-nav-btn:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.25);
+    transform: scale(1.1);
+  }
+  .folder-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .folder-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  .folder-dot.active {
+    background: rgba(255,255,255,0.8);
+    width: 24px;
+    border-radius: 4px;
+  }
+  .folder-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    justify-content: center;
+  }
+  .folder-action-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  .folder-action-btn:hover {
+    background: rgba(255,255,255,0.15);
+  }
+  .folder-action-btn.primary {
+    background: rgba(34,197,94,0.3);
+    border-color: rgba(34,197,94,0.4);
+  }
+  .folder-action-btn.primary:hover {
+    background: rgba(34,197,94,0.45);
+  }
+  .folder-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+  }
+  .folder-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
   /* Stat Cards Row */
   .stat-cards-row {
     display: grid;
@@ -990,6 +1153,9 @@
       <div class="nav-item" data-page="bookmarks" onclick="switchPage('bookmarks')">
         <span>🔗</span><span>快捷书签工具</span>
       </div>
+      <div class="nav-item" data-page="folders" onclick="switchPage('folders')">
+        <span>📁</span><span>文件夹卡片</span>
+      </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
@@ -1071,6 +1237,7 @@ const DEFAULT_DATA = {
     { id: uid(), name: 'DCloud uni-app', url: 'https://uniapp.dcloud.net.cn', group: '开发工具' },
     { id: uid(), name: 'uniCloud控制台', url: 'https://unicloud.dcloud.net.cn', group: '开发工具' },
   ],
+  folders: [],
 };
 
 let appData = loadData();
@@ -1147,6 +1314,7 @@ function renderPage() {
     vault: renderVault,
     business: renderBusiness,
     bookmarks: renderBookmarksPage,
+    folders: renderFolders,
   };
   (renderers[currentPage] || (() => area.innerHTML = '<div class="empty-state">页面开发中</div>'))();
 }
@@ -3288,6 +3456,383 @@ $('globalSearch').addEventListener('input', function() {
     }
   }
 });
+
+// ===================== 文件夹卡片叠加滑动 =====================
+let folderCurrentIndex = 0;
+let folderDragStartX = 0;
+let folderDragCurrentX = 0;
+let folderIsDragging = false;
+
+function renderFolders() {
+  const area = $('contentArea');
+  const folders = appData.folders || [];
+
+  area.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title" style="margin-bottom:4px;">📁 文件夹卡片</div>
+        <div style="color:var(--text-secondary);font-size:13px;">滑动切换 · 3D叠加 · 内容归类</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openFolderModal()">+ 新建文件夹</button>
+      </div>
+    </div>
+    <div id="folderStackArea"></div>
+  `;
+
+  renderFolderStack();
+}
+
+function renderFolderStack() {
+  const folders = appData.folders || [];
+  const container = $('folderStackArea');
+  if (!container) return;
+
+  if (folders.length === 0) {
+    container.innerHTML = `
+      <div class="folder-empty">
+        <div class="folder-empty-icon"></div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">还没有文件夹</div>
+        <div style="font-size:13px;margin-bottom:20px;">创建一个文件夹，把笔记、提示词、待办等内容归类整理</div>
+        <button class="btn btn-primary" onclick="openFolderModal()">+ 新建文件夹</button>
+      </div>
+    `;
+    return;
+  }
+
+  // 确保索引有效
+  if (folderCurrentIndex >= folders.length) folderCurrentIndex = folders.length - 1;
+  if (folderCurrentIndex < 0) folderCurrentIndex = 0;
+
+  const gradients = [
+    'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+    'linear-gradient(135deg, #1a1a2e 0%, #1b4332 50%, #2d6a4f 100%)',
+    'linear-gradient(135deg, #1a1a2e 0%, #3d1c56 50%, #6b2fa0 100%)',
+    'linear-gradient(135deg, #1a1a2e 0%, #5c1a1a 50%, #8b2020 100%)',
+    'linear-gradient(135deg, #1a1a2e 0%, #4a3728 50%, #6b4f3a 100%)',
+    'linear-gradient(135deg, #1a1a2e 0%, #1a3a4a 50%, #2a5a6a 100%)',
+  ];
+
+  let html = '<div class="folder-stack-wrapper"><div class="folder-stack" id="folderStack">';
+
+  // 渲染所有卡片（叠加效果）
+  folders.forEach((folder, i) => {
+    const offset = i - folderCurrentIndex;
+    let transform = '';
+    let opacity = 1;
+    let zIndex = folders.length - Math.abs(offset);
+
+    if (offset === 0) {
+      // 当前卡片
+      transform = 'translateX(0) scale(1) rotateY(0deg)';
+      opacity = 1;
+    } else if (offset > 0) {
+      // 右侧卡片
+      transform = `translateX(${offset * 20}px) scale(${1 - offset * 0.05}) rotateY(${-offset * 3}deg)`;
+      opacity = Math.max(0.3, 1 - offset * 0.2);
+    } else {
+      // 左侧卡片
+      transform = `translateX(${offset * 20}px) scale(${1 - Math.abs(offset) * 0.05}) rotateY(${Math.abs(offset) * 3}deg)`;
+      opacity = Math.max(0.3, 1 - Math.abs(offset) * 0.2);
+    }
+
+    const gradient = gradients[i % gradients.length];
+    const items = folder.items || [];
+
+    html += `
+      <div class="folder-card-item" data-index="${i}" style="transform:${transform};opacity:${opacity};z-index:${zIndex};background:${gradient};">
+        <div class="folder-card-bg" style="background:${gradient};"></div>
+        <div class="folder-card-inner">
+          <div>
+            <div class="folder-card-title">${escapeHtml(folder.name)}</div>
+            <div class="folder-card-count">${items.length} 项内容</div>
+          </div>
+          <div class="folder-card-items">
+            ${items.length === 0 ? '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;font-size:13px;">暂无内容，点击「添加内容」</div>' :
+              items.slice(0, 5).map(item => `
+                <div class="folder-item-row">
+                  <span class="folder-item-icon">${item.icon || '📄'}</span>
+                  <span class="folder-item-text">${escapeHtml(item.title)}</span>
+                </div>
+              `).join('') +
+              (items.length > 5 ? `<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;margin-top:8px;">还有 ${items.length - 5} 项...</div>` : '')
+            }
+          </div>
+          <div class="folder-card-actions">
+            <button class="folder-action-btn" onclick="editFolder(${i})">编辑</button>
+            <button class="folder-action-btn" onclick="addItemToFolder(${i})">添加内容</button>
+            <button class="folder-action-btn primary" onclick="deleteFolder(${i})">删除</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+
+  // 导航控制
+  html += `
+    <div class="folder-card-nav">
+      <button class="folder-nav-btn" onclick="folderNavigate(-1)" ${folderCurrentIndex === 0 ? 'style="opacity:0.3;pointer-events:none;"' : ''}>←</button>
+      <div class="folder-dots">
+        ${folders.map((_, i) => `<div class="folder-dot ${i === folderCurrentIndex ? 'active' : ''}" onclick="folderGoTo(${i})"></div>`).join('')}
+      </div>
+      <button class="folder-nav-btn" onclick="folderNavigate(1)" ${folderCurrentIndex === folders.length - 1 ? 'style="opacity:0.3;pointer-events:none;"' : ''}>→</button>
+    </div>
+  </div>`;
+
+  container.innerHTML = html;
+
+  // 绑定拖拽事件
+  bindFolderDrag();
+}
+
+function bindFolderDrag() {
+  const stack = $('folderStack');
+  if (!stack) return;
+
+  const onStart = (x) => {
+    folderDragStartX = x;
+    folderDragCurrentX = x;
+    folderIsDragging = true;
+    stack.style.transition = 'none';
+    stack.querySelectorAll('.folder-card-item').forEach(el => {
+      el.style.transition = 'none';
+    });
+  };
+
+  const onMove = (x) => {
+    if (!folderIsDragging) return;
+    folderDragCurrentX = x;
+    const diff = x - folderDragStartX;
+    const folders = appData.folders || [];
+
+    stack.querySelectorAll('.folder-card-item').forEach((el, i) => {
+      const offset = i - folderCurrentIndex;
+      const baseTransform = offset === 0 ? 0 : offset * 20;
+      const dragOffset = diff * (offset === 0 ? 1 : 0.3);
+      const newTransform = `translateX(${baseTransform + dragOffset}px) scale(${1 - Math.abs(offset) * 0.05}) rotateY(${(offset * -3) + (diff * 0.02)}deg)`;
+      el.style.transform = newTransform;
+    });
+  };
+
+  const onEnd = () => {
+    if (!folderIsDragging) return;
+    folderIsDragging = false;
+    const diff = folderDragCurrentX - folderDragStartX;
+    const threshold = 60;
+
+    stack.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+    stack.querySelectorAll('.folder-card-item').forEach(el => {
+      el.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease';
+    });
+
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0 && folderCurrentIndex > 0) {
+        folderCurrentIndex--;
+      } else if (diff < 0 && folderCurrentIndex < (appData.folders || []).length - 1) {
+        folderCurrentIndex++;
+      }
+    }
+
+    renderFolderStack();
+  };
+
+  // 鼠标事件
+  stack.onmousedown = (e) => onStart(e.clientX);
+  document.onmousemove = (e) => onMove(e.clientX);
+  document.onmouseup = onEnd;
+
+  // 触摸事件
+  stack.ontouchstart = (e) => onStart(e.touches[0].clientX);
+  stack.ontouchmove = (e) => {
+    e.preventDefault();
+    onMove(e.touches[0].clientX);
+  };
+  stack.ontouchend = onEnd;
+}
+
+function folderNavigate(direction) {
+  const folders = appData.folders || [];
+  const newIndex = folderCurrentIndex + direction;
+  if (newIndex >= 0 && newIndex < folders.length) {
+    folderCurrentIndex = newIndex;
+    renderFolderStack();
+  }
+}
+
+function folderGoTo(index) {
+  folderCurrentIndex = index;
+  renderFolderStack();
+}
+
+function openFolderModal() {
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:420px;">
+        <div class="modal-header">新建文件夹</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">文件夹名称</label>
+            <input class="input" id="folder_name" placeholder="例如：南崽奢链项目">
+          </div>
+          <div class="mb-3">
+            <label class="label">描述（可选）</label>
+            <textarea class="textarea" id="folder_desc" placeholder="简要描述这个文件夹的用途"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="createFolder()">创建</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('modalContainer').innerHTML = html;
+}
+
+function createFolder() {
+  const name = $('folder_name').value.trim();
+  const desc = $('folder_desc').value.trim();
+  if (!name) { toast('请输入文件夹名称', 'warning'); return; }
+
+  if (!appData.folders) appData.folders = [];
+  appData.folders.push({
+    id: uid(),
+    name,
+    desc,
+    items: [],
+    createdAt: Date.now(),
+  });
+
+  saveData();
+  $('modalContainer').innerHTML = '';
+  folderCurrentIndex = appData.folders.length - 1;
+  renderFolders();
+  toast('文件夹创建成功', 'success');
+}
+
+function editFolder(index) {
+  const folder = appData.folders[index];
+  if (!folder) return;
+
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:420px;">
+        <div class="modal-header">编辑文件夹</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">文件夹名称</label>
+            <input class="input" id="edit_folder_name" value="${escapeHtml(folder.name)}">
+          </div>
+          <div class="mb-3">
+            <label class="label">描述</label>
+            <textarea class="textarea" id="edit_folder_desc">${escapeHtml(folder.desc || '')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveFolderEdit(${index})">保存</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveFolderEdit(index) {
+  const folder = appData.folders[index];
+  if (!folder) return;
+
+  folder.name = $('edit_folder_name').value.trim();
+  folder.desc = $('edit_folder_desc').value.trim();
+
+  if (!folder.name) { toast('请输入文件夹名称', 'warning'); return; }
+
+  saveData();
+  $('modalContainer').innerHTML = '';
+  renderFolderStack();
+  toast('文件夹已更新', 'success');
+}
+
+function deleteFolder(index) {
+  if (!confirm('确定要删除这个文件夹吗？')) return;
+
+  appData.folders.splice(index, 1);
+  if (folderCurrentIndex >= appData.folders.length) {
+    folderCurrentIndex = Math.max(0, appData.folders.length - 1);
+  }
+
+  saveData();
+  renderFolderStack();
+  toast('文件夹已删除', 'success');
+}
+
+function addItemToFolder(index) {
+  const folder = appData.folders[index];
+  if (!folder) return;
+
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:420px;">
+        <div class="modal-header">添加内容到「${escapeHtml(folder.name)}」</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">内容标题</label>
+            <input class="input" id="item_title" placeholder="例如：产品需求文档">
+          </div>
+          <div class="mb-3">
+            <label class="label">图标（emoji）</label>
+            <input class="input" id="item_icon" placeholder="📄" value="📄" maxlength="2">
+          </div>
+          <div class="mb-3">
+            <label class="label">内容类型</label>
+            <select class="select" id="item_type">
+              <option value="note">笔记</option>
+              <option value="prompt">提示词</option>
+              <option value="todo">待办</option>
+              <option value="link">链接</option>
+              <option value="file">文件</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="label">备注（可选）</label>
+            <textarea class="textarea" id="item_notes" placeholder="简要说明"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveFolderItem(${index})">添加</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveFolderItem(folderIndex) {
+  const folder = appData.folders[folderIndex];
+  if (!folder) return;
+
+  const title = $('item_title').value.trim();
+  if (!title) { toast('请输入内容标题', 'warning'); return; }
+
+  if (!folder.items) folder.items = [];
+  folder.items.push({
+    id: uid(),
+    title,
+    icon: $('item_icon').value.trim() || '📄',
+    type: $('item_type').value,
+    notes: $('item_notes').value.trim(),
+    createdAt: Date.now(),
+  });
+
+  saveData();
+  $('modalContainer').innerHTML = '';
+  renderFolderStack();
+  toast('内容已添加', 'success');
+}
 
 // ===================== 3D 流体粒子卡片系统 =====================
 // 使用 DOM 粒子（不依赖 canvas 尺寸计算，100% 可靠）
