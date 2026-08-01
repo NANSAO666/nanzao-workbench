@@ -377,6 +377,117 @@
   .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cursor-pointer { cursor: pointer; }
   .opacity-60 { opacity: 0.6; }
+
+  /* ===== 移动端响应式适配 ===== */
+  .mobile-menu-btn { display: none; }
+  .sidebar-overlay { display: none; }
+
+  @media (max-width: 900px) {
+    .right-panel { display: none; }
+  }
+
+  @media (max-width: 768px) {
+    body { overflow: auto; }
+    .app-container { height: 100vh; height: 100dvh; }
+
+    /* 顶部栏精简 */
+    .top-bar {
+      height: 50px;
+      padding: 0 10px;
+      gap: 8px;
+    }
+    .top-bar .flex.items-center.gap-2:first-child { min-width: auto !important; }
+    .top-bar .font-bold { font-size: 14px !important; }
+    .mobile-menu-btn {
+      display: inline-flex;
+      width: 36px; height: 36px;
+      align-items: center; justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text-primary);
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .search-box { max-width: none; flex: 1; min-width: 0; }
+    .search-box .input { font-size: 13px; padding: 7px 10px 7px 32px; }
+    .top-bar .btn.btn-sm { padding: 5px 8px; font-size: 11px; }
+    .top-bar .ml-auto .btn span { display: none; }
+    .top-bar .ml-auto .btn { padding: 5px 8px; min-width: 32px; }
+
+    /* 左侧导航抽屉 */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 260px;
+      z-index: 1100;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.5);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay {
+      display: block;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1099;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .sidebar-overlay.show { opacity: 1; pointer-events: auto; }
+
+    /* 右方面板隐藏 */
+    .right-panel { display: none; }
+
+    /* 内容区 */
+    .content-area { padding: 12px; }
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .page-title { font-size: 18px; }
+    .page-actions { width: 100%; flex-wrap: wrap; }
+
+    /* 卡片网格单列 */
+    .grid-cards {
+      grid-template-columns: 1fr !important;
+      gap: 10px;
+    }
+
+    /* 计时器 */
+    .timer-display { font-size: 48px; padding: 10px; letter-spacing: 2px; }
+
+    /* AI对话 */
+    .chat-container { height: calc(100vh - 280px); height: calc(100dvh - 280px); }
+    .chat-bubble { max-width: 85%; font-size: 13px; }
+
+    /* 弹窗 */
+    .modal { max-width: 96vw; max-height: 92vh; }
+    .modal-body { padding: 14px; }
+    .modal-header { padding: 12px 16px; }
+    .modal-footer { padding: 10px 16px; }
+
+    /* 子标签页 */
+    .subtabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .subtab { padding: 8px 12px; font-size: 13px; flex-shrink: 0; }
+
+    /* 输入框和按钮 */
+    .input, .textarea, .select { font-size: 14px; }
+    .btn { font-size: 13px; }
+
+    /* 业务中心内联flex改堆叠 */
+    .page-actions { flex-wrap: wrap; }
+  }
+
+  @media (max-width: 420px) {
+    .top-bar .ml-auto .btn:not(:last-child) { display: none; }
+    .search-box .input::placeholder { font-size: 11px; }
+  }
 </style>
 </head>
 <body>
@@ -384,6 +495,7 @@
 
   <!-- 顶部工具栏 -->
   <div class="top-bar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
     <div class="flex items-center gap-2" style="min-width:200px;">
       <span style="font-size:20px;">⚡</span>
       <span class="font-bold" style="color:var(--accent);font-size:16px;">南崽工作台</span>
@@ -441,6 +553,7 @@
         <span>🔗</span><span>快捷书签工具</span>
       </div>
     </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
     <!-- 中间内容 -->
     <div class="content-area" id="contentArea">
@@ -564,11 +677,23 @@ function simpleDecrypt(str, key) {
 let currentPage = 'prompts';
 let currentBusinessTab = 'materials';
 
+function toggleSidebar() {
+  const sb = $('sidebar');
+  const ov = $('sidebarOverlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('show');
+}
+
 function switchPage(page) {
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.page === page);
   });
+  // 移动端切换页面后自动关闭侧边栏
+  if (window.innerWidth <= 768) {
+    $('sidebar')?.classList.remove('open');
+    $('sidebarOverlay')?.classList.remove('show');
+  }
   renderPage();
 }
 
