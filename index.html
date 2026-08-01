@@ -3342,30 +3342,74 @@ class ParticleCard {
   }
 
   bindEvents() {
-    this.el.addEventListener('mousemove', (e) => {
-      const rect = this.el.getBoundingClientRect();
-      this.mouseX = (e.clientX - rect.left) / rect.width;
-      this.mouseY = (e.clientY - rect.top) / rect.height;
-      this.hovering = true;
+    const isMobile = 'ontouchstart' in window;
 
-      // 3D 倾斜
-      const rotX = (this.mouseY - 0.5) * -8;
-      const rotY = (this.mouseX - 0.5) * 8;
-      this.el.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.02, 1.02, 1.02)`;
+    // 鼠标事件（桌面端）
+    if (!isMobile) {
+      this.el.addEventListener('mousemove', (e) => {
+        const rect = this.el.getBoundingClientRect();
+        this.mouseX = (e.clientX - rect.left) / rect.width;
+        this.mouseY = (e.clientY - rect.top) / rect.height;
+        this.hovering = true;
 
-      // 光晕跟随
-      this.shine.style.setProperty('--mx', `${this.mouseX * 100}%`);
-      this.shine.style.setProperty('--my', `${this.mouseY * 100}%`);
-    });
+        // 3D 倾斜
+        const rotX = (this.mouseY - 0.5) * -8;
+        const rotY = (this.mouseX - 0.5) * 8;
+        this.el.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.02, 1.02, 1.02)`;
 
-    this.el.addEventListener('mouseleave', () => {
-      this.hovering = false;
-      this.el.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
-    });
+        // 光晕跟随
+        this.shine.style.setProperty('--mx', `${this.mouseX * 100}%`);
+        this.shine.style.setProperty('--my', `${this.mouseY * 100}%`);
+      });
 
-    this.el.addEventListener('mouseenter', () => {
-      this.hovering = true;
-    });
+      this.el.addEventListener('mouseleave', () => {
+        this.hovering = false;
+        this.el.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+      });
+
+      this.el.addEventListener('mouseenter', () => {
+        this.hovering = true;
+      });
+    } else {
+      // 触摸事件（移动端）
+      this.el.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const rect = this.el.getBoundingClientRect();
+        this.mouseX = (touch.clientX - rect.left) / rect.width;
+        this.mouseY = (touch.clientY - rect.top) / rect.height;
+        this.hovering = true;
+
+        // 3D 倾斜（移动端角度小一点）
+        const rotX = (this.mouseY - 0.5) * -5;
+        const rotY = (this.mouseX - 0.5) * 5;
+        this.el.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.01, 1.01, 1.01)`;
+
+        // 光晕跟随
+        this.shine.style.setProperty('--mx', `${this.mouseX * 100}%`);
+        this.shine.style.setProperty('--my', `${this.mouseY * 100}%`);
+      }, { passive: true });
+
+      this.el.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        const rect = this.el.getBoundingClientRect();
+        this.mouseX = (touch.clientX - rect.left) / rect.width;
+        this.mouseY = (touch.clientY - rect.top) / rect.height;
+
+        // 3D 倾斜
+        const rotX = (this.mouseY - 0.5) * -5;
+        const rotY = (this.mouseX - 0.5) * 5;
+        this.el.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.01, 1.01, 1.01)`;
+
+        // 光晕跟随
+        this.shine.style.setProperty('--mx', `${this.mouseX * 100}%`);
+        this.shine.style.setProperty('--my', `${this.mouseY * 100}%`);
+      }, { passive: true });
+
+      this.el.addEventListener('touchend', () => {
+        this.hovering = false;
+        this.el.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+      });
+    }
 
     window.addEventListener('resize', () => {
       this.resize();
