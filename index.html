@@ -74,6 +74,15 @@
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
+  /* 全局粒子画布 */
+  #globalParticleCanvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+  /* AI 对话粒子交互区 */
+  #aiParticleOverlay {
+    position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    border-radius: 12px; overflow: hidden;
+  }
   .app-container {
     display: flex; flex-direction: column; height: 100vh;
     position: relative; z-index: 1;
@@ -1101,7 +1110,7 @@
 
     /* 弹窗 */
     .modal { max-width: 96vw; max-height: 92vh; }
-    .modal-body { padding: 14px; }
+    .modal-body { padding: 14px; overflow-y: auto; max-height: 60vh; }
     .modal-header { padding: 12px 16px; }
     .modal-footer { padding: 10px 16px; }
 
@@ -1152,6 +1161,10 @@
 </style>
 </head>
 <body>
+
+<!-- 全局粒子画布 -->
+<canvas id="globalParticleCanvas"></canvas>
+
 <div class="app-container">
 
   <!-- 顶部工具栏 -->
@@ -1775,7 +1788,8 @@ function renderAI() {
               appData.aiSessions.map(s => `<option value="${s.id}" ${currentAISession?.id===s.id?'selected':''}>${escapeHtml((s.title || '新对话').substring(0,20))} · ${new Date(s.updatedAt||s.createdAt).toLocaleDateString()}</option>`).join('')}
           </select>
         </div>
-        <div class="card mobile-chat-card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="card mobile-chat-card" style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative;">
+          <canvas id="aiParticleOverlay" style="position:absolute;inset:0;pointer-events:none;z-index:5;border-radius:12px;overflow:hidden;"></canvas>
           <div class="chat-messages" id="aiMessages" style="flex:1;min-height:0;overflow-y:auto;"></div>
           <div class="chat-input-area" style="flex-shrink:0;">
             <textarea class="textarea" id="aiInput" style="min-height:44px;resize:none;font-size:16px;" placeholder="输入你的问题..." onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()"></textarea>
@@ -3520,6 +3534,14 @@ function openSettings() {
             <input type="hidden" id="st_fs" value="${s.fontSize}">
           </div>
           <div class="mb-3">
+            <label class="label">粒子主题</label>
+            <div class="flex gap-2 flex-wrap">
+              ${[['stars','星空'],['rain','雨滴'],['snow','飘雪'],['fireflies','萤火虫'],['aurora','极光'],['sakura','樱花']].map(([key, name]) => `
+                <button class="btn ${currentParticleTheme===key?'btn-primary':'btn-secondary'} btn-sm" onclick="switchParticleTheme('${key}');this.parentElement.querySelectorAll('button').forEach(b=>{b.classList.remove('btn-primary');b.classList.add('btn-secondary')});this.classList.add('btn-primary');this.classList.remove('btn-secondary');">${name}</button>
+              `).join('')}
+            </div>
+          </div>
+          <div class="mb-3">
             <label class="label">数据管理</label>
             <div class="flex gap-2 flex-wrap">
               <button class="btn btn-secondary btn-sm" onclick="exportData()">📤 导出数据</button>
@@ -5093,6 +5115,457 @@ async function copyText(text) {
   }
 }
 
+// ===================== 全局粒子系统（手势互动版） =====================
+let globalParticleCanvas, globalCtx;
+let globalParticles = [];
+let currentParticleTheme = 'stars';
+let globalAnimFrame = null;
+let isMobile = window.innerWidth < 768;
+
+// 手势状态
+let gestureState = {
+  active: false,
+  type: 'none',
+  x: 0, y: 0,
+  prevX: 0, prevY: 0,
+  velocityX: 0, velocityY: 0,
+  pinchDist: 0,
+  pinchScale: 1,
+  touchCount: 0,
+  dragStartTime: 0,
+};
+
+const PARTICLE_THEMES = {
+  stars: {
+    name: '星空',
+    colors: ['#ffffff', '#ffeaa7', '#74b9ff', '#a29bfe', '#fd79a8'],
+    count: 80, speed: 0.3, size: [0.5, 2.5],
+    behavior: 'float', glow: true, trail: false,
+  },
+  rain: {
+    name: '雨滴',
+    colors: ['#74b9ff', '#0984e3', '#a29bfe', '#dfe6e9'],
+    count: 120, speed: 4, size: [1, 2],
+    behavior: 'fall', glow: false, trail: true,
+  },
+  snow: {
+    name: '飘雪',
+    colors: ['#ffffff', '#dfe6e9', '#b2bec3', '#74b9ff'],
+    count: 100, speed: 1.5, size: [1.5, 4],
+    behavior: 'snowfall', glow: true, trail: false,
+  },
+  fireflies: {
+    name: '萤火虫',
+    colors: ['#ffeaa7', '#fdcb6e', '#e17055', '#00b894'],
+    count: 60, speed: 0.8, size: [2, 5],
+    behavior: 'wander', glow: true, trail: false,
+  },
+  aurora: {
+    name: '极光',
+    colors: ['#00b894', '#00cec9', '#0984e3', '#6c5ce7', '#fd79a8'],
+    count: 50, speed: 0.5, size: [3, 8],
+    behavior: 'wave', glow: true, trail: true,
+  },
+  sakura: {
+    name: '樱花',
+    colors: ['#fd79a8', '#e84393', '#fab1a0', '#ffeaa7'],
+    count: 70, speed: 1.2, size: [3, 6],
+    behavior: 'sakura', glow: false, trail: false,
+  },
+};
+
+function initGlobalParticles() {
+  globalParticleCanvas = document.getElementById('globalParticleCanvas');
+  if (!globalParticleCanvas) return;
+  globalCtx = globalParticleCanvas.getContext('2d');
+  resizeGlobalCanvas();
+  createGlobalParticles();
+  startGlobalAnimation();
+  setupGestureListeners();
+  window.addEventListener('resize', () => { isMobile = window.innerWidth < 768; resizeGlobalCanvas(); });
+}
+
+function resizeGlobalCanvas() {
+  if (!globalParticleCanvas) return;
+  globalParticleCanvas.width = window.innerWidth;
+  globalParticleCanvas.height = window.innerHeight;
+}
+
+function createGlobalParticles() {
+  globalParticles = [];
+  const theme = PARTICLE_THEMES[currentParticleTheme];
+  const count = isMobile ? Math.floor(theme.count * 0.5) : theme.count;
+  for (let i = 0; i < count; i++) globalParticles.push(createParticle(theme));
+}
+
+function createParticle(theme) {
+  const w = globalParticleCanvas.width, h = globalParticleCanvas.height;
+  return {
+    x: Math.random() * w, y: Math.random() * h,
+    vx: (Math.random() - 0.5) * theme.speed,
+    vy: Math.random() * theme.speed * 0.5 + 0.2,
+    size: Math.random() * (theme.size[1] - theme.size[0]) + theme.size[0],
+    color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
+    alpha: Math.random() * 0.5 + 0.3,
+    phase: Math.random() * Math.PI * 2,
+    affected: false, affectedTimer: 0,
+  };
+}
+
+function setupGestureListeners() {
+  const canvas = globalParticleCanvas;
+  if (!canvas) return;
+  canvas.style.pointerEvents = 'auto';
+  canvas.addEventListener('mousedown', onGestureStart);
+  canvas.addEventListener('mousemove', onGestureMove);
+  canvas.addEventListener('mouseup', onGestureEnd);
+  canvas.addEventListener('mouseleave', onGestureEnd);
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+  canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+}
+
+function onGestureStart(e) {
+  gestureState.active = true;
+  gestureState.x = e.clientX; gestureState.y = e.clientY;
+  gestureState.prevX = e.clientX; gestureState.prevY = e.clientY;
+  gestureState.velocityX = 0; gestureState.velocityY = 0;
+  gestureState.type = 'drag';
+  gestureState.dragStartTime = Date.now();
+}
+
+function onGestureMove(e) {
+  if (!gestureState.active) return;
+  gestureState.velocityX = e.clientX - gestureState.prevX;
+  gestureState.velocityY = e.clientY - gestureState.prevY;
+  gestureState.prevX = gestureState.x; gestureState.prevY = gestureState.y;
+  gestureState.x = e.clientX; gestureState.y = e.clientY;
+}
+
+function onGestureEnd(e) {
+  if (!gestureState.active) return;
+  const elapsed = Date.now() - gestureState.dragStartTime;
+  const speed = Math.hypot(gestureState.velocityX, gestureState.velocityY);
+  if (elapsed < 200 && speed < 5) { gestureState.type = 'tap'; applyTapEffect(gestureState.x, gestureState.y); }
+  else if (speed > 15) { gestureState.type = 'swipe'; applySwipeEffect(gestureState.x, gestureState.y, gestureState.velocityX, gestureState.velocityY); }
+  gestureState.active = false; gestureState.type = 'none';
+}
+
+function onTouchStart(e) {
+  e.preventDefault();
+  const touches = e.touches;
+  gestureState.touchCount = touches.length;
+  if (touches.length === 1) {
+    gestureState.active = true;
+    gestureState.x = touches[0].clientX; gestureState.y = touches[0].clientY;
+    gestureState.prevX = touches[0].clientX; gestureState.prevY = touches[0].clientY;
+    gestureState.velocityX = 0; gestureState.velocityY = 0;
+    gestureState.type = 'drag'; gestureState.dragStartTime = Date.now();
+  } else if (touches.length === 2) {
+    gestureState.type = 'pinch';
+    gestureState.pinchDist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    gestureState.x = (touches[0].clientX + touches[1].clientX) / 2;
+    gestureState.y = (touches[0].clientY + touches[1].clientY) / 2;
+  }
+}
+
+function onTouchMove(e) {
+  e.preventDefault();
+  const touches = e.touches;
+  if (touches.length === 1 && gestureState.active) {
+    gestureState.velocityX = touches[0].clientX - gestureState.prevX;
+    gestureState.velocityY = touches[0].clientY - gestureState.prevY;
+    gestureState.prevX = gestureState.x; gestureState.prevY = gestureState.y;
+    gestureState.x = touches[0].clientX; gestureState.y = touches[0].clientY;
+  } else if (touches.length === 2) {
+    const newDist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    gestureState.pinchScale = newDist / gestureState.pinchDist;
+    gestureState.pinchDist = newDist;
+    gestureState.x = (touches[0].clientX + touches[1].clientX) / 2;
+    gestureState.y = (touches[0].clientY + touches[1].clientY) / 2;
+    gestureState.type = 'pinch';
+  }
+}
+
+function onTouchEnd(e) {
+  e.preventDefault();
+  if (!gestureState.active) return;
+  const elapsed = Date.now() - gestureState.dragStartTime;
+  const speed = Math.hypot(gestureState.velocityX, gestureState.velocityY);
+  if (elapsed < 300 && speed < 10) { gestureState.type = 'tap'; applyTapEffect(gestureState.x, gestureState.y); }
+  else if (speed > 8) { gestureState.type = 'swipe'; applySwipeEffect(gestureState.x, gestureState.y, gestureState.velocityX * 3, gestureState.velocityY * 3); }
+  gestureState.active = false; gestureState.type = 'none'; gestureState.touchCount = 0;
+}
+
+function applyTapEffect(x, y) {
+  const radius = 120;
+  for (let p of globalParticles) {
+    const dist = Math.hypot(p.x - x, p.y - y);
+    if (dist < radius) {
+      const angle = Math.atan2(p.y - y, p.x - x);
+      const force = (radius - dist) / radius * 8;
+      p.vx += Math.cos(angle) * force;
+      p.vy += Math.sin(angle) * force;
+      p.affected = true; p.affectedTimer = 30;
+    }
+  }
+}
+
+function applySwipeEffect(x, y, vx, vy) {
+  const radius = 150;
+  for (let p of globalParticles) {
+    const dist = Math.hypot(p.x - x, p.y - y);
+    if (dist < radius) {
+      const force = (radius - dist) / radius * 5;
+      p.vx += vx * force * 0.1;
+      p.vy += vy * force * 0.1;
+      p.affected = true; p.affectedTimer = 20;
+    }
+  }
+}
+
+function startGlobalAnimation() {
+  if (globalAnimFrame) cancelAnimationFrame(globalAnimFrame);
+  const fps = isMobile ? 30 : 60;
+  const interval = 1000 / fps;
+  let lastTime = 0;
+  function animate(time) {
+    globalAnimFrame = requestAnimationFrame(animate);
+    if (time - lastTime < interval) return;
+    lastTime = time;
+    const ctx = globalCtx;
+    const w = globalParticleCanvas.width, h = globalParticleCanvas.height;
+    const theme = PARTICLE_THEMES[currentParticleTheme];
+    ctx.clearRect(0, 0, w, h);
+    if (gestureState.active) handleGestureInteraction(theme, w, h);
+    for (let p of globalParticles) { updateParticle(p, theme, w, h); drawParticle(ctx, p, theme); }
+    if (gestureState.active && gestureState.type !== 'none') drawGestureIndicator(ctx);
+  }
+  globalAnimFrame = requestAnimationFrame(animate);
+}
+
+function handleGestureInteraction(theme, w, h) {
+  const radius = gestureState.type === 'pinch' ? 200 : 150;
+  for (let p of globalParticles) {
+    const dist = Math.hypot(p.x - gestureState.x, p.y - gestureState.y);
+    if (dist > radius) continue;
+    const influence = (radius - dist) / radius;
+    if (gestureState.type === 'drag') {
+      p.vx += (gestureState.x - p.x) * influence * 0.08;
+      p.vy += (gestureState.y - p.y) * influence * 0.08;
+      p.affected = true; p.affectedTimer = 15;
+    } else if (gestureState.type === 'pinch') {
+      if (gestureState.pinchScale > 1) {
+        const angle = Math.atan2(p.y - h/2, p.x - w/2);
+        p.vx += Math.cos(angle) * influence * 2;
+        p.vy += Math.sin(angle) * influence * 2;
+      } else {
+        const angle = Math.atan2(h/2 - p.y, w/2 - p.x);
+        p.vx += Math.cos(angle) * influence * 2;
+        p.vy += Math.sin(angle) * influence * 2;
+      }
+      p.affected = true; p.affectedTimer = 20;
+    }
+  }
+}
+
+function drawGestureIndicator(ctx) {
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  if (gestureState.type === 'drag') {
+    const gradient = ctx.createRadialGradient(gestureState.x, gestureState.y, 0, gestureState.x, gestureState.y, 150);
+    gradient.addColorStop(0, 'rgba(34,197,94,0.4)');
+    gradient.addColorStop(0.5, 'rgba(34,197,94,0.1)');
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.beginPath(); ctx.arc(gestureState.x, gestureState.y, 150, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.8; ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.arc(gestureState.x, gestureState.y, 4, 0, Math.PI * 2); ctx.fill();
+  } else if (gestureState.type === 'pinch') {
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.arc(gestureState.x, gestureState.y, 80, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+function updateParticle(p, theme, w, h) {
+  p.phase += 0.02;
+  if (p.affected) { p.affectedTimer--; if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; } }
+  p.vx *= 0.98; p.vy *= 0.98;
+  switch (theme.behavior) {
+    case 'float': p.x += p.vx + Math.sin(p.phase) * 0.3; p.y += p.vy + Math.cos(p.phase) * 0.2; break;
+    case 'fall': p.y += p.vy * 3 + 2; p.x += Math.sin(p.phase) * 0.5 + p.vx; if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
+    case 'snowfall': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 1.5 + p.vx; if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
+    case 'wander': p.x += p.vx + Math.sin(p.phase) * 1; p.y += p.vy + Math.cos(p.phase * 0.7) * 1; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1; break;
+    case 'wave': p.x += p.vx; p.y += Math.sin(p.phase + p.x * 0.01) * 2 + p.vy; if (p.x < 0 || p.x > w) p.vx *= -1; break;
+    case 'sakura': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 2 + p.vx; p.phase += 0.01; if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
+  }
+  if (theme.behavior === 'float' || theme.behavior === 'wander') {
+    if (p.x < -50) p.x = w + 50; if (p.x > w + 50) p.x = -50;
+    if (p.y < -50) p.y = h + 50; if (p.y > h + 50) p.y = -50;
+  }
+  if (p.affected) p.alpha = Math.min(p.alpha + 0.05, 1); else p.alpha = Math.max(p.alpha - 0.01, 0.3);
+}
+
+function drawParticle(ctx, p, theme) {
+  ctx.save(); ctx.globalAlpha = p.alpha;
+  if (theme.glow || p.affected) { ctx.shadowBlur = p.affected ? p.size * 5 : p.size * 3; ctx.shadowColor = p.affected ? '#22c55e' : p.color; }
+  if (theme.trail && (Math.abs(p.vx) > 1 || Math.abs(p.vy) > 1)) {
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 3, p.y - p.vy * 3);
+    ctx.strokeStyle = p.color; ctx.lineWidth = p.size * 0.5; ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.affected ? p.size * 1.5 : p.size, 0, Math.PI * 2);
+  ctx.fillStyle = p.affected ? '#22c55e' : p.color; ctx.fill();
+  ctx.restore();
+}
+
+function switchParticleTheme(themeName) {
+  if (!PARTICLE_THEMES[themeName]) return;
+  currentParticleTheme = themeName;
+  createGlobalParticles();
+  toast('已切换到 ' + PARTICLE_THEMES[themeName].name + ' 主题', 'success');
+}
+
+// ===================== AI 对话粒子交互系统 =====================
+let aiParticleCanvas, aiCtx;
+let aiParticles = [];
+let aiMouse = { x: -1000, y: -1000 };
+let aiAnimFrame = null;
+
+function initAIParticles() {
+  aiParticleCanvas = document.getElementById('aiParticleOverlay');
+  if (!aiParticleCanvas) return;
+  aiCtx = aiParticleCanvas.getContext('2d');
+  resizeAICanvas();
+  createAIParticles();
+  startAIAnimation();
+
+  aiParticleCanvas.addEventListener('mousemove', (e) => {
+    const rect = aiParticleCanvas.getBoundingClientRect();
+    aiMouse.x = e.clientX - rect.left;
+    aiMouse.y = e.clientY - rect.top;
+  });
+  aiParticleCanvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) {
+      const rect = aiParticleCanvas.getBoundingClientRect();
+      aiMouse.x = e.touches[0].clientX - rect.left;
+      aiMouse.y = e.touches[0].clientY - rect.top;
+    }
+  }, { passive: true });
+  aiParticleCanvas.addEventListener('mouseleave', () => {
+    aiMouse.x = -1000;
+    aiMouse.y = -1000;
+  });
+}
+
+function resizeAICanvas() {
+  if (!aiParticleCanvas) return;
+  const rect = aiParticleCanvas.parentElement.getBoundingClientRect();
+  aiParticleCanvas.width = rect.width;
+  aiParticleCanvas.height = rect.height;
+}
+
+function createAIParticles() {
+  aiParticles = [];
+  const count = window.innerWidth < 768 ? 20 : 35;
+  for (let i = 0; i < count; i++) {
+    aiParticles.push({
+      x: Math.random() * aiParticleCanvas.width,
+      y: Math.random() * aiParticleCanvas.height,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      size: Math.random() * 3 + 2,
+      color: ['#22c55e', '#4ade80', '#3b82f6', '#8b5cf6'][Math.floor(Math.random() * 4)],
+      alpha: Math.random() * 0.5 + 0.3,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+function startAIAnimation() {
+  if (aiAnimFrame) cancelAnimationFrame(aiAnimFrame);
+  const fps = window.innerWidth < 768 ? 30 : 60;
+  const interval = 1000 / fps;
+  let lastTime = 0;
+
+  function animate(time) {
+    aiAnimFrame = requestAnimationFrame(animate);
+    if (time - lastTime < interval) return;
+    lastTime = time;
+
+    const ctx = aiCtx;
+    const w = aiParticleCanvas.width;
+    const h = aiParticleCanvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    for (let p of aiParticles) {
+      p.phase += 0.03;
+      const mouseDist = Math.hypot(p.x - aiMouse.x, p.y - aiMouse.y);
+      const mouseInfluence = mouseDist < 100 ? (100 - mouseDist) / 100 : 0;
+
+      // 基础运动
+      p.x += p.vx + Math.sin(p.phase) * 0.5;
+      p.y += p.vy + Math.cos(p.phase * 0.7) * 0.5;
+
+      // 鼠标吸引
+      if (mouseInfluence > 0) {
+        p.x += (aiMouse.x - p.x) * mouseInfluence * 0.05;
+        p.y += (aiMouse.y - p.y) * mouseInfluence * 0.05;
+        p.size = Math.min(p.size + 0.1, 6);
+        p.alpha = Math.min(p.alpha + 0.02, 0.8);
+      } else {
+        p.size = Math.max(p.size - 0.05, 2);
+        p.alpha = Math.max(p.alpha - 0.01, 0.3);
+      }
+
+      // 边界
+      if (p.x < 0 || p.x > w) p.vx *= -1;
+      if (p.y < 0 || p.y > h) p.vy *= -1;
+
+      // 绘制
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.shadowBlur = p.size * 2;
+      ctx.shadowColor = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 连线
+    for (let i = 0; i < aiParticles.length; i++) {
+      for (let j = i + 1; j < aiParticles.length; j++) {
+        const p1 = aiParticles[i];
+        const p2 = aiParticles[j];
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        if (dist < 80) {
+          ctx.save();
+          ctx.globalAlpha = (1 - dist / 80) * 0.3;
+          ctx.strokeStyle = p1.color;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+  }
+  aiAnimFrame = requestAnimationFrame(animate);
+}
+
+// 在 renderAI 函数末尾调用
+const originalRenderAI = renderAI;
+renderAI = function() {
+  originalRenderAI();
+  setTimeout(initAIParticles, 100);
+};
+
 // ===================== 初始化 =====================
 function init() {
   // 应用主题
@@ -5107,6 +5580,9 @@ function init() {
 
   // 渲染首屏
   renderPage();
+
+  // 初始化全局粒子系统
+  initGlobalParticles();
 }
 
 init();
