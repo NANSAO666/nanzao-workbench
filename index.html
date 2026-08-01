@@ -1194,7 +1194,7 @@
         <span>💻</span><span>代码片段</span>
       </div>
       <div class="nav-item" data-page="ai" onclick="switchPage('ai')">
-        <span>💬</span><span>AI对话助手</span>
+        <span>🌚</span><span>AI对话助手</span>
       </div>
       <div class="nav-item" data-page="todos" onclick="switchPage('todos')">
         <span>✅</span><span>待办任务管理</span>
@@ -1744,7 +1744,7 @@ function startAiIdleTimer() {
       const roast = AI_ROASTS[Math.floor(Math.random() * AI_ROASTS.length)];
       toast(roast, 'warning', 4000);
     }
-  }, 30000); // 30 秒无操作触发
+  }, 30000); // 30 秒无对话触发
 }
 
 function stopAiIdleTimer() {
@@ -1778,7 +1778,7 @@ function renderAI() {
         <div class="card mobile-chat-card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
           <div class="chat-messages" id="aiMessages" style="flex:1;min-height:0;overflow-y:auto;"></div>
           <div class="chat-input-area" style="flex-shrink:0;">
-            <textarea class="textarea" id="aiInput" style="min-height:44px;resize:none;font-size:16px;" placeholder="输入你的问题..." onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()" oninput="resetAiIdleTimer()"></textarea>
+            <textarea class="textarea" id="aiInput" style="min-height:44px;resize:none;font-size:16px;" placeholder="输入你的问题..." onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()"></textarea>
             <div style="display:flex;gap:8px;">
               <button class="btn btn-primary" style="flex:1;padding:10px 16px;" onclick="sendAIMessage()">发送</button>
               <button class="btn btn-secondary" style="padding:10px 14px;" onclick="clearAIChat()">清空</button>
@@ -1791,7 +1791,7 @@ function renderAI() {
   } else {
     area.innerHTML = `
       <div class="page-header">
-        <div class="page-title">💬🌚 AI对话助手</div>
+        <div class="page-title">🌚 AI对话助手</div>
         <div class="page-actions">
           <button class="btn btn-secondary btn-sm" onclick="openAISettings()">⚙️ API设置</button>
           <button class="btn btn-secondary btn-sm" onclick="newAISession()">+ 新对话</button>
