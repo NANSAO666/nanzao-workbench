@@ -1,0 +1,2453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>南崽工作台</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #121212;
+    --bg-secondary: #1a1a1a;
+    --bg-nav: #1e1e1e;
+    --bg-card: #252525;
+    --bg-card-hover: #2a2a2a;
+    --border: #333333;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --text-primary: #e5e5e5;
+    --text-secondary: #9ca3af;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+  .app-container { display: flex; flex-direction: column; height: 100vh; }
+  .top-bar {
+    height: 56px; flex-shrink: 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 16px; gap: 12px;
+    z-index: 100;
+  }
+  .main-body { flex: 1; display: flex; overflow: hidden; }
+
+  /* 左侧导航 */
+  .sidebar {
+    width: 220px; flex-shrink: 0;
+    background: var(--bg-nav);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-logo {
+    padding: 18px 16px; font-weight: 700; font-size: 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px; cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+  .nav-item.active {
+    background: rgba(59,130,246,0.15);
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 500;
+  }
+  .nav-section {
+    padding: 12px 16px 6px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: #6b7280;
+  }
+
+  /* 中间内容区 */
+  .content-area {
+    flex: 1; overflow-y: auto;
+    padding: 20px;
+    background: var(--bg-primary);
+  }
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .page-title { font-size: 22px; font-weight: 700; }
+  .page-actions { display: flex; gap: 8px; }
+
+  /* 卡片 */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.15s;
+  }
+  .card:hover { border-color: #444; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+
+  .grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+
+  /* 按钮 */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px 14px; border-radius: 7px;
+    font-size: 13px; cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    background: transparent; color: var(--text-primary);
+  }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--text-primary); }
+  .btn-secondary:hover { background: var(--bg-card-hover); border-color: #555; }
+  .btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+  .btn-danger:hover { background: rgba(239,68,68,0.1); }
+  .btn-success { background: transparent; border-color: var(--success); color: var(--success); }
+  .btn-success:hover { background: rgba(16,185,129,0.1); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* 输入框 */
+  .input, .textarea, .select {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  .input:focus, .textarea:focus, .select:focus { border-color: var(--accent); }
+  .textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+  .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block; }
+
+  /* 标签 */
+  .tag {
+    display: inline-flex; align-items: center;
+    padding: 2px 9px; border-radius: 999px;
+    font-size: 11px;
+    background: rgba(59,130,246,0.15);
+    color: var(--accent);
+    margin: 2px 4px 2px 0;
+  }
+  .tag-green { background: rgba(16,185,129,0.15); color: var(--success); }
+  .tag-yellow { background: rgba(245,158,11,0.15); color: var(--warning); }
+  .tag-red { background: rgba(239,68,68,0.15); color: var(--danger); }
+  .tag-gray { background: rgba(156,163,175,0.15); color: var(--text-secondary); }
+
+  /* 右侧面板 */
+  .right-panel {
+    width: 240px; flex-shrink: 0;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 14px;
+  }
+  .right-panel-title {
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .bookmark-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 7px;
+    cursor: pointer; font-size: 13px;
+    color: var(--text-primary);
+    transition: background 0.15s;
+    margin-bottom: 3px;
+  }
+  .bookmark-item:hover { background: var(--bg-card); }
+  .bookmark-group { margin-bottom: 16px; }
+
+  /* 弹窗 */
+  .modal-mask {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+  }
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: 90vw; max-height: 85vh;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-weight: 600;
+  }
+  .modal-body { padding: 20px; overflow-y: auto; }
+  .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+
+  /* AI对话 */
+  .chat-container { display: flex; flex-direction: column; height: calc(100vh - 200px); }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 10px 4px; }
+  .chat-msg { display: flex; margin-bottom: 14px; }
+  .chat-msg.user { justify-content: flex-end; }
+  .chat-bubble {
+    max-width: 72%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .chat-msg.user .chat-bubble {
+    background: var(--accent); color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg.ai .chat-bubble {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-input-area {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    display: flex; gap: 8px;
+  }
+
+  /* 计时器 */
+  .timer-display {
+    font-size: 72px; font-weight: 200;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    text-align: center;
+    letter-spacing: 4px;
+    color: var(--accent);
+    padding: 20px;
+  }
+
+  /* 进度条 */
+  .progress-bar {
+    height: 6px; background: var(--bg-secondary);
+    border-radius: 999px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 999px; transition: width 0.3s;
+  }
+  .progress-fill.success { background: var(--success); }
+
+  /* 子标签页 */
+  .subtabs {
+    display: flex; gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 18px;
+    overflow-x: auto;
+  }
+  .subtab {
+    padding: 9px 16px; cursor: pointer;
+    font-size: 13.5px; color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .subtab:hover { color: var(--text-primary); }
+  .subtab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* 搜索框 */
+  .search-box {
+    flex: 1; max-width: 420px;
+    position: relative;
+  }
+  .search-box .input {
+    padding-left: 36px;
+    background: var(--bg-primary);
+  }
+  .search-icon {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+  }
+
+  /* 代码块 */
+  pre { margin: 8px 0; border-radius: 7px; overflow: hidden; }
+  code { font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 12.5px; }
+  .code-block-wrap { position: relative; }
+  .code-block-wrap .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    opacity: 0.7;
+  }
+  .code-block-wrap:hover .copy-btn { opacity: 1; }
+
+  /* checkbox */
+  .checkbox {
+    width: 18px; height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* 空状态 */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+  /* 颜色点 */
+  .color-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    display: inline-block; margin-right: 6px;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  /* toast */
+  .toast {
+    position: fixed; top: 70px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 10px 20px; border-radius: 8px;
+    z-index: 2000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slideDown 0.25s ease-out;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translate(-50%, -10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  .hidden { display: none !important; }
+  .flex-1 { flex: 1; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .gap-4 { gap: 16px; }
+  .flex { display: flex; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .justify-end { justify-content: flex-end; }
+  .flex-wrap { flex-wrap: wrap; }
+  .flex-col { flex-direction: column; }
+  .mb-2 { margin-bottom: 8px; }
+  .mb-3 { margin-bottom: 12px; }
+  .mb-4 { margin-bottom: 16px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-3 { margin-top: 12px; }
+  .p-2 { padding: 8px; }
+  .p-3 { padding: 12px; }
+  .w-full { width: 100%; }
+  .text-sm { font-size: 12.5px; }
+  .text-xs { font-size: 11px; }
+  .text-gray { color: var(--text-secondary); }
+  .text-success { color: var(--success); }
+  .text-warning { color: var(--warning); }
+  .text-danger { color: var(--danger); }
+  .text-accent { color: var(--accent); }
+  .font-mono { font-family: 'SF Mono', Monaco, Consolas, monospace; }
+  .font-bold { font-weight: 700; }
+  .font-semibold { font-weight: 600; }
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cursor-pointer { cursor: pointer; }
+  .opacity-60 { opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="app-container">
+
+  <!-- 顶部工具栏 -->
+  <div class="top-bar">
+    <div class="flex items-center gap-2" style="min-width:200px;">
+      <span style="font-size:20px;">⚡</span>
+      <span class="font-bold" style="color:var(--accent);font-size:16px;">南崽工作台</span>
+    </div>
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="input" id="globalSearch" placeholder="全局搜索：提示词、笔记、代码、素材、客户...">
+    </div>
+    <div class="flex items-center gap-2 ml-auto">
+      <button class="btn btn-secondary btn-sm" onclick="exportData()">📤 导出</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">📥 导入</button>
+      <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+      <button class="btn btn-secondary btn-sm" onclick="clearAllData()">🗑️ 清空</button>
+      <button class="btn btn-secondary btn-sm" onclick="openSettings()">⚙️</button>
+    </div>
+  </div>
+
+  <div class="main-body">
+
+    <!-- 左侧导航 -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <span>🧭</span>
+        <span>南崽工作台</span>
+      </div>
+
+      <div class="nav-section">通用工具</div>
+      <div class="nav-item active" data-page="prompts" onclick="switchPage('prompts')">
+        <span>💡</span><span>提示词库</span>
+      </div>
+      <div class="nav-item" data-page="notes" onclick="switchPage('notes')">
+        <span>📝</span><span>笔记备忘录</span>
+      </div>
+      <div class="nav-item" data-page="snippets" onclick="switchPage('snippets')">
+        <span>💻</span><span>代码片段</span>
+      </div>
+      <div class="nav-item" data-page="ai" onclick="switchPage('ai')">
+        <span>🤖</span><span>AI对话助手</span>
+      </div>
+      <div class="nav-item" data-page="todos" onclick="switchPage('todos')">
+        <span>✅</span><span>待办任务管理</span>
+      </div>
+      <div class="nav-item" data-page="timer" onclick="switchPage('timer')">
+        <span>⏱️</span><span>时间记录计时器</span>
+      </div>
+      <div class="nav-item" data-page="vault" onclick="switchPage('vault')">
+        <span>🔐</span><span>密码&密钥保险箱</span>
+      </div>
+
+      <div class="nav-section">业务中心</div>
+      <div class="nav-item" data-page="business" onclick="switchPage('business')">
+        <span>💎</span><span>南崽奢链业务中心</span>
+      </div>
+      <div class="nav-item" data-page="bookmarks" onclick="switchPage('bookmarks')">
+        <span>🔗</span><span>快捷书签工具</span>
+      </div>
+    </div>
+
+    <!-- 中间内容 -->
+    <div class="content-area" id="contentArea">
+      <!-- 动态渲染 -->
+    </div>
+
+    <!-- 右侧快捷面板 -->
+    <div class="right-panel">
+      <div class="right-panel-title">快捷书签</div>
+      <div id="rightBookmarks"></div>
+      <button class="btn btn-secondary btn-sm w-full mt-2" onclick="openBookmarkModal()">+ 添加书签</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- 通用弹窗容器 -->
+<div id="modalContainer"></div>
+<!-- Toast容器 -->
+<div id="toastContainer"></div>
+
+<script>
+// ===================== 工具函数 =====================
+const $ = (id) => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+
+function toast(msg, type = 'info') {
+  const colors = { info: 'var(--accent)', success: 'var(--success)', error: 'var(--danger)', warning: 'var(--warning)' };
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.borderLeftColor = colors[type];
+  t.style.borderLeftWidth = '3px';
+  t.innerHTML = msg;
+  $('toastContainer').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; }, 2000);
+  setTimeout(() => t.remove(), 2400);
+}
+
+function confirmDialog(title, message, onConfirm) {
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:420px;">
+        <div class="modal-header">${title}</div>
+        <div class="modal-body"><p style="color:var(--text-secondary);">${message}</p></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-danger" id="confirmBtn">确认</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+  $('confirmBtn').onclick = () => { $('modalContainer').innerHTML = ''; onConfirm(); };
+}
+
+// ===================== 数据存储 =====================
+const STORAGE_KEY = 'nanzao_workbench_data_v1';
+const DEFAULT_DATA = {
+  settings: { accentColor: '#3b82f6', fontSize: 14, vaultPassword: '' },
+  prompts: [],
+  notes: [],
+  snippets: [],
+  aiSessions: [],
+  aiSettings: { apiKey: '', model: 'gpt-4o-mini', baseUrl: '', systemPrompt: '', corsProxy: 'https://cors-anywhere.herokuapp.com/' },
+  todos: [],
+  timerRecords: [],
+  vault: [],
+  vaultUnlocked: false,
+  materials: [],
+  customers: [],
+  agents: [],
+  copywritings: [],
+  devledger: [],
+  bookmarks: [
+    { id: uid(), name: 'TRAE', url: 'https://www.trae.ai', group: '开发工具' },
+    { id: uid(), name: 'AI绘图', url: 'https://www.midjourney.com', group: '开发工具' },
+    { id: uid(), name: 'GitHub', url: 'https://github.com', group: '开发工具' },
+    { id: uid(), name: 'DCloud uni-app', url: 'https://uniapp.dcloud.net.cn', group: '开发工具' },
+    { id: uid(), name: 'uniCloud控制台', url: 'https://unicloud.dcloud.net.cn', group: '开发工具' },
+  ],
+};
+
+let appData = loadData();
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    const parsed = JSON.parse(raw);
+    return { ...JSON.parse(JSON.stringify(DEFAULT_DATA)), ...parsed };
+  } catch (e) {
+    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+// 简单加密（可逆，仅防偷窥）
+function simpleEncrypt(str, key) {
+  if (!key) return str;
+  let result = '';
+  for (let i = 0; i < str.length; i++) {
+    result += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return btoa(unescape(encodeURIComponent(result)));
+}
+function simpleDecrypt(str, key) {
+  if (!key) return str;
+  try {
+    str = decodeURIComponent(escape(atob(str)));
+    let result = '';
+    for (let i = 0; i < str.length; i++) {
+      result += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return result;
+  } catch { return ''; }
+}
+
+// ===================== 路由 =====================
+let currentPage = 'prompts';
+let currentBusinessTab = 'materials';
+
+function switchPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  renderPage();
+}
+
+function renderPage() {
+  const area = $('contentArea');
+  const renderers = {
+    prompts: renderPrompts,
+    notes: renderNotes,
+    snippets: renderSnippets,
+    ai: renderAI,
+    todos: renderTodos,
+    timer: renderTimer,
+    vault: renderVault,
+    business: renderBusiness,
+    bookmarks: renderBookmarksPage,
+  };
+  (renderers[currentPage] || (() => area.innerHTML = '<div class="empty-state">页面开发中</div>'))();
+}
+
+// ===================== 提示词库 =====================
+function renderPrompts() {
+  const tagsAll = [...new Set(appData.prompts.flatMap(p => p.tags || []))];
+  const categories = ['南崽奢链开发提示词', 'TRAE代码指令', 'AI绘图提示词', '短视频口播脚本'];
+  const area = $('contentArea');
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">💡 提示词库</div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openPromptModal()">+ 新建提示词</button>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-sm text-gray">分类：</span>
+        <span class="tag cursor-pointer" onclick="filterPrompts('')" id="pf_all">全部</span>
+        ${categories.map(c => `<span class="tag cursor-pointer" onclick="filterPrompts('${c}')">${c}</span>`).join('')}
+        ${tagsAll.filter(t => !categories.includes(t)).map(t => `<span class="tag tag-gray cursor-pointer" onclick="filterPrompts('${t}')">#${t}</span>`).join('')}
+      </div>
+    </div>
+    <div class="grid-cards" id="promptsGrid"></div>
+  `;
+  renderPromptsGrid('');
+}
+
+let promptFilter = '';
+function filterPrompts(tag) {
+  promptFilter = tag;
+  renderPromptsGrid(tag);
+}
+
+function renderPromptsGrid(tag) {
+  const list = tag ? appData.prompts.filter(p => (p.tags || []).includes(tag)) : appData.prompts;
+  const grid = $('promptsGrid');
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📭</div>暂无提示词，点击右上角新建</div>';
+    return;
+  }
+  grid.innerHTML = list.map(p => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div class="font-semibold">${p.title}</div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="copyText(\`${escapeHtml(p.content)}\`)">📋</button>
+          <button class="btn btn-secondary btn-sm" onclick="openPromptModal('${p.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deletePrompt('${p.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="text-sm text-gray mb-2 truncate" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(p.content)}</div>
+      <div class="flex flex-wrap">${(p.tags || []).map(t => `<span class="tag tag-gray">${t}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+function openPromptModal(id) {
+  const p = id ? appData.prompts.find(x => x.id === id) : { title: '', content: '', tags: [] };
+  const categories = ['南崽奢链开发提示词', 'TRAE代码指令', 'AI绘图提示词', '短视频口播脚本'];
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:620px;">
+        <div class="modal-header">${id ? '编辑' : '新建'}提示词</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">标题</label>
+            <input class="input" id="pm_title" value="${escapeHtml(p.title)}">
+          </div>
+          <div class="mb-3">
+            <label class="label">标签（逗号分隔）</label>
+            <input class="input" id="pm_tags" value="${(p.tags || []).join(', ')}">
+            <div class="mt-2">
+              ${categories.map(c => `<span class="tag tag-gray cursor-pointer" onclick="document.getElementById('pm_tags').value+=(document.getElementById('pm_tags').value?', ':'')+'${c}'">+${c}</span>`).join('')}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="label">提示词内容</label>
+            <textarea class="textarea" id="pm_content" style="min-height:200px;">${escapeHtml(p.content)}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="savePrompt('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function savePrompt(id) {
+  const data = {
+    title: $('pm_title').value.trim(),
+    content: $('pm_content').value,
+    tags: $('pm_tags').value.split(',').map(s => s.trim()).filter(Boolean),
+  };
+  if (!data.title) { toast('请输入标题', 'error'); return; }
+  if (id) {
+    Object.assign(appData.prompts.find(p => p.id === id), data);
+    toast('已更新', 'success');
+  } else {
+    appData.prompts.unshift({ id: uid(), ...data, createdAt: Date.now() });
+    toast('已创建', 'success');
+  }
+  saveData();
+  $('modalContainer').innerHTML = '';
+  renderPromptsGrid(promptFilter);
+}
+
+function deletePrompt(id) {
+  confirmDialog('删除确认', '确定要删除这条提示词吗？', () => {
+    appData.prompts = appData.prompts.filter(p => p.id !== id);
+    saveData();
+    renderPromptsGrid(promptFilter);
+    toast('已删除', 'success');
+  });
+}
+
+// ===================== 笔记备忘录 =====================
+function renderNotes() {
+  const cats = ['商业方案', '运营思路', '创业灵感'];
+  const area = $('contentArea');
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">📝 笔记备忘录</div>
+      <div class="page-actions">
+        <input class="input" style="width:240px;" id="noteSearch" placeholder="搜索笔记..." oninput="renderNotesGrid()">
+        <button class="btn btn-primary" onclick="openNoteModal()">+ 新建笔记</button>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-sm text-gray">分类：</span>
+        <span class="tag cursor-pointer" onclick="filterNotes('')" id="nf_all">全部</span>
+        ${cats.map(c => `<span class="tag cursor-pointer" onclick="filterNotes('${c}')">${c}</span>`).join('')}
+      </div>
+    </div>
+    <div class="grid-cards" id="notesGrid"></div>
+  `;
+  renderNotesGrid();
+}
+let noteFilter = '';
+function filterNotes(cat) { noteFilter = cat; renderNotesGrid(); }
+
+function renderNotesGrid() {
+  const kw = ($('noteSearch')?.value || '').toLowerCase();
+  let list = noteFilter ? appData.notes.filter(n => n.category === noteFilter) : appData.notes;
+  if (kw) list = list.filter(n => (n.title + n.content).toLowerCase().includes(kw));
+  const grid = $('notesGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📒</div>暂无笔记</div>'; return; }
+  grid.innerHTML = list.map(n => `
+    <div class="card cursor-pointer" onclick="openNoteModal('${n.id}')">
+      <div class="flex justify-between items-start mb-2">
+        <div class="font-semibold">${escapeHtml(n.title)}</div>
+        <div class="flex gap-1" onclick="event.stopPropagation()">
+          <button class="btn btn-secondary btn-sm" onclick="deleteNote('${n.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="text-sm text-gray mb-2" style="display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;">
+        ${marked.parse(n.content || '')}
+      </div>
+      <div class="flex justify-between items-center text-xs text-gray">
+        <span class="tag">${n.category || '未分类'}</span>
+        <span>${new Date(n.createdAt || Date.now()).toLocaleDateString()}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openNoteModal(id) {
+  const n = id ? appData.notes.find(x => x.id === id) : { title: '', content: '', category: '商业方案' };
+  const cats = ['商业方案', '运营思路', '创业灵感'];
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:760px;">
+        <div class="modal-header">${id ? '编辑' : '新建'}笔记</div>
+        <div class="modal-body">
+          <div class="flex gap-3 mb-3">
+            <div style="flex:2;">
+              <label class="label">标题</label>
+              <input class="input" id="nm_title" value="${escapeHtml(n.title)}">
+            </div>
+            <div style="flex:1;">
+              <label class="label">分类</label>
+              <select class="select" id="nm_category">
+                ${cats.map(c => `<option ${c===n.category?'selected':''}>${c}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="label">内容（支持 Markdown）</label>
+            <textarea class="textarea" id="nm_content" style="min-height:300px;font-family:monospace;">${escapeHtml(n.content)}</textarea>
+          </div>
+          <div>
+            <label class="label">预览</label>
+            <div class="card" id="nm_preview" style="max-height:200px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveNote('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+  const update = () => { $('nm_preview').innerHTML = marked.parse($('nm_content').value || ''); };
+  $('nm_content').addEventListener('input', update);
+  update();
+}
+
+function saveNote(id) {
+  const data = { title: $('nm_title').value.trim(), content: $('nm_content').value, category: $('nm_category').value };
+  if (!data.title) { toast('请输入标题', 'error'); return; }
+  if (id) { Object.assign(appData.notes.find(n => n.id === id), data); toast('已更新', 'success'); }
+  else { appData.notes.unshift({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderNotesGrid();
+}
+
+function deleteNote(id) {
+  confirmDialog('删除确认', '确定删除这条笔记？', () => {
+    appData.notes = appData.notes.filter(n => n.id !== id); saveData(); renderNotesGrid(); toast('已删除', 'success');
+  });
+}
+
+// ===================== 代码片段 =====================
+function renderSnippets() {
+  const area = $('contentArea');
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">💻 代码片段</div>
+      <div class="page-actions">
+        <input class="input" style="width:240px;" id="snippetSearch" placeholder="搜索代码..." oninput="renderSnippetsGrid()">
+        <select class="select" style="width:150px;" id="snippetLang" onchange="renderSnippetsGrid()">
+          <option value="">全部语言</option>
+          <option>HTML</option><option>JavaScript</option><option>uni-app</option><option>CSS</option><option>其他</option>
+        </select>
+        <button class="btn btn-primary" onclick="openSnippetModal()">+ 新建片段</button>
+      </div>
+    </div>
+    <div class="grid-cards" id="snippetsGrid" style="grid-template-columns:repeat(auto-fill,minmax(360px,1fr));"></div>
+  `;
+  renderSnippetsGrid();
+}
+
+function renderSnippetsGrid() {
+  const kw = ($('snippetSearch')?.value || '').toLowerCase();
+  const lang = $('snippetLang')?.value || '';
+  let list = appData.snippets;
+  if (lang) list = list.filter(s => s.language === lang);
+  if (kw) list = list.filter(s => (s.title + s.code + s.description).toLowerCase().includes(kw));
+  const grid = $('snippetsGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📂</div>暂无代码片段</div>'; return; }
+  grid.innerHTML = list.map(s => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <div class="font-semibold">${escapeHtml(s.title)}</div>
+          <div class="text-xs text-gray">${s.language || '未分类'}</div>
+        </div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="copyText(\`${escapeHtml(s.code)}\`)">📋</button>
+          <button class="btn btn-secondary btn-sm" onclick="openSnippetModal('${s.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deleteSnippet('${s.id}')">🗑️</button>
+        </div>
+      </div>
+      ${s.description ? `<div class="text-sm text-gray mb-2">${escapeHtml(s.description)}</div>` : ''}
+      <div class="code-block-wrap">
+        <button class="btn btn-secondary btn-sm copy-btn" onclick="copyText(\`${escapeHtml(s.code)}\`)">复制</button>
+        <pre><code class="language-${(s.language||'js').toLowerCase()}">${escapeHtml(s.code)}</code></pre>
+      </div>
+    </div>
+  `).join('');
+  document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+}
+
+function openSnippetModal(id) {
+  const s = id ? appData.snippets.find(x => x.id === id) : { title: '', code: '', description: '', language: 'JavaScript' };
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:720px;">
+        <div class="modal-header">${id ? '编辑' : '新建'}代码片段</div>
+        <div class="modal-body">
+          <div class="flex gap-3 mb-3">
+            <div style="flex:2;">
+              <label class="label">标题</label>
+              <input class="input" id="sm_title" value="${escapeHtml(s.title)}">
+            </div>
+            <div style="flex:1;">
+              <label class="label">语言</label>
+              <select class="select" id="sm_lang">
+                ${['HTML','JavaScript','uni-app','CSS','其他'].map(l=>`<option ${l===s.language?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="label">描述</label>
+            <input class="input" id="sm_desc" value="${escapeHtml(s.description || '')}">
+          </div>
+          <div>
+            <label class="label">代码</label>
+            <textarea class="textarea" id="sm_code" style="min-height:260px;font-family:monospace;">${escapeHtml(s.code)}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveSnippet('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveSnippet(id) {
+  const data = { title: $('sm_title').value.trim(), code: $('sm_code').value, description: $('sm_desc').value, language: $('sm_lang').value };
+  if (!data.title) { toast('请输入标题', 'error'); return; }
+  if (id) { Object.assign(appData.snippets.find(s => s.id === id), data); toast('已更新', 'success'); }
+  else { appData.snippets.unshift({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderSnippetsGrid();
+}
+
+function deleteSnippet(id) {
+  confirmDialog('删除确认', '确定删除这个代码片段？', () => {
+    appData.snippets = appData.snippets.filter(s => s.id !== id); saveData(); renderSnippetsGrid(); toast('已删除', 'success');
+  });
+}
+
+// ===================== AI对话助手 =====================
+let currentAISession = null;
+
+function renderAI() {
+  const area = $('contentArea');
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">🤖 AI对话助手</div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openAISettings()">⚙️ API设置</button>
+        <button class="btn btn-secondary btn-sm" onclick="newAISession()">+ 新对话</button>
+      </div>
+    </div>
+    <div class="flex gap-4" style="height:calc(100vh - 200px);">
+      <div class="card" style="width:220px;flex-shrink:0;overflow-y:auto;">
+        <div class="card-title">会话列表</div>
+        <div id="aiSessionsList"></div>
+      </div>
+      <div class="card" style="flex:1;display:flex;flex-direction:column;">
+        <div class="chat-messages" id="aiMessages"></div>
+        <div class="chat-input-area">
+          <textarea class="textarea" id="aiInput" style="min-height:60px;resize:none;" placeholder="输入你的问题... (Ctrl+Enter 发送)" onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()"></textarea>
+          <div class="flex flex-col gap-2">
+            <button class="btn btn-primary" onclick="sendAIMessage()">发送</button>
+            <button class="btn btn-secondary" onclick="clearAIChat()">清空</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="text-xs text-gray mt-2">⚠️ 公共代理仅用于个人调试，请勿对外公开。API-Key仅存本地LocalStorage。</div>
+  `;
+  renderAISessions();
+  if (!currentAISession && appData.aiSessions.length > 0) selectAISession(appData.aiSessions[0].id);
+  else renderAIMessages();
+}
+
+function renderAISessions() {
+  const list = $('aiSessionsList');
+  if (!appData.aiSessions.length) { list.innerHTML = '<div class="text-sm text-gray text-center p-4">暂无会话</div>'; return; }
+  list.innerHTML = appData.aiSessions.map(s => `
+    <div class="p-2 cursor-pointer rounded ${currentAISession?.id===s.id?'bg-blue-500/20':''}" onclick="selectAISession('${s.id}')">
+      <div class="text-sm truncate">${escapeHtml(s.title || '新对话')}</div>
+      <div class="text-xs text-gray">${new Date(s.updatedAt||s.createdAt).toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+function newAISession() {
+  const s = { id: uid(), title: '', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
+  appData.aiSessions.unshift(s);
+  saveData();
+  currentAISession = s;
+  renderAISessions();
+  renderAIMessages();
+}
+
+function selectAISession(id) {
+  currentAISession = appData.aiSessions.find(s => s.id === id);
+  renderAISessions();
+  renderAIMessages();
+}
+
+function renderAIMessages() {
+  const box = $('aiMessages');
+  if (!currentAISession || !currentAISession.messages.length) {
+    box.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💬</div>开始一段新对话吧</div>';
+    return;
+  }
+  box.innerHTML = currentAISession.messages.map(m => `
+    <div class="chat-msg ${m.role}">
+      <div class="chat-bubble">
+        ${m.role === 'ai' ? marked.parse(m.content) : escapeHtml(m.content)}
+        ${m.role === 'ai' ? `
+          <div class="flex gap-2 mt-2">
+            <button class="btn btn-secondary btn-sm" onclick="copyText(\`${escapeHtml(m.content)}\`)">📋复制</button>
+            <button class="btn btn-secondary btn-sm" onclick="saveAISpeechToPrompt(\`${escapeHtml(m.content)}\`)">💡存提示词</button>
+          </div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  box.scrollTop = box.scrollHeight;
+  document.querySelectorAll('.chat-bubble pre code').forEach(el => hljs.highlightElement(el));
+}
+
+function saveAISpeechToPrompt(content) {
+  appData.prompts.unshift({ id: uid(), title: 'AI输出保存-' + new Date().toLocaleString(), content, tags: ['AI输出'], createdAt: Date.now() });
+  saveData(); toast('已保存到提示词库', 'success');
+}
+
+async function sendAIMessage() {
+  const input = $('aiInput');
+  const content = input.value.trim();
+  if (!content) return;
+  if (!appData.aiSettings.apiKey) { toast('请先在API设置中填入API-Key', 'error'); openAISettings(); return; }
+  if (!currentAISession) newAISession();
+
+  currentAISession.messages.push({ role: 'user', content });
+  currentAISession.updatedAt = Date.now();
+  if (!currentAISession.title) currentAISession.title = content.slice(0, 30);
+  input.value = '';
+  renderAISessions();
+  renderAIMessages();
+  saveData();
+
+  // 发送请求
+  const loadingMsg = { role: 'ai', content: '⏳ 思考中...', loading: true };
+  currentAISession.messages.push(loadingMsg);
+  renderAIMessages();
+
+  try {
+    const apiKey = appData.aiSettings.apiKey;
+    const model = appData.aiSettings.model;
+    const baseUrl = appData.aiSettings.baseUrl || 'https://api.openai.com/v1';
+    const systemPrompt = appData.aiSettings.systemPrompt || '你是一个专业的全栈开发助手。';
+    
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...currentAISession.messages.filter(m => !m.loading).map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.content }))
+    ];
+
+    const fullUrl = appData.aiSettings.corsProxy ? appData.aiSettings.corsProxy + baseUrl + '/chat/completions' : baseUrl + '/chat/completions';
+
+    const res = await fetch(fullUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model, messages, stream: false })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || '（无响应内容）';
+    
+    const idx = currentAISession.messages.findIndex(m => m.loading);
+    if (idx >= 0) currentAISession.messages.splice(idx, 1);
+    currentAISession.messages.push({ role: 'ai', content: reply });
+    currentAISession.updatedAt = Date.now();
+  } catch (e) {
+    const idx = currentAISession.messages.findIndex(m => m.loading);
+    if (idx >= 0) currentAISession.messages.splice(idx, 1);
+    currentAISession.messages.push({ role: 'ai', content: `❌ 请求失败：${e.message}\n\n可能原因：1.API-Key无效 2.网络问题 3.CORS限制（可尝试开启代理）` });
+  }
+  saveData();
+  renderAIMessages();
+}
+
+function clearAIChat() {
+  if (!currentAISession) return;
+  confirmDialog('清空对话', '确定清空当前会话的所有消息？', () => {
+    currentAISession.messages = [];
+    saveData();
+    renderAIMessages();
+    toast('已清空', 'success');
+  });
+}
+
+function openAISettings() {
+  const s = appData.aiSettings;
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:520px;">
+        <div class="modal-header">API 设置</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">API-Key</label>
+            <input class="input" id="ais_key" type="password" value="${escapeHtml(s.apiKey)}" placeholder="sk-...">
+          </div>
+          <div class="mb-3">
+            <label class="label">模型</label>
+            <input class="input" id="ais_model" value="${escapeHtml(s.model)}" placeholder="gpt-4o-mini / silicon-flow模型">
+          </div>
+          <div class="mb-3">
+            <label class="label">接口地址（Base URL）</label>
+            <input class="input" id="ais_base" value="${escapeHtml(s.baseUrl)}" placeholder="硅基流动：https://api.siliconflow.cn/v1">
+          </div>
+          <div class="mb-3">
+            <label class="label">CORS代理（留空则不使用）</label>
+            <input class="input" id="ais_proxy" value="${escapeHtml(s.corsProxy)}" placeholder="https://cors-anywhere.herokuapp.com/">
+          </div>
+          <div class="mb-3">
+            <label class="label">系统提示词</label>
+            <textarea class="textarea" id="ais_sys">${escapeHtml(s.systemPrompt)}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveAISettings()">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveAISettings() {
+  appData.aiSettings = {
+    apiKey: $('ais_key').value.trim(),
+    model: $('ais_model').value.trim(),
+    baseUrl: $('ais_base').value.trim(),
+    corsProxy: $('ais_proxy').value.trim(),
+    systemPrompt: $('ais_sys').value,
+  };
+  saveData();
+  $('modalContainer').innerHTML = '';
+  toast('设置已保存', 'success');
+}
+
+// ===================== 待办任务管理 =====================
+function renderTodos() {
+  const area = $('contentArea');
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">✅ 待办任务管理</div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openTodoModal()">+ 新建任务</button>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex gap-2">
+          <span class="tag cursor-pointer" onclick="filterTodos('all')" id="tf_all">全部 (${appData.todos.length})</span>
+          <span class="tag cursor-pointer" onclick="filterTodos('active')" id="tf_active">未完成 (${appData.todos.filter(t=>!t.done).length})</span>
+          <span class="tag cursor-pointer" onclick="filterTodos('done')" id="tf_done">已完成 (${appData.todos.filter(t=>t.done).length})</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="clearDoneTodos()">🧹 清理已完成</button>
+      </div>
+      <div class="mb-2">
+        <div class="flex justify-between text-sm mb-1">
+          <span>完成进度</span>
+          <span>${appData.todos.filter(t=>t.done).length}/${appData.todos.length} (${appData.todos.length?Math.round(appData.todos.filter(t=>t.done).length/appData.todos.length*100):0}%)</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill success" style="width:${appData.todos.length?(appData.todos.filter(t=>t.done).length/appData.todos.length*100):0}%"></div></div>
+      </div>
+    </div>
+    <div class="grid-cards" id="todosGrid"></div>
+  `;
+  renderTodosGrid('all');
+}
+
+let todoFilter = 'all';
+function filterTodos(f) { todoFilter = f; renderTodosGrid(f); }
+
+function renderTodosGrid(filter) {
+  let list = appData.todos;
+  if (filter === 'active') list = list.filter(t => !t.done);
+  if (filter === 'done') list = list.filter(t => t.done);
+  const priColor = { high: 'var(--danger)', medium: 'var(--warning)', low: 'var(--success)' };
+  const priLabel = { high: '高', medium: '中', low: '低' };
+  const grid = $('todosGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🎯</div>暂无任务</div>'; return; }
+  grid.innerHTML = list.map(t => `
+    <div class="card ${t.done ? 'opacity-60' : ''}">
+      <div class="flex items-start gap-3">
+        <input type="checkbox" class="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}')">
+        <div class="flex-1">
+          <div class="flex justify-between items-start">
+            <div class="font-semibold ${t.done?'line-through':''}">${escapeHtml(t.title)}</div>
+            <div class="flex gap-1">
+              <button class="btn btn-secondary btn-sm" onclick="openTodoModal('${t.id}')">✏️</button>
+              <button class="btn btn-secondary btn-sm" onclick="deleteTodo('${t.id}')">🗑️</button>
+            </div>
+          </div>
+          <div class="text-sm text-gray mt-1">${escapeHtml(t.notes || '')}</div>
+          <div class="flex gap-2 mt-2">
+            <span class="tag" style="background:${priColor[t.priority]}22;color:${priColor[t.priority]}">优先级: ${priLabel[t.priority]||'中'}</span>
+            <span class="tag tag-gray">${t.project || '通用'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openTodoModal(id) {
+  const t = id ? appData.todos.find(x => x.id === id) : { title: '', priority: 'medium', project: '通用', notes: '', done: false };
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:460px;">
+        <div class="modal-header">${id ? '编辑' : '新建'}任务</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">任务标题</label>
+            <input class="input" id="tm_title" value="${escapeHtml(t.title)}">
+          </div>
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">优先级</label>
+              <select class="select" id="tm_pri">
+                <option value="high" ${t.priority==='high'?'selected':''}>🔴 高</option>
+                <option value="medium" ${t.priority==='medium'?'selected':''}>🟡 中</option>
+                <option value="low" ${t.priority==='low'?'selected':''}>🟢 低</option>
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="label">项目</label>
+              <select class="select" id="tm_proj">
+                <option ${t.project==='通用'?'selected':''}>通用</option>
+                <option ${t.project==='南崽奢链'?'selected':''}>南崽奢链</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="label">备注</label>
+            <textarea class="textarea" id="tm_notes">${escapeHtml(t.notes || '')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveTodo('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveTodo(id) {
+  const data = { title: $('tm_title').value.trim(), priority: $('tm_pri').value, project: $('tm_proj').value, notes: $('tm_notes').value };
+  if (!data.title) { toast('请输入任务标题', 'error'); return; }
+  if (id) { Object.assign(appData.todos.find(t => t.id === id), data); toast('已更新', 'success'); }
+  else { appData.todos.unshift({ id: uid(), ...data, done: false, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderTodos();
+}
+
+function toggleTodo(id) {
+  const t = appData.todos.find(x => x.id === id);
+  t.done = !t.done;
+  saveData();
+  renderTodos();
+}
+
+function deleteTodo(id) {
+  confirmDialog('删除确认', '确定删除这个任务？', () => {
+    appData.todos = appData.todos.filter(t => t.id !== id); saveData(); renderTodos(); toast('已删除', 'success');
+  });
+}
+
+function clearDoneTodos() {
+  const doneCount = appData.todos.filter(t => t.done).length;
+  if (!doneCount) { toast('没有已完成的任务', 'warning'); return; }
+  confirmDialog('清理确认', `确定清理 ${doneCount} 条已完成任务？`, () => {
+    appData.todos = appData.todos.filter(t => !t.done); saveData(); renderTodos(); toast('已清理', 'success');
+  });
+}
+
+// ===================== 时间记录计时器 =====================
+let timerInterval = null;
+let timerSeconds = 0;
+let timerRunning = false;
+
+function renderTimer() {
+  const area = $('contentArea');
+  const today = new Date().toDateString();
+  const todayRecords = appData.timerRecords.filter(r => new Date(r.startAt).toDateString() === today);
+  const totalToday = todayRecords.reduce((s, r) => s + (r.duration || 0), 0);
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">⏱️ 时间记录计时器</div>
+      <div class="page-actions">
+        <div class="text-sm text-gray">今日累计: <span class="text-accent font-bold">${formatDuration(totalToday)}</span></div>
+      </div>
+    </div>
+    <div class="card mb-4" style="text-align:center;">
+      <div class="timer-display" id="timerDisplay">00:00:00</div>
+      <div class="flex justify-center gap-3 mb-4">
+        <button class="btn btn-primary" id="timerStartBtn" onclick="toggleTimer()">▶️ 开始</button>
+        <button class="btn btn-secondary" onclick="resetTimer()">🔄 重置</button>
+        <button class="btn btn-success" onclick="saveTimerRecord()">💾 保存记录</button>
+      </div>
+      <div class="flex justify-center gap-3">
+        <select class="select" id="timerProject" style="width:200px;">
+          <option>通用</option><option>南崽奢链开发</option><option>学习</option><option>会议</option><option>其他</option>
+        </select>
+        <input class="input" id="timerNote" style="width:260px;" placeholder="本次计时备注...">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">计时历史</div>
+      <div id="timerHistory"></div>
+    </div>
+  `;
+  renderTimerHistory();
+}
+
+function renderTimerHistory() {
+  const list = appData.timerRecords.slice().sort((a, b) => b.startAt - a.startAt);
+  const box = $('timerHistory');
+  if (!list.length) { box.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏲️</div>暂无计时记录</div>'; return; }
+  box.innerHTML = `<div class="grid-cards">${list.map(r => `
+    <div class="card">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="font-semibold">${r.project || '通用'}</div>
+          <div class="text-xs text-gray">${new Date(r.startAt).toLocaleString()}</div>
+        </div>
+        <div class="text-accent font-bold font-mono">${formatDuration(r.duration)}</div>
+      </div>
+      ${r.note ? `<div class="text-sm text-gray mt-2">${escapeHtml(r.note)}</div>` : ''}
+      <div class="flex justify-end mt-2">
+        <button class="btn btn-secondary btn-sm" onclick="deleteTimerRecord('${r.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function formatDuration(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function toggleTimer() {
+  timerRunning = !timerRunning;
+  const btn = $('timerStartBtn');
+  if (timerRunning) {
+    btn.innerHTML = '⏸️ 暂停';
+    btn.className = 'btn btn-warning';
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      if ($('timerDisplay')) $('timerDisplay').textContent = formatDuration(timerSeconds);
+    }, 1000);
+  } else {
+    btn.innerHTML = '▶️ 继续';
+    btn.className = 'btn btn-primary';
+    clearInterval(timerInterval);
+  }
+}
+
+function resetTimer() {
+  if (timerSeconds === 0) return;
+  confirmDialog('重置确认', '确定重置计时器？当前计时将丢失。', () => {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    timerSeconds = 0;
+    $('timerDisplay').textContent = '00:00:00';
+    const btn = $('timerStartBtn');
+    btn.innerHTML = '▶️ 开始';
+    btn.className = 'btn btn-primary';
+  });
+}
+
+function saveTimerRecord() {
+  if (timerSeconds < 10) { toast('计时太短（至少10秒）', 'warning'); return; }
+  const wasRunning = timerRunning;
+  if (wasRunning) toggleTimer();
+  appData.timerRecords.push({
+    id: uid(),
+    startAt: Date.now() - timerSeconds * 1000,
+    duration: timerSeconds,
+    project: $('timerProject').value,
+    note: $('timerNote').value,
+  });
+  saveData();
+  timerSeconds = 0;
+  $('timerDisplay').textContent = '00:00:00';
+  $('timerNote').value = '';
+  renderTimer();
+  toast('记录已保存', 'success');
+}
+
+function deleteTimerRecord(id) {
+  confirmDialog('删除确认', '确定删除这条计时记录？', () => {
+    appData.timerRecords = appData.timerRecords.filter(r => r.id !== id);
+    saveData();
+    renderTimerHistory();
+    toast('已删除', 'success');
+  });
+}
+
+// ===================== 密码&密钥保险箱 =====================
+function renderVault() {
+  const area = $('contentArea');
+  if (!appData.vaultPassword) {
+    area.innerHTML = `
+      <div class="card" style="max-width:460px;margin:80px auto;">
+        <div class="text-center mb-4">
+          <div style="font-size:56px;">🔐</div>
+          <div class="page-title mb-2">设置保险箱密码</div>
+          <div class="text-sm text-gray">首次使用需要设置访问密码，所有数据将本地加密存储。</div>
+        </div>
+        <div class="mb-3">
+          <label class="label">设置密码</label>
+          <input class="input" id="vp_pwd1" type="password" placeholder="请输入密码">
+        </div>
+        <div class="mb-3">
+          <label class="label">确认密码</label>
+          <input class="input" id="vp_pwd2" type="password" placeholder="请再次输入">
+        </div>
+        <button class="btn btn-primary w-full" onclick="setVaultPassword()">设置密码并进入</button>
+        <div class="text-xs text-gray mt-3 text-center">⚠️ 密码一旦设置不可找回，请妥善保管</div>
+      </div>`;
+    return;
+  }
+  if (!appData.vaultUnlocked) {
+    area.innerHTML = `
+      <div class="card" style="max-width:420px;margin:100px auto;">
+        <div class="text-center mb-4">
+          <div style="font-size:56px;">🔒</div>
+          <div class="page-title mb-2">输入保险箱密码</div>
+        </div>
+        <div class="mb-3">
+          <input class="input" id="vp_pwd" type="password" placeholder="请输入密码" onkeydown="if(event.key==='Enter')unlockVault()">
+        </div>
+        <button class="btn btn-primary w-full" onclick="unlockVault()">解锁</button>
+        <div class="text-xs text-gray mt-3 text-center">忘记密码？只能重置保险箱（数据将丢失）</div>
+        <button class="btn btn-danger w-full mt-2 btn-sm" onclick="resetVault()">重置保险箱</button>
+      </div>`;
+    return;
+  }
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">🔐 密码&密钥保险箱</div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="appData.vaultUnlocked=false;renderVault();">🔒 锁定</button>
+        <button class="btn btn-primary" onclick="openVaultModal()">+ 新增</button>
+      </div>
+    </div>
+    <div class="text-xs text-gray mb-3">🔒 数据仅存本地，已加密保护</div>
+    <div class="grid-cards" id="vaultGrid"></div>
+  `;
+  renderVaultGrid();
+}
+
+function setVaultPassword() {
+  const p1 = $('vp_pwd1').value, p2 = $('vp_pwd2').value;
+  if (p1.length < 4) { toast('密码至少4位', 'error'); return; }
+  if (p1 !== p2) { toast('两次密码不一致', 'error'); return; }
+  appData.vaultPassword = btoa(p1);
+  appData.vaultUnlocked = true;
+  saveData();
+  toast('密码设置成功', 'success');
+  renderVault();
+}
+
+function unlockVault() {
+  const p = $('vp_pwd').value;
+  if (atob(appData.vaultPassword) === p) {
+    appData.vaultUnlocked = true;
+    saveData();
+    renderVault();
+    toast('解锁成功', 'success');
+  } else {
+    toast('密码错误', 'error');
+  }
+}
+
+function resetVault() {
+  confirmDialog('重置保险箱', '此操作将清空所有密钥数据并重置密码，确定吗？', () => {
+    appData.vaultPassword = '';
+    appData.vault = [];
+    appData.vaultUnlocked = false;
+    saveData();
+    renderVault();
+    toast('已重置', 'success');
+  });
+}
+
+function renderVaultGrid() {
+  const key = atob(appData.vaultPassword);
+  const grid = $('vaultGrid');
+  if (!appData.vault.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🔑</div>暂无保存的密钥</div>'; return; }
+  grid.innerHTML = appData.vault.map(v => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <div class="font-semibold">${escapeHtml(v.title)}</div>
+          <div class="text-xs text-gray">${v.type || '密钥'}</div>
+        </div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="openVaultModal('${v.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deleteVaultItem('${v.id}')">🗑️</button>
+        </div>
+      </div>
+      ${v.username ? `<div class="text-sm mb-1"><span class="text-gray">账号：</span>${escapeHtml(v.username)}</div>` : ''}
+      <div class="text-sm mb-1 flex items-center gap-2">
+        <span class="text-gray">密钥：</span>
+        <span class="font-mono" id="v_${v.id}">••••••••••••</span>
+        <button class="btn btn-secondary btn-sm" onclick="toggleVaultValue('${v.id}','${escapeHtml(simpleDecrypt(v.value, key))}')">👁️</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyText(\`${escapeHtml(simpleDecrypt(v.value, key))}\`)">📋</button>
+      </div>
+      ${v.url ? `<div class="text-xs text-gray">${escapeHtml(v.url)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function toggleVaultValue(id, val) {
+  const el = $('v_' + id);
+  if (el.textContent === '••••••••••••') el.textContent = val;
+  else el.textContent = '••••••••••••';
+}
+
+function openVaultModal(id) {
+  const key = appData.vaultPassword ? atob(appData.vaultPassword) : '';
+  const v = id ? appData.vault.find(x => x.id === id) : { title: '', type: 'API密钥', username: '', value: '', url: '', notes: '' };
+  if (v.value && key) v.value = simpleDecrypt(v.value, key);
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:520px;">
+        <div class="modal-header">${id ? '编辑' : '新增'}密钥</div>
+        <div class="modal-body">
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">名称</label>
+              <input class="input" id="vl_title" value="${escapeHtml(v.title)}">
+            </div>
+            <div style="width:150px;">
+              <label class="label">类型</label>
+              <select class="select" id="vl_type">
+                ${['API密钥','后台账号','数据库密码','SSH密钥','其他'].map(t=>`<option ${t===v.type?'selected':''}>${t}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          ${v.type !== 'API密钥' ? `
+          <div class="mb-3">
+            <label class="label">账号/用户名</label>
+            <input class="input" id="vl_user" value="${escapeHtml(v.username || '')}">
+          </div>` : `<input type="hidden" id="vl_user" value="${escapeHtml(v.username || '')}">`}
+          <div class="mb-3">
+            <label class="label">密钥/密码</label>
+            <input class="input" id="vl_value" type="password" value="${escapeHtml(v.value)}">
+          </div>
+          <div class="mb-3">
+            <label class="label">关联URL</label>
+            <input class="input" id="vl_url" value="${escapeHtml(v.url || '')}">
+          </div>
+          <div>
+            <label class="label">备注</label>
+            <textarea class="textarea" id="vl_notes">${escapeHtml(v.notes || '')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveVaultItem('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+  // 动态切换类型
+  $('vl_type').addEventListener('change', function() {
+    if (this.value !== 'API密钥') {
+      if (!$('vl_user').type) return;
+    }
+  });
+}
+
+function saveVaultItem(id) {
+  const key = atob(appData.vaultPassword);
+  const userEl = $('vl_user');
+  const data = {
+    title: $('vl_title').value.trim(),
+    type: $('vl_type').value,
+    username: userEl ? userEl.value : '',
+    value: simpleEncrypt($('vl_value').value, key),
+    url: $('vl_url').value,
+    notes: $('vl_notes').value,
+  };
+  if (!data.title) { toast('请输入名称', 'error'); return; }
+  if (id) { Object.assign(appData.vault.find(v => v.id === id), data); toast('已更新', 'success'); }
+  else { appData.vault.push({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderVaultGrid();
+}
+
+function deleteVaultItem(id) {
+  confirmDialog('删除确认', '确定删除这个密钥？', () => {
+    appData.vault = appData.vault.filter(v => v.id !== id); saveData(); renderVaultGrid(); toast('已删除', 'success');
+  });
+}
+
+// ===================== 南崽奢链业务中心 =====================
+function renderBusiness() {
+  const tabs = [
+    { key: 'materials', name: '手串素材库', icon: '📿' },
+    { key: 'customers', name: '客户私域档案', icon: '👥' },
+    { key: 'agents', name: '分销代理资料', icon: '🤝' },
+    { key: 'copywritings', name: '产品文案话术库', icon: '📄' },
+    { key: 'devledger', name: '项目开发台账', icon: '📊' },
+  ];
+  const area = $('contentArea');
+  area.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">💎 南崽奢链业务中心</div>
+    </div>
+    <div class="subtabs">
+      ${tabs.map(t => `<div class="subtab ${currentBusinessTab===t.key?'active':''}" onclick="switchBusinessTab('${t.key}')">${t.icon} ${t.name}</div>`).join('')}
+    </div>
+    <div id="businessContent"></div>
+  `;
+  renderBusinessContent();
+}
+
+function switchBusinessTab(key) {
+  currentBusinessTab = key;
+  document.querySelectorAll('.subtab').forEach(el => {
+    el.classList.toggle('active', el.textContent.includes(key) || el.getAttribute('onclick')?.includes(key));
+  });
+  // 重新渲染高亮
+  renderBusiness();
+}
+
+function renderBusinessContent() {
+  const renderers = {
+    materials: renderMaterials,
+    customers: renderCustomers,
+    agents: renderAgents,
+    copywritings: renderCopywritings,
+    devledger: renderDevLedger,
+  };
+  (renderers[currentBusinessTab] || (() => {}))();
+}
+
+// -- 手串素材库 --
+function renderMaterials() {
+  const colors = [...new Set(appData.materials.map(m => m.color))];
+  $('businessContent').innerHTML = `
+    <div class="page-actions mb-3">
+      <div class="flex gap-2 flex-wrap">
+        <span class="tag cursor-pointer" onclick="filterMaterials('')">全部色系</span>
+        ${colors.map(c => `<span class="tag cursor-pointer" onclick="filterMaterials('${c}')">${c}</span>`).join('')}
+      </div>
+      <div class="flex gap-2 ml-auto">
+        <button class="btn btn-secondary btn-sm" onclick="exportMaterials()">📤 导出清单</button>
+        <button class="btn btn-primary" onclick="openMaterialModal()">+ 新增素材</button>
+      </div>
+    </div>
+    <div class="grid-cards" id="materialsGrid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));"></div>
+    <div class="card mt-4">
+      <div class="card-title">📐 DIY款式设计草稿</div>
+      <div class="flex justify-between items-center mb-3">
+        <div class="text-sm text-gray">保存您的搭配灵感</div>
+        <button class="btn btn-secondary btn-sm" onclick="openDiyModal()">+ 新建设计</button>
+      </div>
+      <div class="grid-cards" id="diyGrid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));"></div>
+    </div>
+  `;
+  renderMaterialsGrid('');
+  renderDiyGrid();
+}
+let materialFilter = '';
+function filterMaterials(c) { materialFilter = c; renderMaterialsGrid(c); }
+
+const COLOR_MAP = {
+  '金色': '#f59e0b', '银色': '#9ca3af', '红色': '#ef4444', '蓝色': '#3b82f6',
+  '绿色': '#10b981', '黑色': '#1f2937', '白色': '#f3f4f6', '紫色': '#8b5cf6',
+  '粉色': '#ec4899', '棕色': '#92400e', '灰色': '#6b7280', '青色': '#06b6d4'
+};
+
+function renderMaterialsGrid(color) {
+  let list = appData.materials;
+  if (color) list = list.filter(m => m.color === color);
+  const grid = $('materialsGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📿</div>暂无素材</div>'; return; }
+  grid.innerHTML = list.map(m => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div class="font-semibold">${escapeHtml(m.name)}</div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="openMaterialModal('${m.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deleteMaterial('${m.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mb-2">
+        <span class="color-dot" style="background:${COLOR_MAP[m.color]||'#888'}"></span>
+        <span class="text-sm">${m.color || '未标注'}</span>
+        <span class="text-sm text-gray">·</span>
+        <span class="text-sm">${m.size || '-'}</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-accent font-bold">¥${m.price || 0}</span>
+        <span class="tag ${m.stock==='有货'?'tag-green':m.stock==='缺货'?'tag-red':'tag-yellow'}">${m.stock || '待查'}</span>
+      </div>
+      ${m.notes ? `<div class="text-xs text-gray mt-2">${escapeHtml(m.notes)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function openMaterialModal(id) {
+  const m = id ? appData.materials.find(x => x.id === id) : { name: '', color: '金色', size: '', price: '', stock: '有货', notes: '' };
+  const colors = Object.keys(COLOR_MAP);
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:460px;">
+        <div class="modal-header">${id ? '编辑' : '新增'}素材</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">素材名称</label>
+            <input class="input" id="mm_name" value="${escapeHtml(m.name)}">
+          </div>
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">材质色系</label>
+              <select class="select" id="mm_color">
+                ${colors.map(c=>`<option ${c===m.color?'selected':''}>${c}</option>`).join('')}
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="label">尺寸</label>
+              <input class="input" id="mm_size" value="${escapeHtml(m.size || '')}" placeholder="如：8mm / 10x12mm">
+            </div>
+          </div>
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">单价 (¥)</label>
+              <input class="input" id="mm_price" value="${escapeHtml(m.price || '')}" type="number">
+            </div>
+            <div class="flex-1">
+              <label class="label">库存状态</label>
+              <select class="select" id="mm_stock">
+                ${['有货','预订中','缺货'].map(s=>`<option ${s===m.stock?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="label">备注</label>
+            <textarea class="textarea" id="mm_notes">${escapeHtml(m.notes || '')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveMaterial('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveMaterial(id) {
+  const data = { name: $('mm_name').value.trim(), color: $('mm_color').value, size: $('mm_size').value, price: $('mm_price').value, stock: $('mm_stock').value, notes: $('mm_notes').value };
+  if (!data.name) { toast('请输入素材名称', 'error'); return; }
+  if (id) { Object.assign(appData.materials.find(m => m.id === id), data); toast('已更新', 'success'); }
+  else { appData.materials.push({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderMaterialsGrid(materialFilter); renderDiyGrid();
+}
+
+function deleteMaterial(id) {
+  confirmDialog('删除确认', '确定删除这个素材？', () => {
+    appData.materials = appData.materials.filter(m => m.id !== id); saveData(); renderMaterialsGrid(materialFilter); toast('已删除', 'success');
+  });
+}
+
+function exportMaterials() {
+  const txt = appData.materials.map(m => `【${m.name}】色系:${m.color} 尺寸:${m.size||'-'} 单价:¥${m.price||0} 库存:${m.stock}${m.notes?(' 备注:'+m.notes):''}`).join('\n');
+  copyText(txt);
+  toast('素材清单已复制到剪贴板', 'success');
+}
+
+// DIY草稿
+function renderDiyGrid() {
+  const list = (appData.diyDesigns || []);
+  const grid = $('diyGrid');
+  if (!grid) return;
+  if (!list.length) { grid.innerHTML = '<div class="text-sm text-gray" style="grid-column:1/-1;">暂无设计草稿</div>'; return; }
+  grid.innerHTML = list.map(d => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div class="font-semibold">${escapeHtml(d.name)}</div>
+        <button class="btn btn-secondary btn-sm" onclick="deleteDiy('${d.id}')">🗑️</button>
+      </div>
+      <div class="text-sm text-gray mb-2">${escapeHtml(d.description || '')}</div>
+      <div class="text-xs text-gray">${new Date(d.createdAt).toLocaleDateString()}</div>
+    </div>
+  `).join('');
+}
+
+function openDiyModal() {
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:460px;">
+        <div class="modal-header">新建设计草稿</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">方案名称</label>
+            <input class="input" id="diy_name">
+          </div>
+          <div>
+            <label class="label">设计描述 / 搭配灵感</label>
+            <textarea class="textarea" id="diy_desc" style="min-height:140px;"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveDiy()">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveDiy() {
+  const name = $('diy_name').value.trim(), desc = $('diy_desc').value;
+  if (!name) { toast('请输入方案名称', 'error'); return; }
+  if (!appData.diyDesigns) appData.diyDesigns = [];
+  appData.diyDesigns.push({ id: uid(), name, description: desc, createdAt: Date.now() });
+  saveData(); $('modalContainer').innerHTML = ''; renderDiyGrid(); toast('已保存', 'success');
+}
+
+function deleteDiy(id) {
+  confirmDialog('删除确认', '确定删除这个设计？', () => {
+    appData.diyDesigns = appData.diyDesigns.filter(d => d.id !== id); saveData(); renderDiyGrid(); toast('已删除', 'success');
+  });
+}
+
+// -- 客户私域档案 --
+function renderCustomers() {
+  $('businessContent').innerHTML = `
+    <div class="page-actions mb-3">
+      <input class="input" style="width:280px;" id="custSearch" placeholder="搜索客户昵称/标签..." oninput="renderCustomersGrid()">
+      <button class="btn btn-primary ml-auto" onclick="openCustomerModal()">+ 新增客户</button>
+    </div>
+    <div class="grid-cards" id="customersGrid"></div>
+  `;
+  renderCustomersGrid();
+}
+
+function renderCustomersGrid() {
+  const kw = ($('custSearch')?.value || '').toLowerCase();
+  let list = appData.customers;
+  if (kw) list = list.filter(c => (c.nickname + c.tags + c.intention).toLowerCase().includes(kw));
+  const statusColor = { '待跟进': 'tag-red', '跟进中': 'tag-yellow', '已成交': 'tag-green', '已流失': 'tag-gray' };
+  const grid = $('customersGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">👥</div>暂无客户档案</div>'; return; }
+  grid.innerHTML = list.map(c => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div class="font-semibold">${escapeHtml(c.nickname)}</div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="openCustomerModal('${c.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deleteCustomer('${c.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="flex flex-wrap mb-2">${(c.tags||[]).map(t=>`<span class="tag tag-gray">${t}</span>`).join('')}</div>
+      <div class="text-sm mb-1"><span class="text-gray">意向产品：</span>${escapeHtml(c.intention || '-')}</div>
+      <div class="text-sm mb-1"><span class="text-gray">成交金额：</span><span class="text-success font-bold">¥${c.amount || 0}</span></div>
+      <div class="text-sm mb-2 text-gray" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">💬 ${escapeHtml(c.communication || '')}</div>
+      <span class="tag ${statusColor[c.status]||'tag-gray'}">${c.status || '待跟进'}</span>
+    </div>
+  `).join('');
+}
+
+function openCustomerModal(id) {
+  const c = id ? appData.customers.find(x => x.id === id) : { nickname: '', tags: [], intention: '', amount: 0, status: '待跟进', communication: '' };
+  const tagOpts = ['男士文玩', '玉佩定制', '高净值', '情绪型', '送礼', '收藏', '代理意向'];
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:520px;">
+        <div class="modal-header">${id ? '编辑' : '新增'}客户档案</div>
+        <div class="modal-body">
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">客户昵称</label>
+              <input class="input" id="cm_nick" value="${escapeHtml(c.nickname)}">
+            </div>
+            <div style="width:150px;">
+              <label class="label">跟进状态</label>
+              <select class="select" id="cm_status">
+                ${['待跟进','跟进中','已成交','已流失'].map(s=>`<option ${s===c.status?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="label">客户标签（点击添加）</label>
+            <div class="flex flex-wrap gap-1">
+              ${tagOpts.map(t => `<span class="tag ${(c.tags||[]).includes(t)?'':'tag-gray'} cursor-pointer" onclick="this.classList.toggle('tag-gray');this.classList.toggle('bg-blue-500/20');">${t}</span>`).join('')}
+            </div>
+          </div>
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">意向产品</label>
+              <input class="input" id="cm_intent" value="${escapeHtml(c.intention || '')}">
+            </div>
+            <div style="width:150px;">
+              <label class="label">成交金额 ¥</label>
+              <input class="input" id="cm_amount" value="${c.amount || 0}" type="number">
+            </div>
+          </div>
+          <div>
+            <label class="label">沟通记录</label>
+            <textarea class="textarea" id="cm_comm" style="min-height:120px;">${escapeHtml(c.communication || '')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveCustomer('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveCustomer(id) {
+  const tags = Array.from(document.querySelectorAll('.modal-body .tag:not(.tag-gray)')).map(el => el.textContent.trim());
+  const data = {
+    nickname: $('cm_nick').value.trim(),
+    status: $('cm_status').value,
+    tags,
+    intention: $('cm_intent').value,
+    amount: Number($('cm_amount').value) || 0,
+    communication: $('cm_comm').value,
+  };
+  if (!data.nickname) { toast('请输入客户昵称', 'error'); return; }
+  if (id) { Object.assign(appData.customers.find(c => c.id === id), data); toast('已更新', 'success'); }
+  else { appData.customers.push({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderCustomersGrid();
+}
+
+function deleteCustomer(id) {
+  confirmDialog('删除确认', '确定删除这个客户档案？', () => {
+    appData.customers = appData.customers.filter(c => c.id !== id); saveData(); renderCustomersGrid(); toast('已删除', 'success');
+  });
+}
+
+// -- 分销代理资料 --
+function renderAgents() {
+  $('businessContent').innerHTML = `
+    <div class="page-actions mb-3">
+      <button class="btn btn-primary ml-auto" onclick="openAgentModal()">+ 新增资料</button>
+    </div>
+    <div class="grid-cards" id="agentsGrid"></div>
+  `;
+  renderAgentsGrid();
+}
+
+function renderAgentsGrid() {
+  const grid = $('agentsGrid');
+  if (!appData.agents.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🤝</div>暂无代理资料</div>'; return; }
+  grid.innerHTML = appData.agents.map(a => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <div class="font-semibold">${escapeHtml(a.title)}</div>
+          <div class="text-xs text-gray">${a.category || '未分类'}</div>
+        </div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="copyText(\`${escapeHtml(a.content)}\`)">📋</button>
+          <button class="btn btn-secondary btn-sm" onclick="openAgentModal('${a.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deleteAgent('${a.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="text-sm text-gray" style="display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;">${escapeHtml(a.content)}</div>
+    </div>
+  `).join('');
+}
+
+function openAgentModal(id) {
+  const a = id ? appData.agents.find(x => x.id === id) : { title: '', category: '代理规则', content: '' };
+  const cats = ['代理规则', '推广码说明', '佣金规则', '代理招募文案', '代理后台需求', '业务规则'];
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:620px;">
+        <div class="modal-header">${id ? '编辑' : '新增'}代理资料</div>
+        <div class="modal-body">
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">标题</label>
+              <input class="input" id="ag_title" value="${escapeHtml(a.title)}">
+            </div>
+            <div style="width:200px;">
+              <label class="label">分类</label>
+              <select class="select" id="ag_cat">
+                ${cats.map(c=>`<option ${c===a.category?'selected':''}>${c}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="label">内容</label>
+            <textarea class="textarea" id="ag_content" style="min-height:300px;">${escapeHtml(a.content)}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveAgent('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveAgent(id) {
+  const data = { title: $('ag_title').value.trim(), category: $('ag_cat').value, content: $('ag_content').value };
+  if (!data.title) { toast('请输入标题', 'error'); return; }
+  if (id) { Object.assign(appData.agents.find(a => a.id === id), data); toast('已更新', 'success'); }
+  else { appData.agents.push({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderAgentsGrid();
+}
+
+function deleteAgent(id) {
+  confirmDialog('删除确认', '确定删除这个资料？', () => {
+    appData.agents = appData.agents.filter(a => a.id !== id); saveData(); renderAgentsGrid(); toast('已删除', 'success');
+  });
+}
+
+// -- 产品文案话术库 --
+function renderCopywritings() {
+  const cats = ['说唱专辑手串', '新中式文人手串', '轻奢收藏手串', '精聊聊天脚本', '朋友圈文案', '短视频口播稿'];
+  $('businessContent').innerHTML = `
+    <div class="page-actions mb-3">
+      <div class="flex gap-2 flex-wrap">
+        <span class="tag cursor-pointer" onclick="filterCopy('')">全部</span>
+        ${cats.map(c => `<span class="tag cursor-pointer" onclick="filterCopy('${c}')">${c}</span>`).join('')}
+      </div>
+      <button class="btn btn-primary ml-auto" onclick="openCopyModal()">+ 新增文案</button>
+    </div>
+    <div class="grid-cards" id="copyGrid"></div>
+  `;
+  renderCopyGrid('');
+}
+let copyFilter = '';
+function filterCopy(c) { copyFilter = c; renderCopyGrid(c); }
+
+function renderCopyGrid(cat) {
+  let list = appData.copywritings;
+  if (cat) list = list.filter(c => c.category === cat);
+  const grid = $('copyGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📄</div>暂无文案</div>'; return; }
+  grid.innerHTML = list.map(c => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <div class="font-semibold">${escapeHtml(c.title)}</div>
+          <span class="tag tag-gray">${c.category || '未分类'}</span>
+        </div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="copyText(\`${escapeHtml(c.content)}\`)">📋</button>
+          <button class="btn btn-secondary btn-sm" onclick="openCopyModal('${c.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deleteCopy('${c.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="text-sm whitespace-pre-wrap" style="display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(c.content)}</div>
+    </div>
+  `).join('');
+}
+
+function openCopyModal(id) {
+  const c = id ? appData.copywritings.find(x => x.id === id) : { title: '', category: '说唱专辑手串', content: '' };
+  const cats = ['说唱专辑手串', '新中式文人手串', '轻奢收藏手串', '精聊聊天脚本', '朋友圈文案', '短视频口播稿'];
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:620px;">
+        <div class="modal-header">${id ? '编辑' : '新增'}文案</div>
+        <div class="modal-body">
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">标题</label>
+              <input class="input" id="cp_title" value="${escapeHtml(c.title)}">
+            </div>
+            <div style="width:200px;">
+              <label class="label">分类</label>
+              <select class="select" id="cp_cat">
+                ${cats.map(x=>`<option ${x===c.category?'selected':''}>${x}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="label">文案内容</label>
+            <textarea class="textarea" id="cp_content" style="min-height:320px;">${escapeHtml(c.content)}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveCopy('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveCopy(id) {
+  const data = { title: $('cp_title').value.trim(), category: $('cp_cat').value, content: $('cp_content').value };
+  if (!data.title) { toast('请输入标题', 'error'); return; }
+  if (id) { Object.assign(appData.copywritings.find(c => c.id === id), data); toast('已更新', 'success'); }
+  else { appData.copywritings.push({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderCopyGrid(copyFilter);
+}
+
+function deleteCopy(id) {
+  confirmDialog('删除确认', '确定删除这条文案？', () => {
+    appData.copywritings = appData.copywritings.filter(c => c.id !== id); saveData(); renderCopyGrid(copyFilter); toast('已删除', 'success');
+  });
+}
+
+// -- 项目开发台账 --
+function renderDevLedger() {
+  const total = appData.devledger.length;
+  const done = appData.devledger.filter(d => d.status === '已完成').length;
+  $('businessContent').innerHTML = `
+    <div class="card mb-3">
+      <div class="flex justify-between items-center mb-3">
+        <div class="page-title" style="font-size:18px;">📊 项目开发进度</div>
+        <button class="btn btn-primary btn-sm" onclick="openLedgerModal()">+ 新增条目</button>
+      </div>
+      <div class="flex justify-between text-sm mb-1">
+        <span>整体完成度</span>
+        <span>${done}/${total} (${total?Math.round(done/total*100):0}%)</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill success" style="width:${total?(done/total*100):0}%"></div></div>
+    </div>
+    <div class="grid-cards" id="ledgerGrid"></div>
+  `;
+  renderLedgerGrid();
+}
+
+function renderLedgerGrid() {
+  const list = appData.devledger.slice().sort((a, b) => {
+    const order = { '开发中': 0, '待修复': 1, '待开发': 2, '已完成': 3 };
+    return (order[a.status] || 0) - (order[b.status] || 0);
+  });
+  const statusColor = { '开发中': 'tag-yellow', '待修复': 'tag-red', '待开发': 'tag-gray', '已完成': 'tag-green' };
+  const grid = $('ledgerGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📋</div>暂无开发记录</div>'; return; }
+  grid.innerHTML = list.map(d => `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div class="font-semibold">${escapeHtml(d.title)}</div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="openLedgerModal('${d.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" onclick="deleteLedger('${d.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="text-sm text-gray mb-2" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(d.description || '')}</div>
+      <div class="flex justify-between items-center">
+        <span class="tag ${statusColor[d.status]||'tag-gray'}">${d.status || '待开发'}</span>
+        ${d.timeSpent ? `<span class="text-xs text-gray">⏱️ ${d.timeSpent}h</span>` : ''}
+      </div>
+      ${d.todoId ? `<div class="text-xs text-gray mt-2">🔗 已关联待办任务</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function openLedgerModal(id) {
+  const d = id ? appData.devledger.find(x => x.id === id) : { title: '', status: '待开发', type: '功能开发', description: '', timeSpent: '' };
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:520px;">
+        <div class="modal-header">${id ? '编辑' : '新增'}开发条目</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">标题</label>
+            <input class="input" id="dl_title" value="${escapeHtml(d.title)}">
+          </div>
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">类型</label>
+              <select class="select" id="dl_type">
+                ${['功能开发','Bug修复','原型需求','TRAE指令','其他'].map(t=>`<option ${t===d.type?'selected':''}>${t}</option>`).join('')}
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="label">状态</label>
+              <select class="select" id="dl_status">
+                ${['待开发','开发中','待修复','已完成'].map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="label">耗时 (小时)</label>
+            <input class="input" id="dl_time" value="${d.timeSpent || ''}" type="number" step="0.5">
+          </div>
+          <div>
+            <label class="label">描述详情</label>
+            <textarea class="textarea" id="dl_desc" style="min-height:160px;">${escapeHtml(d.description || '')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveLedger('${id || ''}')">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveLedger(id) {
+  const data = { title: $('dl_title').value.trim(), type: $('dl_type').value, status: $('dl_status').value, timeSpent: $('dl_time').value, description: $('dl_desc').value };
+  if (!data.title) { toast('请输入标题', 'error'); return; }
+  if (id) { Object.assign(appData.devledger.find(d => d.id === id), data); toast('已更新', 'success'); }
+  else { appData.devledger.push({ id: uid(), ...data, createdAt: Date.now() }); toast('已创建', 'success'); }
+  saveData(); $('modalContainer').innerHTML = ''; renderDevLedger();
+}
+
+function deleteLedger(id) {
+  confirmDialog('删除确认', '确定删除这条开发记录？', () => {
+    appData.devledger = appData.devledger.filter(d => d.id !== id); saveData(); renderDevLedger(); toast('已删除', 'success');
+  });
+}
+
+// ===================== 快捷书签 =====================
+function renderBookmarksPage() {
+  const groups = [...new Set(appData.bookmarks.map(b => b.group || '未分组'))];
+  $('contentArea').innerHTML = `
+    <div class="page-header">
+      <div class="page-title">🔗 快捷书签工具</div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openBookmarkModal()">+ 新增书签</button>
+      </div>
+    </div>
+    ${groups.map(g => `
+      <div class="card mb-3">
+        <div class="card-title">${g}</div>
+        <div class="grid-cards" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
+          ${appData.bookmarks.filter(b => (b.group||'未分组')===g).map(b => `
+            <div class="card">
+              <div class="flex justify-between items-start">
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold truncate">${escapeHtml(b.name)}</div>
+                  <div class="text-xs text-gray truncate">${escapeHtml(b.url)}</div>
+                </div>
+                <div class="flex gap-1 ml-2">
+                  <button class="btn btn-secondary btn-sm" onclick="window.open('${escapeHtml(b.url)}','_blank')">🔗</button>
+                  <button class="btn btn-secondary btn-sm" onclick="deleteBookmark('${b.id}')">🗑️</button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderRightBookmarks() {
+  const groups = [...new Set(appData.bookmarks.map(b => b.group || '未分组'))];
+  $('rightBookmarks').innerHTML = groups.map(g => `
+    <div class="bookmark-group">
+      <div class="text-xs text-gray mb-1 font-semibold">${g}</div>
+      ${appData.bookmarks.filter(b => (b.group||'未分组')===g).map(b => `
+        <div class="bookmark-item" onclick="window.open('${escapeHtml(b.url)}','_blank')" title="${escapeHtml(b.url)}">
+          <span style="width:18px;">🔗</span>
+          <span class="truncate">${escapeHtml(b.name)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function openBookmarkModal() {
+  const groups = ['开发工具', '南崽奢链业务', '其他'];
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:440px;">
+        <div class="modal-header">新增书签</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">名称</label>
+            <input class="input" id="bm_name">
+          </div>
+          <div class="mb-3">
+            <label class="label">URL</label>
+            <input class="input" id="bm_url" placeholder="https://...">
+          </div>
+          <div>
+            <label class="label">分组</label>
+            <select class="select" id="bm_group">
+              ${groups.map(g=>`<option>${g}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveBookmark()">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveBookmark() {
+  const name = $('bm_name').value.trim(), url = $('bm_url').value.trim(), group = $('bm_group').value;
+  if (!name || !url) { toast('请填写完整', 'error'); return; }
+  appData.bookmarks.push({ id: uid(), name, url, group });
+  saveData(); $('modalContainer').innerHTML = '';
+  renderRightBookmarks();
+  if (currentPage === 'bookmarks') renderBookmarksPage();
+  toast('已添加', 'success');
+}
+
+function deleteBookmark(id) {
+  appData.bookmarks = appData.bookmarks.filter(b => b.id !== id);
+  saveData();
+  renderRightBookmarks();
+  if (currentPage === 'bookmarks') renderBookmarksPage();
+  toast('已删除', 'success');
+}
+
+// ===================== 设置 =====================
+function openSettings() {
+  const s = appData.settings;
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:440px;">
+        <div class="modal-header">⚙️ 设置</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">主题强调色</label>
+            <div class="flex gap-2">
+              ${[['#3b82f6','电光蓝'],['#06b6d4','科技青'],['#8b5cf6','神秘紫'],['#10b981','薄荷绿']].map(([c,n]) => `
+                <button class="btn ${s.accentColor===c?'btn-primary':'btn-secondary'}" style="background:${s.accentColor===c?c:'transparent'};border-color:${c};" onclick="document.getElementById('st_color').value='${c}';this.closest('.modal-body').querySelectorAll('button').forEach(b=>{b.classList.remove('btn-primary');b.classList.add('btn-secondary');b.style.background='transparent'});this.classList.add('btn-primary');this.classList.remove('btn-secondary');this.style.background='${c}';">${n}</button>
+              `).join('')}
+              <input type="hidden" id="st_color" value="${s.accentColor}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="label">基础字体大小: <span id="st_fs_val">${s.fontSize}px</span></label>
+            <input type="range" min="12" max="18" value="${s.fontSize}" class="w-full" oninput="$('st_fs').value=this.value;$('st_fs_val').textContent=this.value+'px';">
+            <input type="hidden" id="st_fs" value="${s.fontSize}">
+          </div>
+          <div class="mb-3">
+            <label class="label">数据管理</label>
+            <div class="flex gap-2 flex-wrap">
+              <button class="btn btn-secondary btn-sm" onclick="exportData()">📤 导出数据</button>
+              <button class="btn btn-secondary btn-sm" onclick="clearAllData()">🗑️ 清空所有数据</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveSettings()">保存</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveSettings() {
+  appData.settings.accentColor = $('st_color').value;
+  appData.settings.fontSize = Number($('st_fs').value);
+  document.documentElement.style.setProperty('--accent', appData.settings.accentColor);
+  document.body.style.fontSize = appData.settings.fontSize + 'px';
+  saveData();
+  $('modalContainer').innerHTML = '';
+  toast('设置已保存', 'success');
+}
+
+// ===================== 导入导出 =====================
+function exportData() {
+  const dataStr = JSON.stringify(appData, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nanzao_workbench_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('已导出数据备份', 'success');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      confirmDialog('导入确认', '将覆盖当前所有数据，确定继续吗？', () => {
+        appData = { ...JSON.parse(JSON.stringify(DEFAULT_DATA)), ...data };
+        saveData();
+        location.reload();
+      });
+    } catch (err) {
+      toast('文件格式错误', 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function clearAllData() {
+  confirmDialog('⚠️ 危险操作', '此操作将清空所有本地数据且不可恢复！确定吗？', () => {
+    confirmDialog('⚠️ 二次确认', '真的确定要清空所有数据吗？', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    });
+  });
+}
+
+// ===================== 全局搜索 =====================
+$('globalSearch').addEventListener('input', function() {
+  const kw = this.value.trim().toLowerCase();
+  if (!kw) return;
+  // 做一个简单的结果展示
+  const results = [];
+  appData.prompts.forEach(p => { if ((p.title + p.content).toLowerCase().includes(kw)) results.push({ type: '提示词', title: p.title, page: 'prompts' }); });
+  appData.notes.forEach(n => { if ((n.title + n.content).toLowerCase().includes(kw)) results.push({ type: '笔记', title: n.title, page: 'notes' }); });
+  appData.snippets.forEach(s => { if ((s.title + s.code).toLowerCase().includes(kw)) results.push({ type: '代码片段', title: s.title, page: 'snippets' }); });
+  appData.materials.forEach(m => { if ((m.name + m.notes).toLowerCase().includes(kw)) results.push({ type: '素材', title: m.name, page: 'business', sub: 'materials' }); });
+  appData.customers.forEach(c => { if ((c.nickname + c.intention).toLowerCase().includes(kw)) results.push({ type: '客户', title: c.nickname, page: 'business', sub: 'customers' }); });
+  appData.copywritings.forEach(c => { if ((c.title + c.content).toLowerCase().includes(kw)) results.push({ type: '文案', title: c.title, page: 'business', sub: 'copywritings' }); });
+  appData.todos.forEach(t => { if ((t.title + t.notes).toLowerCase().includes(kw)) results.push({ type: '任务', title: t.title, page: 'todos' }); });
+
+  if (results.length) {
+    toast(`找到 ${results.length} 条相关结果，类型：${[...new Set(results.map(r=>r.type))].join('、')}。跳转到对应模块查看。`, 'info');
+    // 自动跳转到第一个结果的模块
+    const first = results[0];
+    if (first.page !== currentPage) {
+      switchPage(first.page);
+      if (first.sub) { currentBusinessTab = first.sub; renderBusiness(); }
+    }
+  }
+});
+
+// ===================== 辅助函数 =====================
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/`/g, '&#96;');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('已复制到剪贴板', 'success');
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+    toast('已复制到剪贴板', 'success');
+  }
+}
+
+// ===================== 初始化 =====================
+function init() {
+  // 应用主题
+  document.documentElement.style.setProperty('--accent', appData.settings.accentColor);
+  document.body.style.fontSize = (appData.settings.fontSize || 14) + 'px';
+  
+  // marked配置
+  marked.setOptions({ breaks: true, gfm: true });
+
+  // 渲染右侧书签
+  renderRightBookmarks();
+
+  // 渲染首屏
+  renderPage();
+}
+
+init();
+</script>
+</body>
+</html>
