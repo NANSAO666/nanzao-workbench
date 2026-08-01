@@ -478,6 +478,66 @@
     opacity: 0.5;
   }
 
+  /* ===== AI 自动化工作流 ===== */
+  .wf-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+  .wf-card { padding: 20px; cursor: pointer; transition: all 0.2s; }
+  .wf-card:hover { transform: translateY(-2px); }
+  .wf-card-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .wf-card-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5; }
+  .wf-card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-tertiary); }
+  .wf-card-badge { background: rgba(34,197,94,0.15); color: #22c55e; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+
+  .wf-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .wf-detail-title { font-size: 20px; font-weight: 700; }
+  .wf-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .wf-task-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .wf-task-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); transition: all 0.3s; }
+  .wf-task-item.running { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); }
+  .wf-task-item.done { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.05); }
+  .wf-task-item.error { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+  .wf-task-item.waiting { opacity: 0.5; }
+  .wf-task-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+  .wf-task-item.running .wf-task-num { background: rgba(59,130,246,0.2); color: #3b82f6; }
+  .wf-task-item.done .wf-task-num { background: rgba(34,197,94,0.2); color: #22c55e; }
+  .wf-task-item.error .wf-task-num { background: rgba(239,68,68,0.2); color: #ef4444; }
+  .wf-task-info { flex: 1; min-width: 0; }
+  .wf-task-type { font-size: 11px; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 4px; }
+  .wf-task-type-ai { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .wf-task-type-delay { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .wf-task-type-export { background: rgba(168,85,247,0.15); color: #a855f7; }
+  .wf-task-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wf-task-result { font-size: 12px; color: var(--text-secondary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wf-task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .wf-task-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.2s; }
+  .wf-task-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+
+  .wf-progress-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+  .wf-progress-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #3b82f6); border-radius: 3px; transition: width 0.5s ease; }
+
+  .wf-log-area { max-height: 300px; overflow-y: auto; padding: 14px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); font-family: 'SF Mono', Monaco, monospace; font-size: 12px; line-height: 1.8; }
+  .wf-log-area::-webkit-scrollbar { width: 4px; }
+  .wf-log-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .wf-log-line { margin-bottom: 2px; }
+  .wf-log-time { color: var(--text-tertiary); }
+  .wf-log-info { color: var(--text-secondary); }
+  .wf-log-success { color: #22c55e; }
+  .wf-log-error { color: #ef4444; }
+  .wf-log-warn { color: #fbbf24; }
+
+  .wf-empty { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+  .wf-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+
+  .wf-run-btn { padding: 12px 28px; font-size: 15px; font-weight: 700; border-radius: 12px; border: none; cursor: pointer; transition: all 0.2s; }
+  .wf-run-btn.go { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; box-shadow: 0 4px 15px rgba(34,197,94,0.3); }
+  .wf-run-btn.go:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,0.4); }
+  .wf-run-btn.stop { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; box-shadow: 0 4px 15px rgba(239,68,68,0.3); }
+  .wf-run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  .wf-result-area { margin-top: 16px; padding: 16px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
+  .wf-result-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+  .wf-result-content { font-size: 13px; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+
   /* Stat Cards Row */
   .stat-cards-row {
     display: grid;
@@ -1154,7 +1214,10 @@
         <span>🔗</span><span>快捷书签工具</span>
       </div>
       <div class="nav-item" data-page="folders" onclick="switchPage('folders')">
-        <span>📁</span><span>文件夹卡片</span>
+        <span></span><span>文件夹卡片</span>
+      </div>
+      <div class="nav-item" data-page="workflow" onclick="switchPage('workflow')">
+        <span></span><span>AI自动化工作流</span>
       </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -1238,6 +1301,7 @@ const DEFAULT_DATA = {
     { id: uid(), name: 'uniCloud控制台', url: 'https://unicloud.dcloud.net.cn', group: '开发工具' },
   ],
   folders: [],
+  workflows: [],
 };
 
 let appData = loadData();
@@ -1315,6 +1379,7 @@ function renderPage() {
     business: renderBusiness,
     bookmarks: renderBookmarksPage,
     folders: renderFolders,
+    workflow: renderWorkflow,
   };
   (renderers[currentPage] || (() => area.innerHTML = '<div class="empty-state">页面开发中</div>'))();
 }
@@ -3878,6 +3943,691 @@ function saveFolderItem(folderIndex) {
   $('modalContainer').innerHTML = '';
   renderFolderStack();
   toast('内容已添加', 'success');
+}
+
+// ===================== AI 自动化工作流 =====================
+let currentWorkflow = null;
+let wfRunning = false;
+let wfStopFlag = false;
+let wfResults = [];
+let wfLogs = [];
+
+// 预置示例工作流
+const DEFAULT_WORKFLOWS = [
+  {
+    id: 'wf_jewelry_001',
+    name: '珠宝营销内容批量生成',
+    desc: '自动生成珠宝DIY小程序开发提示词、微商朋友圈文案、客户精聊话术，并导出txt',
+    tasks: [
+      { id: 't1', type: 'ai', title: '生成3套珠宝DIY小程序开发提示词', prompt: '请为珠宝DIY小程序开发生成3套完整的AI提示词，涵盖：1)小程序UI设计提示词 2)商品展示功能提示词 3)用户定制流程提示词。每套提示词要具体、可直接使用，包含角色设定、任务描述、输出格式要求。', count: 3 },
+      { id: 't2', type: 'delay', title: '延时2秒', seconds: 2 },
+      { id: 't3', type: 'ai', title: '批量生成5条珠宝微商朋友圈成交文案', prompt: '请生成5条珠宝微商朋友圈成交文案，要求：1)每条100-150字 2)包含产品卖点、情感共鸣、行动号召 3)适合发朋友圈的口语化风格 4)涵盖不同场景（新品上市、客户好评、限时优惠、日常种草、节日促销）。每条文案用【】标注主题。', count: 5 },
+      { id: 't4', type: 'delay', title: '延时1.5秒', seconds: 1.5 },
+      { id: 't5', type: 'ai', title: '生成3组客户精聊话术', prompt: '请生成3组珠宝客户精聊话术，每组包含：1)开场白（破冰） 2)需求挖掘（3个问题） 3)产品推荐话术 4)异议处理（价格贵/再考虑/别家更便宜） 5)促单话术。针对不同类型客户：A)第一次咨询的新客户 B)对比多家的犹豫客户 C)老客户复购。', count: 3 },
+      { id: 't6', type: 'export', title: '全部结果导出txt文件下载', filename: '珠宝营销内容包' },
+    ],
+    createdAt: Date.now(),
+  },
+  {
+    id: 'wf_jewelry_002',
+    name: '珠宝产品描述生成器',
+    desc: '输入产品类型，自动生成产品标题、卖点、详情页文案、SEO关键词',
+    tasks: [
+      { id: 't1', type: 'ai', title: '生成5个吸引人的产品标题', prompt: '请为珠宝产品生成5个吸引人的电商标题，要求：1)包含核心关键词 2)突出卖点（材质/工艺/寓意） 3)符合电商平台搜索习惯 4)长度30-60字 5)带emoji增加点击率。产品类型：{input}', count: 5 },
+      { id: 't2', type: 'delay', title: '延时1秒', seconds: 1 },
+      { id: 't3', type: 'ai', title: '生成产品核心卖点（5条）', prompt: '请为珠宝产品生成5条核心卖点文案，每条50字以内，要求：1)突出材质优势 2)强调工艺精湛 3)体现情感价值 4)差异化竞争点 5)适合详情页首屏展示。产品类型：{input}', count: 5 },
+      { id: 't4', type: 'delay', title: '延时1秒', seconds: 1 },
+      { id: 't5', type: 'ai', title: '生成详情页完整文案', prompt: '请为珠宝产品生成完整的详情页文案，包含：1)品牌故事（100字） 2)产品参数表 3)佩戴场景描述（3个场景） 4)保养说明 5)售后保障承诺 6)用户好评模板（3条）。要求文案有温度、有信任感。产品类型：{input}', count: 1 },
+      { id: 't6', type: 'export', title: '导出产品文案包', filename: '珠宝产品文案包' },
+    ],
+    createdAt: Date.now(),
+  },
+];
+
+function renderWorkflow() {
+  const area = $('contentArea');
+
+  // 初始化默认工作流
+  if (!appData.workflows || appData.workflows.length === 0) {
+    appData.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
+    saveData();
+  }
+
+  if (currentWorkflow) {
+    renderWorkflowDetail(area);
+  } else {
+    renderWorkflowList(area);
+  }
+}
+
+function renderWorkflowList(area) {
+  const workflows = appData.workflows || [];
+
+  area.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title" style="margin-bottom:4px;"> AI自动化工作流</div>
+        <div style="color:var(--text-secondary);font-size:13px;">配置任务清单，AI自动按顺序执行，实现工作流自动化</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openWorkflowModal()">+ 新建工作流</button>
+      </div>
+    </div>
+    <div class="wf-list">
+      ${workflows.map(wf => `
+        <div class="card wf-card" onclick="openWorkflow('${wf.id}')">
+          <div class="wf-card-name">${escapeHtml(wf.name)}</div>
+          <div class="wf-card-desc">${escapeHtml(wf.desc || '')}</div>
+          <div class="wf-card-meta">
+            <span>${wf.tasks.length} 个任务</span>
+            <span class="wf-card-badge">${wf.tasks.filter(t => t.type === 'ai').length} AI任务</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderWorkflowDetail(area) {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  const progress = wfResults.filter(r => r.status === 'done').length / wf.tasks.length * 100;
+
+  area.innerHTML = `
+    <div class="wf-detail-header">
+      <div>
+        <button class="btn btn-secondary btn-sm" onclick="currentWorkflow=null;renderWorkflow()" style="margin-bottom:8px;">← 返回</button>
+        <div class="wf-detail-title">${escapeHtml(wf.name)}</div>
+        <div style="color:var(--text-secondary);font-size:13px;margin-top:4px;">${escapeHtml(wf.desc || '')}</div>
+      </div>
+      <div class="wf-detail-actions">
+        <button class="btn btn-secondary btn-sm" onclick="addTaskModal()">+ 添加任务</button>
+        <button class="btn btn-secondary btn-sm" onclick="editWorkflowModal()">编辑</button>
+        <button class="btn btn-secondary btn-sm" onclick="duplicateWorkflow()">复制</button>
+        <button class="btn btn-secondary btn-sm" onclick="deleteWorkflow()">删除</button>
+      </div>
+    </div>
+
+    <div class="wf-progress-bar">
+      <div class="wf-progress-fill" style="width:${progress}%"></div>
+    </div>
+
+    <div class="wf-task-list" id="wfTaskList">
+      ${renderTaskList(wf)}
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <button class="wf-run-btn ${wfRunning ? 'stop' : 'go'}" id="wfRunBtn" onclick="${wfRunning ? 'stopWorkflow()' : 'startWorkflow()'}" ${wfRunning ? '' : (appData.aiSettings.apiKey ? '' : 'disabled title="请先配置API Key"')}>
+        ${wfRunning ? '⏹ 停止执行' : '▶ 开始自动执行'}
+      </button>
+      ${!appData.aiSettings.apiKey ? '<span style="color:#ef4444;font-size:13px;">️ 请先在AI对话助手中配置API Key</span>' : ''}
+    </div>
+
+    <div class="wf-log-area" id="wfLogArea" style="margin-top:16px;">
+      <div class="wf-log-line"><span class="wf-log-time">[系统]</span> <span class="wf-log-info">等待开始执行...</span></div>
+    </div>
+
+    <div class="wf-result-area" id="wfResultArea" style="display:none;">
+      <div class="wf-result-title">执行结果汇总</div>
+      <div class="wf-result-content" id="wfResultContent"></div>
+      <button class="btn btn-primary btn-sm mt-2" onclick="downloadWorkflowResults()">下载结果文件</button>
+    </div>
+  `;
+}
+
+function renderTaskList(wf) {
+  return wf.tasks.map((task, i) => {
+    const result = wfResults[i];
+    const status = result ? result.status : 'waiting';
+    const typeClass = task.type === 'ai' ? 'wf-task-type-ai' : task.type === 'delay' ? 'wf-task-type-delay' : 'wf-task-type-export';
+    const typeLabel = task.type === 'ai' ? 'AI生成' : task.type === 'delay' ? '延时' : '导出';
+
+    return `
+      <div class="wf-task-item ${status}" id="wfTask_${i}">
+        <div class="wf-task-num">${status === 'done' ? '✓' : status === 'error' ? '✗' : status === 'running' ? '' : (i + 1)}</div>
+        <div class="wf-task-info">
+          <span class="wf-task-type ${typeClass}">${typeLabel}</span>
+          <div class="wf-task-title">${escapeHtml(task.title)}</div>
+          ${result && result.result ? `<div class="wf-task-result">${escapeHtml(result.result.substring(0, 80))}${result.result.length > 80 ? '...' : ''}</div>` : ''}
+        </div>
+        <div class="wf-task-actions">
+          <button class="wf-task-btn" onclick="editTaskModal(${i})" title="编辑">✏️</button>
+          <button class="wf-task-btn" onclick="deleteTask(${i})" title="删除">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openWorkflow(id) {
+  currentWorkflow = appData.workflows.find(w => w.id === id);
+  wfResults = [];
+  wfLogs = [];
+  wfRunning = false;
+  wfStopFlag = false;
+  renderWorkflow();
+}
+
+function openWorkflowModal() {
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:420px;">
+        <div class="modal-header">新建工作流</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">工作流名称</label>
+            <input class="input" id="wf_name" placeholder="例如：珠宝营销内容批量生成">
+          </div>
+          <div class="mb-3">
+            <label class="label">描述（可选）</label>
+            <textarea class="textarea" id="wf_desc" placeholder="简要描述这个工作流的用途"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="createWorkflow()">创建</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('modalContainer').innerHTML = html;
+}
+
+function createWorkflow() {
+  const name = $('wf_name').value.trim();
+  const desc = $('wf_desc').value.trim();
+  if (!name) { toast('请输入工作流名称', 'warning'); return; }
+
+  const wf = {
+    id: 'wf_' + uid(),
+    name,
+    desc,
+    tasks: [],
+    createdAt: Date.now(),
+  };
+
+  appData.workflows.push(wf);
+  saveData();
+  $('modalContainer').innerHTML = '';
+  currentWorkflow = wf;
+  renderWorkflow();
+  toast('工作流创建成功，点击「编辑」添加任务', 'success');
+}
+
+function editWorkflowModal() {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:420px;">
+        <div class="modal-header">编辑工作流</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">工作流名称</label>
+            <input class="input" id="edit_wf_name" value="${escapeHtml(wf.name)}">
+          </div>
+          <div class="mb-3">
+            <label class="label">描述</label>
+            <textarea class="textarea" id="edit_wf_desc">${escapeHtml(wf.desc || '')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveWorkflowEdit()">保存</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('modalContainer').innerHTML = html;
+}
+
+function saveWorkflowEdit() {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  wf.name = $('edit_wf_name').value.trim();
+  wf.desc = $('edit_wf_desc').value.trim();
+
+  if (!wf.name) { toast('请输入工作流名称', 'warning'); return; }
+
+  saveData();
+  $('modalContainer').innerHTML = '';
+  renderWorkflow();
+  toast('工作流已更新', 'success');
+}
+
+function duplicateWorkflow() {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  const newWf = JSON.parse(JSON.stringify(wf));
+  newWf.id = 'wf_' + uid();
+  newWf.name = wf.name + ' (副本)';
+  newWf.createdAt = Date.now();
+
+  appData.workflows.push(newWf);
+  saveData();
+  toast('工作流已复制', 'success');
+  currentWorkflow = null;
+  renderWorkflow();
+}
+
+function deleteWorkflow() {
+  if (!confirm('确定要删除这个工作流吗？')) return;
+
+  const idx = appData.workflows.findIndex(w => w.id === currentWorkflow.id);
+  if (idx > -1) {
+    appData.workflows.splice(idx, 1);
+    saveData();
+  }
+
+  currentWorkflow = null;
+  renderWorkflow();
+  toast('工作流已删除', 'success');
+}
+
+function editTaskModal(taskIndex) {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  const task = wf.tasks[taskIndex];
+  if (!task) return;
+
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:480px;">
+        <div class="modal-header">编辑任务</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">任务类型</label>
+            <select class="select" id="task_type" onchange="toggleTaskFields()">
+              <option value="ai" ${task.type === 'ai' ? 'selected' : ''}>AI 生成内容</option>
+              <option value="delay" ${task.type === 'delay' ? 'selected' : ''}>延时等待</option>
+              <option value="export" ${task.type === 'export' ? 'selected' : ''}>导出结果</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="label">任务标题</label>
+            <input class="input" id="task_title" value="${escapeHtml(task.title)}">
+          </div>
+          <div id="aiFields" style="display:${task.type === 'ai' ? 'block' : 'none'};">
+            <div class="mb-3">
+              <label class="label">AI 提示词（用 {input} 表示用户输入）</label>
+              <textarea class="textarea" id="task_prompt" style="min-height:100px;">${escapeHtml(task.prompt || '')}</textarea>
+            </div>
+            <div class="mb-3">
+              <label class="label">生成数量</label>
+              <input class="input" id="task_count" type="number" value="${task.count || 1}" min="1" max="20">
+            </div>
+          </div>
+          <div id="delayFields" style="display:${task.type === 'delay' ? 'block' : 'none'};">
+            <div class="mb-3">
+              <label class="label">延时秒数</label>
+              <input class="input" id="task_seconds" type="number" value="${task.seconds || 2}" min="0.5" max="60" step="0.5">
+            </div>
+          </div>
+          <div id="exportFields" style="display:${task.type === 'export' ? 'block' : 'none'};">
+            <div class="mb-3">
+              <label class="label">导出文件名（不含扩展名）</label>
+              <input class="input" id="task_filename" value="${escapeHtml(task.filename || '工作流结果')}">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="saveTaskEdit(${taskIndex})">保存</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('modalContainer').innerHTML = html;
+}
+
+function toggleTaskFields() {
+  const type = $('task_type').value;
+  $('aiFields').style.display = type === 'ai' ? 'block' : 'none';
+  $('delayFields').style.display = type === 'delay' ? 'block' : 'none';
+  $('exportFields').style.display = type === 'export' ? 'block' : 'none';
+}
+
+function saveTaskEdit(taskIndex) {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  const task = wf.tasks[taskIndex];
+  if (!task) return;
+
+  task.type = $('task_type').value;
+  task.title = $('task_title').value.trim();
+
+  if (!task.title) { toast('请输入任务标题', 'warning'); return; }
+
+  if (task.type === 'ai') {
+    task.prompt = $('task_prompt').value.trim();
+    task.count = parseInt($('task_count').value) || 1;
+    if (!task.prompt) { toast('请输入AI提示词', 'warning'); return; }
+  } else if (task.type === 'delay') {
+    task.seconds = parseFloat($('task_seconds').value) || 2;
+  } else if (task.type === 'export') {
+    task.filename = $('task_filename').value.trim() || '工作流结果';
+  }
+
+  saveData();
+  $('modalContainer').innerHTML = '';
+  renderWorkflow();
+  toast('任务已更新', 'success');
+}
+
+function deleteTask(taskIndex) {
+  if (!confirm('确定要删除这个任务吗？')) return;
+
+  currentWorkflow.tasks.splice(taskIndex, 1);
+  wfResults.splice(taskIndex, 1);
+
+  saveData();
+  renderWorkflow();
+  toast('任务已删除', 'success');
+}
+
+function addTaskModal() {
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:480px;">
+        <div class="modal-header">添加任务</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">任务类型</label>
+            <select class="select" id="new_task_type" onchange="toggleTaskFields()">
+              <option value="ai">AI 生成内容</option>
+              <option value="delay">延时等待</option>
+              <option value="export">导出结果</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="label">任务标题</label>
+            <input class="input" id="new_task_title" placeholder="例如：生成珠宝营销文案">
+          </div>
+          <div id="newAiFields">
+            <div class="mb-3">
+              <label class="label">AI 提示词</label>
+              <textarea class="textarea" id="new_task_prompt" style="min-height:100px;" placeholder="请生成5条珠宝微商朋友圈成交文案..."></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="label">生成数量</label>
+              <input class="input" id="new_task_count" type="number" value="1" min="1" max="20">
+            </div>
+          </div>
+          <div id="newDelayFields" style="display:none;">
+            <div class="mb-3">
+              <label class="label">延时秒数</label>
+              <input class="input" id="new_task_seconds" type="number" value="2" min="0.5" max="60" step="0.5">
+            </div>
+          </div>
+          <div id="newExportFields" style="display:none;">
+            <div class="mb-3">
+              <label class="label">导出文件名（不含扩展名）</label>
+              <input class="input" id="new_task_filename" value="工作流结果">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" onclick="addTask()">添加</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('modalContainer').innerHTML = html;
+}
+
+function addTask() {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  const type = $('new_task_type').value;
+  const title = $('new_task_title').value.trim();
+
+  if (!title) { toast('请输入任务标题', 'warning'); return; }
+
+  const task = {
+    id: 't_' + uid(),
+    type,
+    title,
+  };
+
+  if (type === 'ai') {
+    task.prompt = $('new_task_prompt').value.trim();
+    task.count = parseInt($('new_task_count').value) || 1;
+    if (!task.prompt) { toast('请输入AI提示词', 'warning'); return; }
+  } else if (type === 'delay') {
+    task.seconds = parseFloat($('new_task_seconds').value) || 2;
+  } else if (type === 'export') {
+    task.filename = $('new_task_filename').value.trim() || '工作流结果';
+  }
+
+  wf.tasks.push(task);
+  saveData();
+  $('modalContainer').innerHTML = '';
+  renderWorkflow();
+  toast('任务已添加', 'success');
+}
+
+// ===================== 工作流执行引擎 =====================
+async function startWorkflow() {
+  const wf = currentWorkflow;
+  if (!wf || wf.tasks.length === 0) { toast('请先添加任务', 'warning'); return; }
+  if (!appData.aiSettings.apiKey) { toast('请先配置AI API Key', 'error'); return; }
+
+  wfRunning = true;
+  wfStopFlag = false;
+  wfResults = wf.tasks.map(() => ({ status: 'waiting', result: '' }));
+  wfLogs = [];
+
+  renderWorkflow();
+  addLog('info', `开始执行工作流：${wf.name}`);
+  addLog('info', `共 ${wf.tasks.length} 个任务`);
+
+  for (let i = 0; i < wf.tasks.length; i++) {
+    if (wfStopFlag) {
+      addLog('warn', '用户停止执行');
+      break;
+    }
+
+    const task = wf.tasks[i];
+    wfResults[i].status = 'running';
+    updateTaskUI(i);
+    addLog('info', `执行任务 ${i + 1}/${wf.tasks.length}：${task.title}`);
+
+    try {
+      if (task.type === 'ai') {
+        await executeAITask(i, task);
+      } else if (task.type === 'delay') {
+        await executeDelayTask(i, task);
+      } else if (task.type === 'export') {
+        await executeExportTask(i, task);
+      }
+    } catch (err) {
+      wfResults[i].status = 'error';
+      wfResults[i].result = err.message;
+      addLog('error', `任务失败：${err.message}`);
+    }
+
+    updateTaskUI(i);
+    updateProgress();
+  }
+
+  wfRunning = false;
+  const doneCount = wfResults.filter(r => r.status === 'done').length;
+  addLog('success', `执行完成：${doneCount}/${wf.tasks.length} 个任务成功`);
+
+  // 显示结果汇总
+  showResults();
+
+  const btn = $('wfRunBtn');
+  if (btn) {
+    btn.className = 'wf-run-btn go';
+    btn.textContent = '▶ 开始自动执行';
+    btn.disabled = false;
+  }
+}
+
+function stopWorkflow() {
+  wfStopFlag = true;
+  addLog('warn', '正在停止...');
+}
+
+async function executeAITask(index, task) {
+  const apiKey = appData.aiSettings.apiKey;
+  const model = appData.aiSettings.model || 'glm-4-flash';
+  const baseUrl = appData.aiSettings.baseUrl || 'https://open.bigmodel.cn/api/paas/v4';
+
+  const messages = [
+    { role: 'system', content: '你是一个专业的内容生成助手，请严格按照用户要求生成内容，不要添加多余的解释。' },
+    { role: 'user', content: task.prompt }
+  ];
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.8,
+      max_tokens: 2000
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`API请求失败：${response.status} - ${errText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '无内容';
+
+  wfResults[index].status = 'done';
+  wfResults[index].result = content;
+  addLog('success', `AI生成完成，${content.length} 字`);
+}
+
+async function executeDelayTask(index, task) {
+  const seconds = task.seconds || 2;
+  addLog('info', `等待 ${seconds} 秒...`);
+
+  await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+
+  wfResults[index].status = 'done';
+  wfResults[index].result = `延时 ${seconds} 秒完成`;
+  addLog('success', `延时完成`);
+}
+
+async function executeExportTask(index, task) {
+  wfResults[index].status = 'done';
+  wfResults[index].result = '准备导出';
+  addLog('info', '导出任务已标记');
+}
+
+function addLog(type, message) {
+  const time = new Date().toLocaleTimeString();
+  wfLogs.push({ type, message, time });
+
+  const logArea = $('wfLogArea');
+  if (logArea) {
+    const line = document.createElement('div');
+    line.className = 'wf-log-line';
+    line.innerHTML = `<span class="wf-log-time">[${time}]</span> <span class="wf-log-${type}">${escapeHtml(message)}</span>`;
+    logArea.appendChild(line);
+    logArea.scrollTop = logArea.scrollHeight;
+  }
+}
+
+function updateTaskUI(index) {
+  const el = document.getElementById(`wfTask_${index}`);
+  if (!el) return;
+
+  const result = wfResults[index];
+  el.className = `wf-task-item ${result.status}`;
+
+  const numEl = el.querySelector('.wf-task-num');
+  if (numEl) {
+    numEl.textContent = result.status === 'done' ? '✓' : result.status === 'error' ? '✗' : result.status === 'running' ? '⟳' : (index + 1);
+  }
+
+  // 添加结果文本
+  let resultEl = el.querySelector('.wf-task-result');
+  if (result && result.result) {
+    if (!resultEl) {
+      resultEl = document.createElement('div');
+      resultEl.className = 'wf-task-result';
+      el.querySelector('.wf-task-info').appendChild(resultEl);
+    }
+    resultEl.textContent = result.result.substring(0, 80) + (result.result.length > 80 ? '...' : '');
+  }
+}
+
+function updateProgress() {
+  const wf = currentWorkflow;
+  if (!wf) return;
+
+  const progress = wfResults.filter(r => r.status === 'done').length / wf.tasks.length * 100;
+  const fill = document.querySelector('.wf-progress-fill');
+  if (fill) fill.style.width = `${progress}%`;
+}
+
+function showResults() {
+  const resultArea = $('wfResultArea');
+  const resultContent = $('wfResultContent');
+
+  if (!resultArea || !resultContent) return;
+
+  const aiResults = wfResults.filter((r, i) => currentWorkflow.tasks[i].type === 'ai' && r.status === 'done');
+
+  if (aiResults.length === 0) {
+    resultArea.style.display = 'none';
+    return;
+  }
+
+  let html = '';
+  aiResults.forEach((r, idx) => {
+    const task = currentWorkflow.tasks.find(t => t.type === 'ai' && wfResults.indexOf(r) >= 0);
+    html += `【任务 ${idx + 1}】\n${r.result}\n\n`;
+  });
+
+  resultContent.textContent = html;
+  resultArea.style.display = 'block';
+}
+
+function downloadWorkflowResults() {
+  const aiResults = wfResults.filter((r, i) => currentWorkflow.tasks[i].type === 'ai' && r.status === 'done');
+
+  if (aiResults.length === 0) {
+    toast('没有可导出的AI生成结果', 'warning');
+    return;
+  }
+
+  let content = `工作流：${currentWorkflow.name}\n`;
+  content += `执行时间：${new Date().toLocaleString()}\n`;
+  content += `${'='.repeat(50)}\n\n`;
+
+  aiResults.forEach((r, idx) => {
+    content += `【任务 ${idx + 1}】\n${r.result}\n\n`;
+    content += `${'-'.repeat(50)}\n\n`;
+  });
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${currentWorkflow.name || '工作流结果'}_${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  toast('文件已下载', 'success');
 }
 
 // ===================== 3D 流体粒子卡片系统（高性能版） =====================
