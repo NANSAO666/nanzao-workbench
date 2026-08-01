@@ -1194,7 +1194,7 @@
         <span>💻</span><span>代码片段</span>
       </div>
       <div class="nav-item" data-page="ai" onclick="switchPage('ai')">
-        <span>🤖</span><span>AI对话助手</span>
+        <span>💬</span><span>AI对话助手</span>
       </div>
       <div class="nav-item" data-page="todos" onclick="switchPage('todos')">
         <span>✅</span><span>待办任务管理</span>
@@ -1354,6 +1354,11 @@ function toggleSidebar() {
 }
 
 function switchPage(page) {
+  // 离开 AI 页面时停止计时器
+  if (currentPage === 'ai' && page !== 'ai') {
+    stopAiIdleTimer();
+  }
+
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.page === page);
@@ -1364,6 +1369,11 @@ function switchPage(page) {
     $('sidebarOverlay')?.classList.remove('show');
   }
   renderPage();
+
+  // 进入 AI 页面时启动计时器
+  if (page === 'ai') {
+    startAiIdleTimer();
+  }
 }
 
 function renderPage() {
@@ -1709,6 +1719,41 @@ function deleteSnippet(id) {
 
 // ===================== AI对话助手 =====================
 let currentAISession = null;
+let aiIdleTimer = null;
+let aiRoastShown = false;
+
+const AI_ROASTS = [
+  "你盯着聊天框发呆了 30 秒，是在等我自己说话吗？",
+  "这个聊天框是有什么魔力？你已经看了它半分钟了 ",
+  "温馨提示：聊天框不会自己回复你，你得先说话 🗣️",
+  "你是在等聊天框先开口吗？它比较害羞，你得主动 💬",
+  "30 秒过去了，你和聊天框的沉默对峙还在继续... ",
+  "聊天框：「你倒是说句话啊！」你：「...」😶",
+  "检测到聊天框沉迷症晚期，建议立即输入内容治疗 💊",
+  "你已经盯着这个页面够久了，AI 都开始怀疑人生了 🤖💔",
+  "再不发消息，聊天框就要主动跟你分手了 💔",
+  "你的输入框说它很寂寞，已经 30 秒没人理它了 ",
+];
+
+function startAiIdleTimer() {
+  stopAiIdleTimer();
+  aiRoastShown = false;
+  aiIdleTimer = setTimeout(() => {
+    if (currentPage === 'ai' && !aiRoastShown) {
+      aiRoastShown = true;
+      const roast = AI_ROASTS[Math.floor(Math.random() * AI_ROASTS.length)];
+      toast(roast, 'warning', 4000);
+    }
+  }, 30000); // 30 秒无操作触发
+}
+
+function stopAiIdleTimer() {
+  if (aiIdleTimer) { clearTimeout(aiIdleTimer); aiIdleTimer = null; }
+}
+
+function resetAiIdleTimer() {
+  if (currentPage === 'ai') startAiIdleTimer();
+}
 
 function renderAI() {
   const area = $('contentArea');
@@ -1717,9 +1762,9 @@ function renderAI() {
   if (isMobile) {
     area.innerHTML = `
       <div class="page-header">
-        <div class="page-title">🤖 AI对话助手</div>
+        <div class="page-title"> AI对话助手</div>
         <div class="page-actions">
-          <button class="btn btn-secondary btn-sm" onclick="openAISettings()">⚙️ API设置</button>
+          <button class="btn btn-secondary btn-sm" onclick="openAISettings()">️ API设置</button>
           <button class="btn btn-secondary btn-sm" onclick="newAISession()">+ 新对话</button>
         </div>
       </div>
@@ -1733,7 +1778,7 @@ function renderAI() {
         <div class="card mobile-chat-card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
           <div class="chat-messages" id="aiMessages" style="flex:1;min-height:0;overflow-y:auto;"></div>
           <div class="chat-input-area" style="flex-shrink:0;">
-            <textarea class="textarea" id="aiInput" style="min-height:44px;resize:none;font-size:16px;" placeholder="输入你的问题..." onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()"></textarea>
+            <textarea class="textarea" id="aiInput" style="min-height:44px;resize:none;font-size:16px;" placeholder="输入你的问题..." onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()" oninput="resetAiIdleTimer()"></textarea>
             <div style="display:flex;gap:8px;">
               <button class="btn btn-primary" style="flex:1;padding:10px 16px;" onclick="sendAIMessage()">发送</button>
               <button class="btn btn-secondary" style="padding:10px 14px;" onclick="clearAIChat()">清空</button>
@@ -1746,7 +1791,7 @@ function renderAI() {
   } else {
     area.innerHTML = `
       <div class="page-header">
-        <div class="page-title">🤖 AI对话助手</div>
+        <div class="page-title">💬 AI对话助手</div>
         <div class="page-actions">
           <button class="btn btn-secondary btn-sm" onclick="openAISettings()">⚙️ API设置</button>
           <button class="btn btn-secondary btn-sm" onclick="newAISession()">+ 新对话</button>
