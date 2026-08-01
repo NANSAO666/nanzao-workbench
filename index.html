@@ -130,6 +130,7 @@
   .btn-success { background: transparent; border-color: var(--success); color: var(--success); }
   .btn-success:hover { background: rgba(16,185,129,0.1); }
   .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-text { margin-left: 5px; }
 
   /* 输入框 */
   .input, .textarea, .select {
@@ -393,8 +394,8 @@
     /* 顶部栏精简 */
     .top-bar {
       height: 50px;
-      padding: 0 10px;
-      gap: 8px;
+      padding: 0 8px;
+      gap: 6px;
     }
     .top-bar .flex.items-center.gap-2:first-child { min-width: auto !important; }
     .top-bar .font-bold { font-size: 14px !important; }
@@ -411,10 +412,20 @@
       flex-shrink: 0;
     }
     .search-box { max-width: none; flex: 1; min-width: 0; }
-    .search-box .input { font-size: 13px; padding: 7px 10px 7px 32px; }
-    .top-bar .btn.btn-sm { padding: 5px 8px; font-size: 11px; }
-    .top-bar .ml-auto .btn span { display: none; }
-    .top-bar .ml-auto .btn { padding: 5px 8px; min-width: 32px; }
+    .search-box .input { font-size: 13px; padding: 7px 10px 7px 30px; }
+    .top-bar .btn.btn-sm {
+      padding: 6px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .top-bar .ml-auto .btn .btn-text { display: none; }
+    .top-bar .ml-auto .btn {
+      padding: 6px 8px;
+      min-width: 34px;
+      height: 34px;
+      justify-content: center;
+    }
 
     /* 左侧导航抽屉 */
     .sidebar {
@@ -476,6 +487,10 @@
     .subtabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .subtab { padding: 8px 12px; font-size: 13px; flex-shrink: 0; }
 
+    /* 分类筛选卡片 */
+    .content-area > .card { padding: 12px; }
+    .content-area > .card .tag { padding: 4px 12px; font-size: 12px; }
+
     /* 输入框和按钮 */
     .input, .textarea, .select { font-size: 14px; }
     .btn { font-size: 13px; }
@@ -505,10 +520,10 @@
       <input type="text" class="input" id="globalSearch" placeholder="全局搜索：提示词、笔记、代码、素材、客户...">
     </div>
     <div class="flex items-center gap-2 ml-auto">
-      <button class="btn btn-secondary btn-sm" onclick="exportData()">📤 导出</button>
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">📥 导入</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportData()">📤<span class="btn-text">导出</span></button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">📥<span class="btn-text">导入</span></button>
       <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
-      <button class="btn btn-secondary btn-sm" onclick="clearAllData()">🗑️ 清空</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearAllData()">🗑️<span class="btn-text">清空</span></button>
       <button class="btn btn-secondary btn-sm" onclick="openSettings()">⚙️</button>
     </div>
   </div>
