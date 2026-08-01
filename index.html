@@ -691,6 +691,22 @@
 
     /* 业务中心内联flex改堆叠 */
     .page-actions { flex-wrap: wrap; }
+    .page-actions .btn { font-size: 13px; padding: 6px 12px; }
+
+    /* 待办进度卡 */
+    .content-area > .card.mb-3 { padding: 14px; }
+    .content-area > .card.mb-3 > div:first-child { flex-direction: column; align-items: flex-start !important; }
+    .content-area > .card.mb-3 > div:first-child > div:first-child { margin-bottom: 12px; }
+    .content-area > .card.mb-3 > div:last-child { flex-direction: row; gap: 12px; }
+
+    /* 待办卡片移动端 */
+    #todosGrid .card { padding: 0; }
+    #todosGrid .card > div:last-child { padding: 14px; }
+    #todosGrid .flex.items-start.gap-3 { gap: 10px; }
+    #todosGrid .flex.justify-between.items-start.gap-2 { gap: 8px; }
+    #todosGrid .font-semibold { font-size: 14px; }
+    #todosGrid .flex.gap-1 { gap: 4px; }
+    #todosGrid .btn.btn-secondary.btn-sm { width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; }
   }
 
   @media (max-width: 420px) {
