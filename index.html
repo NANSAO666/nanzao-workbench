@@ -4062,6 +4062,10 @@ function renderWorkflowDetail(area) {
         ${wfRunning ? '⏹ 停止执行' : '▶ 开始自动执行'}
       </button>
       ${!appData.aiSettings.apiKey ? '<span style="color:#ef4444;font-size:13px;">️ 请先在AI对话助手中配置API Key</span>' : ''}
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);cursor:pointer;margin-left:auto;">
+        <input type="checkbox" id="wfExpertToggle" ${wf.expertMode ? 'checked' : ''} onchange="toggleExpertMode(this.checked)" style="accent-color:#22c55e;width:16px;height:16px;">
+        专家模式
+      </label>
     </div>
 
     <div class="wf-log-area" id="wfLogArea" style="margin-top:16px;">
@@ -4235,6 +4239,9 @@ function editTaskModal(taskIndex) {
   const task = wf.tasks[taskIndex];
   if (!task) return;
 
+  const expert = wf.expertMode;
+  const exp = task.expert || {};
+
   const html = `
     <div class="modal-mask" onclick="if(event.target===this)this.remove()">
       <div class="modal" style="width:480px;">
@@ -4254,13 +4261,40 @@ function editTaskModal(taskIndex) {
           </div>
           <div id="aiFields" style="display:${task.type === 'ai' ? 'block' : 'none'};">
             <div class="mb-3">
-              <label class="label">AI 提示词（用 {input} 表示用户输入）</label>
+              <label class="label">AI 提示词（用 {input} 表示用户输入，{{task_1}} 引用前序结果）</label>
               <textarea class="textarea" id="task_prompt" style="min-height:100px;">${escapeHtml(task.prompt || '')}</textarea>
             </div>
             <div class="mb-3">
               <label class="label">生成数量</label>
               <input class="input" id="task_count" type="number" value="${task.count || 1}" min="1" max="20">
             </div>
+            ${expert ? `
+            <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;margin-top:8px;">
+              <div style="font-size:12px;color:#22c55e;font-weight:700;margin-bottom:10px;"> 专家参数</div>
+              <div class="mb-3">
+                <label class="label">自定义模型（留空用默认）</label>
+                <input class="input" id="task_exp_model" value="${escapeHtml(exp.model || '')}" placeholder="glm-4-flash / glm-4 / glm-4-plus">
+              </div>
+              <div class="mb-3">
+                <label class="label">Temperature: <span id="task_exp_temp_val">${exp.temperature ?? 0.8}</span></label>
+                <input type="range" min="0" max="2" step="0.1" value="${exp.temperature ?? 0.8}" class="w-full" oninput="$('task_exp_temp').value=this.value;$('task_exp_temp_val').textContent=this.value;">
+                <input type="hidden" id="task_exp_temp" value="${exp.temperature ?? 0.8}">
+              </div>
+              <div class="mb-3">
+                <label class="label">Max Tokens</label>
+                <input class="input" id="task_exp_maxtok" type="number" value="${exp.maxTokens || 2000}" min="100" max="8000">
+              </div>
+              <div class="mb-3">
+                <label class="label">系统提示词（可选）</label>
+                <textarea class="textarea" id="task_exp_sys" style="min-height:60px;" placeholder="你是一个专业的珠宝营销文案专家...">${escapeHtml(exp.systemPrompt || '')}</textarea>
+              </div>
+              <div class="mb-3">
+                <label class="label">结果变量名（用于链式引用）</label>
+                <input class="input" id="task_exp_var" value="${escapeHtml(exp.resultVar || '')}" placeholder="例如：jewelry_copy">
+                <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">其他任务可用 {{jewelry_copy}} 引用此结果</div>
+              </div>
+            </div>
+            ` : ''}
           </div>
           <div id="delayFields" style="display:${task.type === 'delay' ? 'block' : 'none'};">
             <div class="mb-3">
@@ -4308,6 +4342,18 @@ function saveTaskEdit(taskIndex) {
     task.prompt = $('task_prompt').value.trim();
     task.count = parseInt($('task_count').value) || 1;
     if (!task.prompt) { toast('请输入AI提示词', 'warning'); return; }
+    // 专家模式参数
+    if (wf.expertMode) {
+      task.expert = {
+        model: $('task_exp_model').value.trim() || '',
+        temperature: parseFloat($('task_exp_temp').value) || 0.8,
+        maxTokens: parseInt($('task_exp_maxtok').value) || 2000,
+        systemPrompt: $('task_exp_sys').value.trim() || '',
+        resultVar: $('task_exp_var').value.trim() || '',
+      };
+    } else {
+      delete task.expert;
+    }
   } else if (task.type === 'delay') {
     task.seconds = parseFloat($('task_seconds').value) || 2;
   } else if (task.type === 'export') {
@@ -4332,6 +4378,9 @@ function deleteTask(taskIndex) {
 }
 
 function addTaskModal() {
+  const wf = currentWorkflow;
+  const expert = wf?.expertMode;
+
   const html = `
     <div class="modal-mask" onclick="if(event.target===this)this.remove()">
       <div class="modal" style="width:480px;">
@@ -4358,6 +4407,33 @@ function addTaskModal() {
               <label class="label">生成数量</label>
               <input class="input" id="new_task_count" type="number" value="1" min="1" max="20">
             </div>
+            ${expert ? `
+            <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;margin-top:8px;">
+              <div style="font-size:12px;color:#22c55e;font-weight:700;margin-bottom:10px;"> 专家参数</div>
+              <div class="mb-3">
+                <label class="label">自定义模型（留空用默认）</label>
+                <input class="input" id="new_exp_model" placeholder="glm-4-flash / glm-4 / glm-4-plus">
+              </div>
+              <div class="mb-3">
+                <label class="label">Temperature: <span id="new_exp_temp_val">0.8</span></label>
+                <input type="range" min="0" max="2" step="0.1" value="0.8" class="w-full" oninput="$('new_exp_temp').value=this.value;$('new_exp_temp_val').textContent=this.value;">
+                <input type="hidden" id="new_exp_temp" value="0.8">
+              </div>
+              <div class="mb-3">
+                <label class="label">Max Tokens</label>
+                <input class="input" id="new_exp_maxtok" type="number" value="2000" min="100" max="8000">
+              </div>
+              <div class="mb-3">
+                <label class="label">系统提示词（可选）</label>
+                <textarea class="textarea" id="new_exp_sys" style="min-height:60px;" placeholder="你是一个专业的珠宝营销文案专家..."></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="label">结果变量名（用于链式引用）</label>
+                <input class="input" id="new_exp_var" placeholder="例如：jewelry_copy">
+                <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">其他任务可用 {{jewelry_copy}} 引用此结果</div>
+              </div>
+            </div>
+            ` : ''}
           </div>
           <div id="newDelayFields" style="display:none;">
             <div class="mb-3">
@@ -4401,6 +4477,16 @@ function addTask() {
     task.prompt = $('new_task_prompt').value.trim();
     task.count = parseInt($('new_task_count').value) || 1;
     if (!task.prompt) { toast('请输入AI提示词', 'warning'); return; }
+    // 专家模式参数
+    if (wf.expertMode) {
+      task.expert = {
+        model: $('new_exp_model').value.trim() || '',
+        temperature: parseFloat($('new_exp_temp').value) || 0.8,
+        maxTokens: parseInt($('new_exp_maxtok').value) || 2000,
+        systemPrompt: $('new_exp_sys').value.trim() || '',
+        resultVar: $('new_exp_var').value.trim() || '',
+      };
+    }
   } else if (type === 'delay') {
     task.seconds = parseFloat($('new_task_seconds').value) || 2;
   } else if (type === 'export') {
@@ -4412,6 +4498,36 @@ function addTask() {
   $('modalContainer').innerHTML = '';
   renderWorkflow();
   toast('任务已添加', 'success');
+}
+
+function toggleExpertMode(enabled) {
+  if (!currentWorkflow) return;
+  currentWorkflow.expertMode = enabled;
+  saveData();
+  renderWorkflow();
+  toast(enabled ? '专家模式已开启' : '专家模式已关闭', 'success');
+}
+
+// 解析链式引用 {{task_x}} → 前面任务的结果
+function resolveChainRefs(text) {
+  return text.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
+    // 查找之前已完成的任务结果
+    for (let i = 0; i < wfResults.length; i++) {
+      const task = currentWorkflow.tasks[i];
+      if (task.expert?.resultVar === varName && wfResults[i].status === 'done') {
+        return wfResults[i].result;
+      }
+    }
+    // 也支持 {{task_1}} {{task_2}} 按序号引用
+    const numMatch = varName.match(/^task_(\d+)$/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1]) - 1;
+      if (idx >= 0 && idx < wfResults.length && wfResults[idx].status === 'done') {
+        return wfResults[idx].result;
+      }
+    }
+    return match; // 未找到则保留原文
+  });
 }
 
 // ===================== 工作流执行引擎 =====================
@@ -4480,13 +4596,24 @@ function stopWorkflow() {
 
 async function executeAITask(index, task) {
   const apiKey = appData.aiSettings.apiKey;
-  const model = appData.aiSettings.model || 'glm-4-flash';
+  const exp = task.expert || {};
+
+  // 使用专家模式参数或默认值
+  const model = exp.model || appData.aiSettings.model || 'glm-4-flash';
   const baseUrl = appData.aiSettings.baseUrl || 'https://open.bigmodel.cn/api/paas/v4';
+  const temperature = exp.temperature ?? 0.8;
+  const maxTokens = exp.maxTokens || 2000;
+  const systemPrompt = exp.systemPrompt || '你是一个专业的内容生成助手，请严格按照用户要求生成内容，不要添加多余的解释。';
+
+  // 解析链式引用
+  const resolvedPrompt = resolveChainRefs(task.prompt);
 
   const messages = [
-    { role: 'system', content: '你是一个专业的内容生成助手，请严格按照用户要求生成内容，不要添加多余的解释。' },
-    { role: 'user', content: task.prompt }
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: resolvedPrompt }
   ];
+
+  addLog('info', `模型: ${model} | Temperature: ${temperature} | MaxTokens: ${maxTokens}`);
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
@@ -4497,8 +4624,8 @@ async function executeAITask(index, task) {
     body: JSON.stringify({
       model,
       messages,
-      temperature: 0.8,
-      max_tokens: 2000
+      temperature,
+      max_tokens: maxTokens
     })
   });
 
