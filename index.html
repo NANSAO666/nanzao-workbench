@@ -1455,62 +1455,81 @@ function saveAISettings() {
 // ===================== 待办任务管理 =====================
 function renderTodos() {
   const area = $('contentArea');
+  const total = appData.todos.length;
+  const done = appData.todos.filter(t => t.done).length;
+  const pct = total ? Math.round(done / total * 100) : 0;
   area.innerHTML = `
     <div class="page-header">
       <div class="page-title">✅ 待办任务管理</div>
       <div class="page-actions">
+        <button class="btn btn-secondary" onclick="openAITodoModal()">✨ AI 智能拆解</button>
         <button class="btn btn-primary" onclick="openTodoModal()">+ 新建任务</button>
       </div>
     </div>
-    <div class="card mb-3">
-      <div class="flex justify-between items-center mb-3">
-        <div class="flex gap-2">
-          <span class="tag cursor-pointer" onclick="filterTodos('all')" id="tf_all">全部 (${appData.todos.length})</span>
-          <span class="tag cursor-pointer" onclick="filterTodos('active')" id="tf_active">未完成 (${appData.todos.filter(t=>!t.done).length})</span>
-          <span class="tag cursor-pointer" onclick="filterTodos('done')" id="tf_done">已完成 (${appData.todos.filter(t=>t.done).length})</span>
+    <div class="card mb-3" style="padding:20px;">
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2 flex-wrap">
+          <span class="tag cursor-pointer ${todoFilter==='all'?'':''}" onclick="filterTodos('all')" id="tf_all" style="${todoFilter==='all'?'background:rgba(59,130,246,0.25);border-color:rgba(59,130,246,0.4);color:#93c5fd':''}">全部 (${total})</span>
+          <span class="tag cursor-pointer" onclick="filterTodos('active')" id="tf_active" style="${todoFilter==='active'?'background:rgba(59,130,246,0.25);border-color:rgba(59,130,246,0.4);color:#93c5fd':''}">未完成 (${total - done})</span>
+          <span class="tag cursor-pointer" onclick="filterTodos('done')" id="tf_done" style="${todoFilter==='done'?'background:rgba(59,130,246,0.25);border-color:rgba(59,130,246,0.4);color:#93c5fd':''}">已完成 (${done})</span>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="clearDoneTodos()">🧹 清理已完成</button>
       </div>
-      <div class="mb-2">
-        <div class="flex justify-between text-sm mb-1">
-          <span>完成进度</span>
-          <span>${appData.todos.filter(t=>t.done).length}/${appData.todos.length} (${appData.todos.length?Math.round(appData.todos.filter(t=>t.done).length/appData.todos.length*100):0}%)</span>
+      <div class="flex items-center gap-3">
+        <div class="flex-1">
+          <div class="flex justify-between text-sm mb-2">
+            <span style="color:var(--text-secondary)">完成进度</span>
+            <span style="color:var(--text-secondary);font-weight:500">${done}/${total} · <span style="color:#6ee7b7">${pct}%</span></span>
+          </div>
+          <div class="progress-bar" style="height:8px;"><div class="progress-fill success" style="width:${pct}%"></div></div>
         </div>
-        <div class="progress-bar"><div class="progress-fill success" style="width:${appData.todos.length?(appData.todos.filter(t=>t.done).length/appData.todos.length*100):0}%"></div></div>
+        <div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(#10b981 ${pct*3.6}deg, rgba(255,255,255,0.08) 0);display:flex;align-items:center;justify-content:center;position:relative;">
+          <div style="position:absolute;inset:6px;border-radius:50%;background:rgba(10,10,14,0.9);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#6ee7b7;">${pct}%</div>
+        </div>
       </div>
     </div>
     <div class="grid-cards" id="todosGrid"></div>
   `;
-  renderTodosGrid('all');
+  renderTodosGrid(todoFilter);
 }
 
 let todoFilter = 'all';
-function filterTodos(f) { todoFilter = f; renderTodosGrid(f); }
+function filterTodos(f) { todoFilter = f; renderTodos(); }
 
 function renderTodosGrid(filter) {
   let list = appData.todos;
   if (filter === 'active') list = list.filter(t => !t.done);
   if (filter === 'done') list = list.filter(t => t.done);
-  const priColor = { high: 'var(--danger)', medium: 'var(--warning)', low: 'var(--success)' };
-  const priLabel = { high: '高', medium: '中', low: '低' };
+  const priColor = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+  const priLabel = { high: '高优先级', medium: '中优先级', low: '低优先级' };
+  const priIcon = { high: '🔥', medium: '⚡', low: '🌱' };
   const grid = $('todosGrid');
-  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🎯</div>暂无任务</div>'; return; }
+  if (!list.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🎯</div>暂无任务，点击「新建任务」或「AI智能拆解」开始</div>'; return; }
   grid.innerHTML = list.map(t => `
-    <div class="card ${t.done ? 'opacity-60' : ''}">
-      <div class="flex items-start gap-3">
-        <input type="checkbox" class="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}')">
-        <div class="flex-1">
-          <div class="flex justify-between items-start">
-            <div class="font-semibold ${t.done?'line-through':''}">${escapeHtml(t.title)}</div>
-            <div class="flex gap-1">
-              <button class="btn btn-secondary btn-sm" onclick="openTodoModal('${t.id}')">✏️</button>
-              <button class="btn btn-secondary btn-sm" onclick="deleteTodo('${t.id}')">🗑️</button>
-            </div>
+    <div class="card ${t.done ? '' : ''}" style="padding:0;overflow:hidden;display:flex;flex-direction:column;${t.done?'opacity:0.55':''}">
+      <div style="height:3px;background:linear-gradient(90deg, ${priColor[t.priority]}, ${priColor[t.priority]}88);"></div>
+      <div style="padding:16px 18px 18px;flex:1;">
+        <div class="flex items-start gap-3">
+          <div style="padding-top:2px;">
+            <label style="cursor:pointer;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;border:1.5px solid ${t.done?priColor[t.priority]:'rgba(255,255,255,0.2)'};;background:${t.done?priColor[t.priority]:'transparent'};transition:all 0.15s;" onclick="event.preventDefault();toggleTodo('${t.id}')">
+              ${t.done?'<span style="color:white;font-size:12px;font-weight:700;">✓</span>':''}
+            </label>
           </div>
-          <div class="text-sm text-gray mt-1">${escapeHtml(t.notes || '')}</div>
-          <div class="flex gap-2 mt-2">
-            <span class="tag" style="background:${priColor[t.priority]}22;color:${priColor[t.priority]}">优先级: ${priLabel[t.priority]||'中'}</span>
-            <span class="tag tag-gray">${t.project || '通用'}</span>
+          <div class="flex-1">
+            <div class="flex justify-between items-start gap-2">
+              <div class="font-semibold ${t.done?'line-through':''}" style="font-size:15px;line-height:1.4;">${escapeHtml(t.title)}</div>
+              <div class="flex gap-1 flex-shrink-0">
+                <button class="btn btn-secondary btn-sm" onclick="openTodoModal('${t.id}')" title="编辑">✏️</button>
+                <button class="btn btn-secondary btn-sm" onclick="deleteTodo('${t.id}')" title="删除">🗑️</button>
+              </div>
+            </div>
+            ${t.notes ? `<div style="color:var(--text-secondary);font-size:13px;margin-top:8px;line-height:1.5;">${escapeHtml(t.notes)}</div>` : ''}
+            <div class="flex gap-2 mt-3 flex-wrap">
+              <span class="tag" style="background:${priColor[t.priority]}18;color:${priColor[t.priority]};border-color:${priColor[t.priority]}30;">
+                ${priIcon[t.priority]} ${priLabel[t.priority]||'中优先级'}
+              </span>
+              <span class="tag tag-gray">${t.project || '通用'}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1566,6 +1585,139 @@ function saveTodo(id) {
   if (id) { Object.assign(appData.todos.find(t => t.id === id), data); toast('已更新', 'success'); }
   else { appData.todos.unshift({ id: uid(), ...data, done: false, createdAt: Date.now() }); toast('已创建', 'success'); }
   saveData(); $('modalContainer').innerHTML = ''; renderTodos();
+}
+
+// ===== AI 智能拆解待办 =====
+function openAITodoModal() {
+  if (!appData.aiSettings.apiKey) { toast('请先在AI对话助手中配置API Key', 'error'); return; }
+  const html = `
+    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="width:540px;">
+        <div class="modal-header">✨ AI 智能拆解任务</div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="label">描述你的目标或大任务</label>
+            <textarea class="textarea" id="ai_todo_prompt" style="min-height:120px;" placeholder="例如：开发一个南崽奢链小程序商城，包含用户注册、商品展示、购物车、支付功能"></textarea>
+          </div>
+          <div class="flex gap-3 mb-3">
+            <div class="flex-1">
+              <label class="label">拆解数量</label>
+              <select class="select" id="ai_todo_count">
+                <option value="3">3 个步骤</option>
+                <option value="5" selected>5 个步骤</option>
+                <option value="8">8 个步骤</option>
+                <option value="10">10 个步骤</option>
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="label">项目归类</label>
+              <select class="select" id="ai_todo_project">
+                <option>通用</option>
+                <option>南崽奢链</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-2" style="color:var(--text-secondary);font-size:12px;">💡 AI 会根据你的目标智能拆解成多个可执行的待办任务，并自动分配优先级</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+          <button class="btn btn-primary" id="ai_todo_gen_btn" onclick="aiGenerateTodos()">🤖 开始生成</button>
+        </div>
+      </div>
+    </div>`;
+  $('modalContainer').innerHTML = html;
+}
+
+async function aiGenerateTodos() {
+  const prompt = $('ai_todo_prompt').value.trim();
+  const count = $('ai_todo_count').value;
+  const project = $('ai_todo_project').value;
+  if (!prompt) { toast('请描述你的目标', 'error'); return; }
+
+  const btn = $('ai_todo_gen_btn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ 生成中...';
+
+  try {
+    const apiKey = appData.aiSettings.apiKey;
+    const baseUrl = appData.aiSettings.baseUrl || 'https://open.bigmodel.cn/api/paas/v4';
+    const model = appData.aiSettings.model || 'glm-4-flash';
+    const systemPrompt = `你是一个专业的任务管理助手。请将用户的目标拆解成${count}个具体可执行的待办任务，按优先级从高到低排列。
+
+请严格按以下JSON格式返回，不要返回其他文字：
+{
+  "tasks": [
+    {
+      "title": "任务标题（简洁明确）",
+      "notes": "任务说明或备注（一句话）",
+      "priority": "high" 或 "medium" 或 "low"
+    }
+  ]
+}
+
+要求：
+- title 要具体可执行，不要模糊
+- priority 根据任务重要性和紧急度分配
+- 按执行顺序排列，第一个是最优先的
+- 返回合法JSON，不要Markdown代码块`;
+
+    const res = await fetch(baseUrl + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `我的目标是：${prompt}\n\n请拆解成${count}个待办任务。` }
+        ],
+        stream: false
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    
+    // 提取 JSON
+    let jsonStr = content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) jsonStr = jsonMatch[0];
+    
+    let parsed;
+    try { parsed = JSON.parse(jsonStr); } catch (e) { throw new Error('AI返回格式不正确'); }
+    
+    const tasks = parsed.tasks || [];
+    if (!tasks.length) throw new Error('未生成任务');
+
+    // 插入任务
+    let added = 0;
+    tasks.forEach(t => {
+      if (t.title) {
+        appData.todos.unshift({
+          id: uid(),
+          title: t.title,
+          notes: t.notes || '',
+          priority: t.priority || 'medium',
+          project: project,
+          done: false,
+          createdAt: Date.now()
+        });
+        added++;
+      }
+    });
+
+    saveData();
+    $('modalContainer').innerHTML = '';
+    renderTodos();
+    toast(`✨ 已生成 ${added} 个任务`, 'success');
+  } catch (e) {
+    toast('生成失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 开始生成';
+  }
 }
 
 function toggleTodo(id) {
