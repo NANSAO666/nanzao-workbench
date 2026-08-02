@@ -75,10 +75,13 @@
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-  /* 全局粒子画布（作用于全部卡片，透过半透明卡片可见） */
+  /* 全局粒子画布：通过 clip-path 裁剪到所有 .card 卡片区域内可见 */
   #globalParticleCanvas {
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    clip-path: polygon(0 0);
   }
+  .card { background: rgba(255, 255, 255, 0.025); }
+  .card > *:not(canvas):not(#aiGesturePanel):not(#aiGestureToggle) { position: relative; z-index: 2; }
   /* 视频手势识别预览（仅 AI 对话助手） */
   #aiGesturePanel {
     position: absolute; right: 10px; top: 10px; z-index: 8;
@@ -1795,7 +1798,7 @@ function renderAI() {
   // 视频手势面板（仅 AI 对话助手；粒子为全局背景层，作用于全部卡片）
   const particleHtml = `
     <div id="aiGesturePanel" class="closed">
-      <video id="aiGestureVideo" autoplay playsinline muted></video>
+      <video id="aiGestureVideo" autoplay playsinline muted playsinline webkit-playsinline="true"></video>
       <div id="aiGestureHint">手势识别未开启</div>
     </div>
     <button id="aiGestureToggle" onclick="toggleGestureCam()">📹 开启手势</button>
@@ -5307,6 +5310,8 @@ function startGlobalAnimation() {
     const ctx = globalCtx;
     const w = window.innerWidth, h = window.innerHeight;
     const theme = PARTICLE_THEMES[currentParticleTheme];
+    // 裁剪粒子画布：只在 .card 卡片框区域内可见
+    updateCardClipPath();
     ctx.fillStyle = theme.behavior === 'rain' ? 'rgba(6,8,14,0.28)' : 'rgba(6,8,14,0.16)';
     ctx.fillRect(0, 0, w, h);
     if (pointer.active && theme.behavior !== 'sword' && theme.behavior !== 'rain') handlePointerInfluence();
@@ -5325,6 +5330,39 @@ function startGlobalAnimation() {
   }
   globalAnimFrame = requestAnimationFrame(animate);
 }
+
+// 收集所有 .card 视口矩形，用 clip-path 让粒子只在卡片框内可见
+let _lastClipStr = '';
+let _clipCheckTick = 0;
+function updateCardClipPath() {
+  // 每 6 帧更新一次（性能优化），滚动/尺寸变化时立即更新
+  _clipCheckTick++;
+  if (_clipCheckTick % 6 !== 0 && !window._cardClipDirty) return;
+  window._cardClipDirty = false;
+  const cards = document.querySelectorAll('.card');
+  if (!cards.length) { if (_lastClipStr) { globalParticleCanvas.style.clipPath = 'polygon(0 0)'; _lastClipStr=''; } return; }
+  const rects = [];
+  const winW = window.innerWidth, winH = window.innerHeight;
+  for (const c of cards) {
+    const r = c.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > winH || r.right < 0 || r.left > winW) continue;
+    rects.push([Math.max(0, r.left), Math.max(0, r.top), Math.min(winW, r.right), Math.min(winH, r.bottom)]);
+  }
+  if (!rects.length) { if (_lastClipStr) { globalParticleCanvas.style.clipPath = 'polygon(0 0)'; _lastClipStr=''; } return; }
+  // 用 path() 表示多个矩形（支持更好），回退 polygon 用第一个矩形
+  let str = '';
+  try {
+    str = 'path("' + rects.map(r => `M ${r[0]} ${r[1]} L ${r[2]} ${r[1]} L ${r[2]} ${r[3]} L ${r[0]} ${r[3]} Z`).join(' ') + '")';
+    globalParticleCanvas.style.clipPath = str;
+    _lastClipStr = str;
+  } catch (e) {
+    const r = rects[0];
+    str = `polygon(${r[0]}px ${r[1]}px, ${r[2]}px ${r[1]}px, ${r[2]}px ${r[3]}px, ${r[0]}px ${r[3]}px)`;
+    globalParticleCanvas.style.clipPath = str;
+    _lastClipStr = str;
+  }
+}
+window.addEventListener('scroll', () => { window._cardClipDirty = true; }, { passive: true, capture: true });
 
 function handlePointerInfluence() {
   const radius = 150;
@@ -5556,15 +5594,22 @@ function assignShapeTargets() {
 // ===================== MediaPipe Hands 手势识别（手势控制粒子布局） =====================
 async function toggleGestureCam() {
   if (gestureCam.on) { stopGestureCam(); return; }
+  setGestureHint('正在初始化…');
   try {
     gestureCam.video = document.getElementById('aiGestureVideo');
-    if (!gestureCam.video) { toast('未找到视频元素', 'error'); return; }
-    if (typeof Hands === 'undefined') { toast('手势库未加载，请检查网络', 'error'); return; }
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 }, audio: false });
+    if (!gestureCam.video) { toast('请先进入AI对话助手页面', 'error'); return; }
+    // 等 Hands 库就绪（移动端 CDN 加载较慢）
+    let waited = 0;
+    while (typeof Hands === 'undefined' && waited < 8000) { await new Promise(r => setTimeout(r, 200)); waited += 200; }
+    if (typeof Hands === 'undefined') { toast('手势库加载失败，请检查网络后重试', 'error'); setGestureHint('手势库未加载'); return; }
+    setGestureHint('请求摄像头…');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } }, audio: false });
     gestureCam.video.srcObject = stream;
-    await gestureCam.video.play();
+    gestureCam.video.setAttribute('playsinline', '');
+    await gestureCam.video.play().catch(() => {});
+    setGestureHint('加载手势模型…');
     gestureCam.hands = new Hands({ locateFile: (f) => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f });
-    gestureCam.hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+    gestureCam.hands.setOptions({ selfieMode: true, maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.4 });
     gestureCam.hands.onResults(onHandsResults);
     gestureCam.on = true;
     const panel = document.getElementById('aiGesturePanel');
@@ -5575,8 +5620,13 @@ async function toggleGestureCam() {
     toast('摄像头已开启，手势控制粒子布局', 'success');
     gestureCamLoop();
   } catch (err) {
-    console.error(err);
-    toast('无法访问摄像头：' + (err.message || err.name), 'error');
+    console.error('手势识别初始化失败', err);
+    let msg = err.message || err.name || '未知错误';
+    if (err.name === 'NotAllowedError') msg = '摄像头权限被拒绝，请在浏览器设置中允许';
+    else if (err.name === 'NotFoundError') msg = '未找到摄像头设备';
+    else if (err.name === 'NotReadableError') msg = '摄像头被其他应用占用';
+    toast('手势识别失败：' + msg, 'error');
+    setGestureHint('开启失败：' + msg);
     stopGestureCam();
   }
 }
@@ -5631,7 +5681,8 @@ function onHandsResults(results) {
   }
   const lm = results.multiHandLandmarks[0];
   const fingers = countFingers(lm);
-  const wx = (1 - lm[0].x) * window.innerWidth;
+  // selfieMode 已镜像，直接用原始坐标映射到屏幕
+  const wx = lm[0].x * window.innerWidth;
   const wy = lm[0].y * window.innerHeight;
 
   if (currentParticleTheme === 'sword') {
