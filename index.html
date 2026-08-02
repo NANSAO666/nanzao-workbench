@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
 <style>
   :root {
     --bg-primary: #0a0a0a;
@@ -74,12 +75,11 @@
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-  /* AI 对话粒子交互区（卡片内） */
-  #aiParticleOverlay {
-    position: absolute; inset: 0; pointer-events: none; z-index: 5;
-    border-radius: 12px; overflow: hidden;
+  /* 全局粒子画布（作用于全部卡片，透过半透明卡片可见） */
+  #globalParticleCanvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
   }
-  /* 视频手势识别预览 */
+  /* 视频手势识别预览（仅 AI 对话助手） */
   #aiGesturePanel {
     position: absolute; right: 10px; top: 10px; z-index: 8;
     width: 130px; height: 98px; border-radius: 10px; overflow: hidden;
@@ -1182,6 +1182,9 @@
 </head>
 <body>
 
+<!-- 全局粒子画布（氛围层，作用于全部卡片） -->
+<canvas id="globalParticleCanvas"></canvas>
+
 <div class="app-container">
 
   <!-- 顶部工具栏 -->
@@ -1789,9 +1792,8 @@ function renderAI() {
   const area = $('contentArea');
   const isMobile = window.innerWidth <= 768;
 
-  // 卡片内粒子 + 视频手势面板（统一片段）
+  // 视频手势面板（仅 AI 对话助手；粒子为全局背景层，作用于全部卡片）
   const particleHtml = `
-    <canvas id="aiParticleOverlay"></canvas>
     <div id="aiGesturePanel" class="closed">
       <video id="aiGestureVideo" autoplay playsinline muted></video>
       <div id="aiGestureHint">手势识别未开启</div>
@@ -1817,7 +1819,7 @@ function renderAI() {
         </div>
         <div class="card mobile-chat-card" style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative;">
           ${particleHtml}
-          <div class="chat-messages" id="aiMessages" style="flex:1;min-height:0;overflow-y:auto;position:relative;z-index:6;">
+          <div class="chat-messages" id="aiMessages" style="flex:1;min-height:0;overflow-y:auto;position:relative;z-index:6;"></div>
           <div class="chat-input-area" style="flex-shrink:0;">
             <textarea class="textarea" id="aiInput" style="min-height:44px;resize:none;font-size:16px;" placeholder="输入你的问题..." onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()"></textarea>
             <div style="display:flex;gap:8px;">
@@ -3564,7 +3566,7 @@ function openSettings() {
           <div class="mb-3">
             <label class="label">粒子主题</label>
             <div class="flex gap-2 flex-wrap">
-              ${[['stars','星空'],['rain','雨滴'],['snow','飘雪'],['fireflies','萤火虫'],['aurora','极光'],['sakura','樱花']].map(([key, name]) => `
+              ${[['stars','星空'],['rain','雨滴'],['snow','飘雪'],['fireflies','萤火虫'],['aurora','极光'],['sakura','樱花'],['sword','御剑']].map(([key, name]) => `
                 <button class="btn ${currentParticleTheme===key?'btn-primary':'btn-secondary'} btn-sm" onclick="switchParticleTheme('${key}');this.parentElement.querySelectorAll('button').forEach(b=>{b.classList.remove('btn-primary');b.classList.add('btn-secondary')});this.classList.add('btn-primary');this.classList.remove('btn-secondary');">${name}</button>
               `).join('')}
             </div>
@@ -5143,15 +5145,16 @@ async function copyText(text) {
   }
 }
 
-// ===================== 卡片内粒子系统 + 视频手势识别 =====================
-let aiParticleCanvas, aiCtx;
-let aiParticles = [];
+// ===================== 全局粒子系统 + MediaPipe 手势识别 + 御剑特效 =====================
+let globalParticleCanvas, globalCtx;
+let globalParticles = [];
 let currentParticleTheme = 'stars';
-let aiAnimFrame = null;
-let aiGesture = { x: -1000, y: -1000, active: false, vx: 0, vy: 0, prevX: 0, prevY: 0, downTime: 0 };
+let globalAnimFrame = null;
+let pointer = { x: -1000, y: -1000, active: false, vx: 0, vy: 0, prevX: 0, prevY: 0, downTime: 0 };
 let splashes = [];
+let swordCenter = { x: 0, y: 0, tx: 0, ty: 0, active: false };
 
-const gestureCam = { stream: null, video: null, workCanvas: null, workCtx: null, on: false, raf: null, lastFrame: null, lastSwitch: 0, stableTheme: null, stableCount: 0 };
+const gestureCam = { hands: null, video: null, on: false, raf: null, lastSwitch: 0 };
 
 const PARTICLE_THEMES = {
   stars: { name: '星空', colors: ['#ffffff','#ffeaa7','#74b9ff','#a29bfe','#fd79a8'], count: 80, speed: 0.3, size: [0.6, 2.6], behavior: 'float', glow: true },
@@ -5160,106 +5163,114 @@ const PARTICLE_THEMES = {
   fireflies: { name: '萤火虫', colors: ['#ffeaa7','#fdcb6e','#e17055','#00b894'], count: 55, speed: 0.8, size: [2, 5], behavior: 'wander', glow: true },
   aurora:{ name: '极光', colors: ['#00b894','#00cec9','#0984e3','#6c5ce7','#fd79a8'], count: 45, speed: 0.5, size: [3, 9], behavior: 'wave' },
   sakura:{ name: '樱花', colors: ['#fd79a8','#e84393','#fab1a0','#ffeaa7'], count: 65, speed: 1.2, size: [3, 6.5], behavior: 'sakura' },
+  sword: { name: '御剑', colors: ['#e2e8f0','#94a3b8','#cbd5e1','#60a5fa','#a5b4fc'], count: 11, speed: 0.4, size: [5, 7], behavior: 'sword' },
 };
 
-function initAIParticles() {
-  aiParticleCanvas = document.getElementById('aiParticleOverlay');
-  if (!aiParticleCanvas) return;
-  aiCtx = aiParticleCanvas.getContext('2d');
-  resizeAICanvas();
-  createAIParticles();
-  startAIAnimation();
-  setupAIGesture();
+const FINGER_THEME_MAP = { 1: 'stars', 2: 'rain', 3: 'snow', 4: 'sakura', 5: 'sword' };
+
+function initGlobalParticles() {
+  globalParticleCanvas = document.getElementById('globalParticleCanvas');
+  if (!globalParticleCanvas) return;
+  globalCtx = globalParticleCanvas.getContext('2d');
+  resizeGlobalCanvas();
+  swordCenter.x = window.innerWidth / 2; swordCenter.y = window.innerHeight / 2;
+  swordCenter.tx = swordCenter.x; swordCenter.ty = swordCenter.y;
+  createGlobalParticles();
+  startGlobalAnimation();
+  setupGlobalGesture();
 }
 
-let _aiResizeTimer = null;
+let _gResizeTimer = null;
 window.addEventListener('resize', () => {
-  clearTimeout(_aiResizeTimer);
-  _aiResizeTimer = setTimeout(() => { if (aiParticleCanvas) { resizeAICanvas(); createAIParticles(); } }, 200);
+  clearTimeout(_gResizeTimer);
+  _gResizeTimer = setTimeout(() => { if (globalParticleCanvas) { resizeGlobalCanvas(); createGlobalParticles(); } }, 200);
 });
 
-function resizeAICanvas() {
-  if (!aiParticleCanvas) return;
-  const rect = aiParticleCanvas.parentElement.getBoundingClientRect();
+function resizeGlobalCanvas() {
+  if (!globalParticleCanvas) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  aiParticleCanvas.width = Math.max(1, rect.width * dpr);
-  aiParticleCanvas.height = Math.max(1, rect.height * dpr);
-  aiParticleCanvas.style.width = rect.width + 'px';
-  aiParticleCanvas.style.height = rect.height + 'px';
-  aiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  globalParticleCanvas.width = Math.max(1, window.innerWidth * dpr);
+  globalParticleCanvas.height = Math.max(1, window.innerHeight * dpr);
+  globalParticleCanvas.style.width = window.innerWidth + 'px';
+  globalParticleCanvas.style.height = window.innerHeight + 'px';
+  globalCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-function createAIParticles() {
-  aiParticles = []; splashes = [];
+function createGlobalParticles() {
+  globalParticles = []; splashes = [];
   const theme = PARTICLE_THEMES[currentParticleTheme];
-  const w = aiParticleCanvas.clientWidth || aiParticleCanvas.parentElement.clientWidth;
-  const h = aiParticleCanvas.clientHeight || aiParticleCanvas.parentElement.clientHeight;
-  const count = window.innerWidth < 768 ? Math.floor(theme.count * 0.6) : theme.count;
-  for (let i = 0; i < count; i++) aiParticles.push(createParticle(theme, w, h));
+  const w = window.innerWidth, h = window.innerHeight;
+  const count = w < 768 ? Math.floor(theme.count * 0.6) : theme.count;
+  for (let i = 0; i < count; i++) globalParticles.push(createParticle(theme, w, h, i, count));
 }
 
-function createParticle(theme, w, h) {
-  return {
+function createParticle(theme, w, h, idx, total) {
+  const base = {
+    color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
+    alpha: Math.random() * 0.5 + 0.5,
+    phase: Math.random() * Math.PI * 2,
+    rot: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.04,
+    affected: false, affectedTimer: 0, depth: Math.random(),
+  };
+  if (theme.behavior === 'sword') {
+    return Object.assign(base, {
+      baseAngle: (idx / total) * Math.PI * 2,
+      angle: (idx / total) * Math.PI * 2,
+      dist: 95 + Math.random() * 35,
+      rotSpeed: 0.008 + Math.random() * 0.007,
+      size: theme.size[0] + Math.random() * (theme.size[1] - theme.size[0]),
+      x: w / 2, y: h / 2,
+    });
+  }
+  return Object.assign(base, {
     x: Math.random() * w, y: Math.random() * h,
     vx: (Math.random() - 0.5) * theme.speed,
     vy: Math.random() * theme.speed * 0.5 + 0.2,
     size: Math.random() * (theme.size[1] - theme.size[0]) + theme.size[0],
-    color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
-    alpha: Math.random() * 0.5 + 0.3,
-    phase: Math.random() * Math.PI * 2,
-    rot: Math.random() * Math.PI * 2,
-    rotSpeed: (Math.random() - 0.5) * 0.04,
-    affected: false, affectedTimer: 0,
-    depth: Math.random(),
-  };
+  });
 }
 
-function setupAIGesture() {
-  const host = aiParticleCanvas.parentElement;
-  if (!host || host._aiGestureBound) return;
-  host._aiGestureBound = true;
-  const getPos = (cx, cy) => {
-    const r = aiParticleCanvas.getBoundingClientRect();
-    return { x: cx - r.left, y: cy - r.top };
-  };
-  host.addEventListener('mousemove', (e) => {
-    const p = getPos(e.clientX, e.clientY);
-    aiGesture.prevX = aiGesture.x; aiGesture.prevY = aiGesture.y;
-    aiGesture.x = p.x; aiGesture.y = p.y;
-    aiGesture.vx = aiGesture.x - aiGesture.prevX; aiGesture.vy = aiGesture.y - aiGesture.prevY;
-    aiGesture.active = true;
+function setupGlobalGesture() {
+  if (window._gGestureBound) return; window._gGestureBound = true;
+  window.addEventListener('mousemove', (e) => {
+    pointer.prevX = pointer.x; pointer.prevY = pointer.y;
+    pointer.x = e.clientX; pointer.y = e.clientY;
+    pointer.vx = pointer.x - pointer.prevX; pointer.vy = pointer.y - pointer.prevY;
+    pointer.active = true;
+    if (!swordCenter.active) { swordCenter.tx = pointer.x; swordCenter.ty = pointer.y; }
   });
-  host.addEventListener('mouseleave', () => { aiGesture.x = -1000; aiGesture.y = -1000; aiGesture.active = false; });
-  host.addEventListener('click', (e) => {
-    const p = getPos(e.clientX, e.clientY); applyTapEffect(p.x, p.y);
-  });
-  host.addEventListener('touchstart', (e) => {
+  window.addEventListener('mouseleave', () => { pointer.active = false; });
+  window.addEventListener('click', (e) => { if (currentParticleTheme !== 'sword') applyTapEffect(e.clientX, e.clientY); });
+  window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
-      const p = getPos(e.touches[0].clientX, e.touches[0].clientY);
-      aiGesture.x = p.x; aiGesture.y = p.y; aiGesture.prevX = p.x; aiGesture.prevY = p.y;
-      aiGesture.active = true; aiGesture.downTime = Date.now();
+      pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY;
+      pointer.prevX = pointer.x; pointer.prevY = pointer.y;
+      pointer.active = true; pointer.downTime = Date.now();
     }
   }, { passive: true });
-  host.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 1 && aiGesture.active) {
-      const p = getPos(e.touches[0].clientX, e.touches[0].clientY);
-      aiGesture.prevX = aiGesture.x; aiGesture.prevY = aiGesture.y;
-      aiGesture.x = p.x; aiGesture.y = p.y;
-      aiGesture.vx = aiGesture.x - aiGesture.prevX; aiGesture.vy = aiGesture.y - aiGesture.prevY;
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && pointer.active) {
+      pointer.prevX = pointer.x; pointer.prevY = pointer.y;
+      pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY;
+      pointer.vx = pointer.x - pointer.prevX; pointer.vy = pointer.y - pointer.prevY;
+      if (!swordCenter.active) { swordCenter.tx = pointer.x; swordCenter.ty = pointer.y; }
     }
   }, { passive: true });
-  host.addEventListener('touchend', () => {
-    const elapsed = Date.now() - aiGesture.downTime;
-    const speed = Math.hypot(aiGesture.vx, aiGesture.vy);
-    if (elapsed < 250 && speed < 8) applyTapEffect(aiGesture.x, aiGesture.y);
-    else if (speed > 6) applySwipeEffect(aiGesture.x, aiGesture.y, aiGesture.vx, aiGesture.vy);
-    aiGesture.active = false; aiGesture.x = -1000; aiGesture.y = -1000;
+  window.addEventListener('touchend', () => {
+    const sp = Math.hypot(pointer.vx, pointer.vy);
+    const el = Date.now() - pointer.downTime;
+    if (currentParticleTheme !== 'sword') {
+      if (el < 250 && sp < 8) applyTapEffect(pointer.x, pointer.y);
+      else if (sp > 6) applySwipeEffect(pointer.x, pointer.y, pointer.vx, pointer.vy);
+    }
+    pointer.active = false;
   }, { passive: true });
 }
 
 function applyTapEffect(x, y) {
   const radius = 130;
-  for (let p of aiParticles) {
+  for (let p of globalParticles) {
     const dist = Math.hypot(p.x - x, p.y - y);
     if (dist < radius) {
       const angle = Math.atan2(p.y - y, p.x - x);
@@ -5272,7 +5283,7 @@ function applyTapEffect(x, y) {
 
 function applySwipeEffect(x, y, vx, vy) {
   const radius = 160;
-  for (let p of aiParticles) {
+  for (let p of globalParticles) {
     const dist = Math.hypot(p.x - x, p.y - y);
     if (dist < radius) {
       const force = (radius - dist) / radius * 6;
@@ -5282,46 +5293,55 @@ function applySwipeEffect(x, y, vx, vy) {
   }
 }
 
-function startAIAnimation() {
-  if (aiAnimFrame) cancelAnimationFrame(aiAnimFrame);
+function startGlobalAnimation() {
+  if (globalAnimFrame) cancelAnimationFrame(globalAnimFrame);
   const fps = window.innerWidth < 768 ? 30 : 60;
   const interval = 1000 / fps;
   let lastTime = 0;
   function animate(time) {
-    aiAnimFrame = requestAnimationFrame(animate);
+    globalAnimFrame = requestAnimationFrame(animate);
     if (time - lastTime < interval) return;
     lastTime = time;
-    if (!aiParticleCanvas || !aiCtx) return;
-    const ctx = aiCtx;
-    const w = aiParticleCanvas.clientWidth, h = aiParticleCanvas.clientHeight;
+    if (!globalParticleCanvas || !globalCtx) return;
+    const ctx = globalCtx;
+    const w = window.innerWidth, h = window.innerHeight;
     const theme = PARTICLE_THEMES[currentParticleTheme];
     ctx.fillStyle = theme.behavior === 'rain' ? 'rgba(6,8,14,0.28)' : 'rgba(6,8,14,0.16)';
     ctx.fillRect(0, 0, w, h);
-    if (aiGesture.active && aiGesture.x >= 0) handlePointerInfluence();
-    for (let p of aiParticles) { updateParticle(p, theme, w, h); drawParticle(ctx, p, theme); }
+    if (pointer.active && theme.behavior !== 'sword' && theme.behavior !== 'rain') handlePointerInfluence();
+    if (theme.behavior === 'sword') {
+      if (!swordCenter.active && !pointer.active) {
+        swordCenter.tx += (w / 2 - swordCenter.tx) * 0.02;
+        swordCenter.ty += (h / 2 - swordCenter.ty) * 0.02;
+      }
+      swordCenter.x += (swordCenter.tx - swordCenter.x) * 0.12;
+      swordCenter.y += (swordCenter.ty - swordCenter.y) * 0.12;
+    }
+    for (let p of globalParticles) { updateParticle(p, theme, w, h); drawParticle(ctx, p, theme); }
     drawSplashes(ctx);
     if (theme.behavior === 'float' || theme.behavior === 'wander') drawConnections(ctx);
+    if (theme.behavior === 'sword') drawSwordCenter(ctx);
   }
-  aiAnimFrame = requestAnimationFrame(animate);
+  globalAnimFrame = requestAnimationFrame(animate);
 }
 
 function handlePointerInfluence() {
   const radius = 150;
-  for (let p of aiParticles) {
-    const dist = Math.hypot(p.x - aiGesture.x, p.y - aiGesture.y);
+  for (let p of globalParticles) {
+    const dist = Math.hypot(p.x - pointer.x, p.y - pointer.y);
     if (dist > radius) continue;
     const influence = (radius - dist) / radius;
-    p.vx += (aiGesture.x - p.x) * influence * 0.06;
-    p.vy += (aiGesture.y - p.y) * influence * 0.06;
+    p.vx += (pointer.x - p.x) * influence * 0.05;
+    p.vy += (pointer.y - p.y) * influence * 0.05;
     p.affected = true; p.affectedTimer = 14;
   }
 }
 
 function drawConnections(ctx) {
   const maxDist = 90;
-  for (let i = 0; i < aiParticles.length; i++) {
-    for (let j = i + 1; j < aiParticles.length; j++) {
-      const p1 = aiParticles[i], p2 = aiParticles[j];
+  for (let i = 0; i < globalParticles.length; i++) {
+    for (let j = i + 1; j < globalParticles.length; j++) {
+      const p1 = globalParticles[i], p2 = globalParticles[j];
       const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
       if (dist < maxDist) {
         ctx.save();
@@ -5351,12 +5371,20 @@ function updateParticle(p, theme, w, h) {
       if (p.x < 0 || p.x > w) p.vx *= -1; break;
     case 'sakura': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 2 + p.vx; p.phase += 0.01;
       if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
+    case 'sword':
+      p.angle += p.rotSpeed;
+      p.x = swordCenter.x + Math.cos(p.angle) * p.dist;
+      p.y = swordCenter.y + Math.sin(p.angle) * p.dist;
+      p.rot = p.angle + Math.PI / 2;
+      break;
   }
   if (theme.behavior === 'float' || theme.behavior === 'wander') {
     if (p.x < -50) p.x = w + 50; if (p.x > w + 50) p.x = -50;
     if (p.y < -50) p.y = h + 50; if (p.y > h + 50) p.y = -50;
   }
-  if (p.affected) p.alpha = Math.min(p.alpha + 0.05, 1); else p.alpha = Math.max(p.alpha - 0.01, 0.3);
+  if (theme.behavior !== 'sword') {
+    if (p.affected) p.alpha = Math.min(p.alpha + 0.05, 1); else p.alpha = Math.max(p.alpha - 0.01, 0.3);
+  }
 }
 
 function spawnSplash(x, y) {
@@ -5376,7 +5404,19 @@ function drawSplashes(ctx) {
 function drawParticle(ctx, p, theme) {
   ctx.save(); ctx.globalAlpha = p.alpha;
   const isAff = p.affected;
-  if (theme.behavior === 'rain') {
+  if (theme.behavior === 'sword') {
+    ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    const L = p.size * 7;
+    ctx.shadowBlur = 12; ctx.shadowColor = p.color;
+    const grad = ctx.createLinearGradient(0, -L / 2, 0, L / 2);
+    grad.addColorStop(0, '#f8fafc'); grad.addColorStop(0.5, p.color); grad.addColorStop(1, '#475569');
+    ctx.fillStyle = grad;
+    ctx.fillRect(-1.4, -L / 2, 2.8, L * 0.75);
+    ctx.beginPath(); ctx.moveTo(0, -L / 2 - 7); ctx.lineTo(-2.2, -L / 2); ctx.lineTo(2.2, -L / 2); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0; ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-6, L * 0.25, 12, 2.4);
+    ctx.fillStyle = '#64748b'; ctx.fillRect(-1.6, L * 0.25, 3.2, L * 0.18);
+    ctx.beginPath(); ctx.arc(0, L * 0.25 + L * 0.18 + 1, 2.2, 0, Math.PI * 2); ctx.fill();
+  } else if (theme.behavior === 'rain') {
     const len = 8 + p.vy * 4;
     const grad = ctx.createLinearGradient(p.x, p.y - len, p.x, p.y);
     grad.addColorStop(0, 'rgba(168,216,255,0)');
@@ -5428,32 +5468,42 @@ function drawParticle(ctx, p, theme) {
   ctx.restore();
 }
 
+function drawSwordCenter(ctx) {
+  ctx.save();
+  const grad = ctx.createRadialGradient(swordCenter.x, swordCenter.y, 0, swordCenter.x, swordCenter.y, 34);
+  grad.addColorStop(0, 'rgba(96,165,250,0.45)'); grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(swordCenter.x, swordCenter.y, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.arc(swordCenter.x, swordCenter.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
 function switchParticleTheme(themeName) {
   if (!PARTICLE_THEMES[themeName]) return;
   currentParticleTheme = themeName;
-  createAIParticles();
+  createGlobalParticles();
   toast('已切换到 ' + PARTICLE_THEMES[themeName].name + ' 主题', 'success');
 }
 
-// ===================== 视频手势识别（皮肤色 + 运动检测） =====================
+// ===================== MediaPipe Hands 手势识别（1-5 手指切换主题） =====================
 async function toggleGestureCam() {
   if (gestureCam.on) { stopGestureCam(); return; }
   try {
     gestureCam.video = document.getElementById('aiGestureVideo');
     if (!gestureCam.video) { toast('未找到视频元素', 'error'); return; }
-    gestureCam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 }, audio: false });
-    gestureCam.video.srcObject = gestureCam.stream;
+    if (typeof Hands === 'undefined') { toast('手势库未加载，请检查网络', 'error'); return; }
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 }, audio: false });
+    gestureCam.video.srcObject = stream;
     await gestureCam.video.play();
-    gestureCam.workCanvas = document.createElement('canvas');
-    gestureCam.workCanvas.width = 80; gestureCam.workCanvas.height = 60;
-    gestureCam.workCtx = gestureCam.workCanvas.getContext('2d', { willReadFrequently: true });
+    gestureCam.hands = new Hands({ locateFile: (f) => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f });
+    gestureCam.hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+    gestureCam.hands.onResults(onHandsResults);
     gestureCam.on = true;
     const panel = document.getElementById('aiGesturePanel');
     if (panel) panel.classList.remove('closed');
     const btn = document.getElementById('aiGestureToggle');
     if (btn) btn.textContent = '📹 关闭手势';
-    setGestureHint('手势识别中…');
-    toast('摄像头已开启，比划手势切换粒子', 'success');
+    setGestureHint('比出 1-5 根手指');
+    toast('摄像头已开启，比 1-5 切换特效', 'success');
     gestureCamLoop();
   } catch (err) {
     console.error(err);
@@ -5465,9 +5515,11 @@ async function toggleGestureCam() {
 function stopGestureCam() {
   gestureCam.on = false;
   if (gestureCam.raf) cancelAnimationFrame(gestureCam.raf);
-  if (gestureCam.stream) { gestureCam.stream.getTracks().forEach(t => t.stop()); gestureCam.stream = null; }
-  if (gestureCam.video) gestureCam.video.srcObject = null;
-  gestureCam.lastFrame = null; gestureCam.stableTheme = null; gestureCam.stableCount = 0;
+  if (gestureCam.video && gestureCam.video.srcObject) {
+    gestureCam.video.srcObject.getTracks().forEach(t => t.stop());
+    gestureCam.video.srcObject = null;
+  }
+  gestureCam.hands = null; swordCenter.active = false;
   const panel = document.getElementById('aiGesturePanel');
   if (panel) panel.classList.add('closed');
   const btn = document.getElementById('aiGestureToggle');
@@ -5483,112 +5535,45 @@ function setGestureHint(text) {
 function gestureCamLoop() {
   if (!gestureCam.on) return;
   gestureCam.raf = requestAnimationFrame(gestureCamLoop);
-  const v = gestureCam.video, wc = gestureCam.workCanvas, wctx = gestureCam.workCtx;
-  if (!v || v.readyState < 2) return;
-  wctx.save(); wctx.scale(-1, 1); wctx.drawImage(v, -wc.width, 0, wc.width, wc.height); wctx.restore();
-  const frame = wctx.getImageData(0, 0, wc.width, wc.height);
-  const result = analyzeHand(frame, wc.width, wc.height);
-  if (result) updateGestureRecognition(result);
+  const v = gestureCam.video;
+  if (v && v.readyState >= 2 && gestureCam.hands) {
+    gestureCam.hands.send({ image: v });
+  }
 }
 
-function analyzeHand(frame, w, h) {
-  const data = frame.data;
-  const prev = gestureCam.lastFrame;
-  let skinCount = 0, sumX = 0, sumY = 0, minX = w, maxX = 0, minY = h, maxY = 0;
-  let motionPixels = 0;
-  for (let y = 0; y < h; y += 1) {
-    for (let x = 0; x < w; x += 1) {
-      const i = (y * w + x) * 4;
-      const r = data[i], g = data[i+1], b = data[i+2];
-      const isSkin = (r > 60 && g > 30 && b > 15 &&
-        r > g && r > b &&
-        Math.abs(r - g) > 12 &&
-        (r - b) > 12 &&
-        !(r > 220 && g > 210 && b > 170));
-      if (isSkin) {
-        skinCount++; sumX += x; sumY += y;
-        if (x < minX) minX = x; if (x > maxX) maxX = x;
-        if (y < minY) minY = y; if (y > maxY) maxY = y;
-      }
-      if (prev) {
-        const pi = (y * w + x) * 4;
-        const dr = Math.abs(r - prev[pi]);
-        const dg = Math.abs(g - prev[pi+1]);
-        const db = Math.abs(b - prev[pi+2]);
-        if (dr + dg + db > 60) motionPixels++;
-      }
-    }
+function countFingers(lm) {
+  let count = 0;
+  const wrist = lm[0];
+  const fingers = [[4, 3], [8, 6], [12, 10], [16, 14], [20, 18]];
+  for (const [tip, pip] of fingers) {
+    const dt = Math.hypot(lm[tip].x - wrist.x, lm[tip].y - wrist.y);
+    const dp = Math.hypot(lm[pip].x - wrist.x, lm[pip].y - wrist.y);
+    if (dt > dp * 1.1) count++;
   }
-  gestureCam.lastFrame = new Uint8ClampedArray(data);
-  if (skinCount < 40) {
-    return { detected: false, motion: motionPixels };
-  }
-  const cx = sumX / skinCount, cy = sumY / skinCount;
-  const boxW = maxX - minX, boxH = maxY - minY;
-  const boxArea = Math.max(1, boxW * boxH);
-  const density = skinCount / boxArea;
-  const aspect = boxW / Math.max(1, boxH);
-  return {
-    detected: true, motion: motionPixels,
-    cx, cy, boxW, boxH, density, aspect, skinCount,
-    normX: cx / w, normY: cy / h,
-  };
+  return count;
 }
 
-function updateGestureRecognition(r) {
-  const now = Date.now();
-  if (now - gestureCam.lastSwitch < 1200) {
-    if (r.detected) setGestureHint('识别中… ' + describeHand(r));
-    else if (r.motion > 200) setGestureHint('检测到运动…');
-    else setGestureHint('把手放入画面');
+function onHandsResults(results) {
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    swordCenter.active = false;
+    setGestureHint('把手放入画面');
     return;
   }
-
-  let target = null;
-  if (!r.detected) {
-    if (r.motion > 250) target = 'sakura';
-  } else {
-    const d = r.density, a = r.aspect, skin = r.skinCount;
-    if (skin < 120 && d < 0.35) target = 'aurora';
-    else if (d > 0.62 && a < 1.3) target = 'rain';
-    else if (a > 1.05 && d < 0.5) target = 'stars';
-    else if (skin < 150 && d > 0.5) target = 'snow';
-    else if (r.motion < 80 && r.normX > 0.3 && r.normX < 0.7) target = 'fireflies';
-  }
-
-  if (target) {
-    if (gestureCam.stableTheme === target) {
-      gestureCam.stableCount++;
-      if (gestureCam.stableCount >= 2) {
-        if (currentParticleTheme !== target) {
-          switchParticleTheme(target);
-          gestureCam.lastSwitch = now;
-          setGestureHint('已切换：' + PARTICLE_THEMES[target].name);
-        }
-        gestureCam.stableCount = 0;
-      }
-    } else {
-      gestureCam.stableTheme = target;
-      gestureCam.stableCount = 1;
-      setGestureHint('识别到 ' + PARTICLE_THEMES[target].name + '…');
+  const lm = results.multiHandLandmarks[0];
+  const fingers = countFingers(lm);
+  const wx = (1 - lm[0].x) * window.innerWidth;
+  const wy = lm[0].y * window.innerHeight;
+  swordCenter.tx = wx; swordCenter.ty = wy; swordCenter.active = true;
+  const target = FINGER_THEME_MAP[fingers];
+  setGestureHint(fingers + ' 根手指' + (target ? ' → ' + PARTICLE_THEMES[target].name : ''));
+  const now = Date.now();
+  if (target && now - gestureCam.lastSwitch > 1000) {
+    if (currentParticleTheme !== target) {
+      switchParticleTheme(target);
+      gestureCam.lastSwitch = now;
     }
-  } else if (r.detected) {
-    setGestureHint('识别中… ' + describeHand(r));
-  } else {
-    setGestureHint('把手放入画面');
   }
 }
-
-function describeHand(r) {
-  if (!r.detected) return '';
-  return '密度' + r.density.toFixed(2) + ' 比例' + r.aspect.toFixed(2);
-}
-
-const originalRenderAI = renderAI;
-renderAI = function() {
-  originalRenderAI();
-  setTimeout(initAIParticles, 80);
-};
 
 // ===================== 初始化 =====================
 function init() {
@@ -5605,6 +5590,8 @@ function init() {
   // 渲染首屏
   renderPage();
 
+  // 初始化全局粒子系统（作用于全部卡片）
+  initGlobalParticles();
 }
 
 init();
