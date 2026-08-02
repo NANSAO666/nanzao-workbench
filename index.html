@@ -5602,13 +5602,13 @@ async function toggleGestureCam() {
     while (typeof Hands === 'undefined' && waited < 8000) { await new Promise(r => setTimeout(r, 200)); waited += 200; }
     if (typeof Hands === 'undefined') { toast('手势库加载失败，请检查网络后重试', 'error'); setGestureHint('手势库未加载'); return; }
     setGestureHint('请求摄像头…');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } }, audio: false });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
     gestureCam.video.srcObject = stream;
     gestureCam.video.setAttribute('playsinline', '');
     await gestureCam.video.play().catch(() => {});
     setGestureHint('加载手势模型…');
     gestureCam.hands = new Hands({ locateFile: (f) => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f });
-    gestureCam.hands.setOptions({ selfieMode: true, maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.4 });
+    gestureCam.hands.setOptions({ selfieMode: true, maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.6 });
     gestureCam.hands.onResults(onHandsResults);
     gestureCam.on = true;
     const panel = document.getElementById('aiGesturePanel');
@@ -5638,6 +5638,7 @@ function stopGestureCam() {
     gestureCam.video.srcObject = null;
   }
   gestureCam.hands = null; swordCenter.active = false;
+  _fingerHistory = []; _lastFingerMode = 'free'; _lastSwitchTime = 0;
   const panel = document.getElementById('aiGesturePanel');
   if (panel) panel.classList.add('closed');
   const btn = document.getElementById('aiGestureToggle');
@@ -5650,23 +5651,38 @@ function setGestureHint(text) {
   if (el) el.textContent = text;
 }
 
+// 手势防抖：最近若干帧手指数投票 + 切换时间节流
+let _fingerHistory = [];      // 最近帧的手指数
+let _lastFingerMode = 'free'; // 上次生效的形态
+let _lastSwitchTime = 0;      // 上次切换时间戳
 function gestureCamLoop() {
   if (!gestureCam.on) return;
-  gestureCam.raf = requestAnimationFrame(gestureCamLoop);
   const v = gestureCam.video;
   if (v && v.readyState >= 2 && gestureCam.hands) {
-    gestureCam.hands.send({ image: v });
+    // 串行处理：onResults 回调结束后再发下一帧，避免帧堆积卡顿
+    gestureCam.hands.send({ image: v }).then(() => {
+      if (gestureCam.on) gestureCam.raf = requestAnimationFrame(gestureCamLoop);
+    }).catch(() => {
+      if (gestureCam.on) gestureCam.raf = requestAnimationFrame(gestureCamLoop);
+    });
+  } else {
+    gestureCam.raf = requestAnimationFrame(gestureCamLoop);
   }
 }
 
+// 手指弯曲检测：四指用"指尖 y < PIP y"（手朝上时指尖在上方），拇指用指尖与 IP/MCP 横向比较
 function countFingers(lm) {
   let count = 0;
-  const wrist = lm[0];
-  const fingers = [[4, 3], [8, 6], [12, 10], [16, 14], [20, 18]];
+  // 拇指：比较拇指尖(4)到拇指 IP(3) 与 IP(3)到 MCP(2) 的距离方向
+  // 用拇指尖到手腕(0)距离 vs 拇指 MCP(2)到手腕距离
+  const thumbExt = Math.hypot(lm[4].x - lm[0].x, lm[4].y - lm[0].y) >
+                   Math.hypot(lm[2].x - lm[0].x, lm[2].y - lm[0].y) * 1.15;
+  if (thumbExt) count++;
+  // 四指：指尖(tip)比 PIP 关节更靠上（y 更小=更靠上，因为图片坐标 y 向下）
+  // [食指8/6, 中指12/10, 无名指16/14, 小指20/18]，PIP 是 tip-2
+  const fingers = [[8, 6], [12, 10], [16, 14], [20, 18]];
   for (const [tip, pip] of fingers) {
-    const dt = Math.hypot(lm[tip].x - wrist.x, lm[tip].y - wrist.y);
-    const dp = Math.hypot(lm[pip].x - wrist.x, lm[pip].y - wrist.y);
-    if (dt > dp * 1.1) count++;
+    if (lm[tip].y < lm[pip].y - 0.02) count++;
   }
   return count;
 }
@@ -5674,12 +5690,14 @@ function countFingers(lm) {
 function onHandsResults(results) {
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
     swordCenter.active = false;
+    _fingerHistory = [];
     setParticleShape('free');
+    _lastFingerMode = 'free';
     setGestureHint('把手放入画面');
     return;
   }
   const lm = results.multiHandLandmarks[0];
-  const fingers = countFingers(lm);
+  const rawFingers = countFingers(lm);
   // selfieMode 已镜像，直接用原始坐标映射到屏幕
   const wx = lm[0].x * window.innerWidth;
   const wy = lm[0].y * window.innerHeight;
@@ -5690,13 +5708,36 @@ function onHandsResults(results) {
     const spread = Math.hypot(lm[4].x - lm[20].x, lm[4].y - lm[20].y);
     swordCenter.spread = Math.max(0.15, Math.min(1, spread * 3.2));
     setGestureHint('御剑 · 张开度 ' + Math.round(swordCenter.spread * 100) + '%');
-  } else {
-    // 其他主题：手指数改变粒子布局形态（1-4 聚成数字，5 炸开成 I♥U）
-    swordCenter.active = false;
-    if (fingers === 5) { setParticleShape('heart'); setGestureHint('5 指 → I ♥ U'); }
-    else if (fingers >= 1 && fingers <= 4) { setParticleShape(String(fingers)); setGestureHint(fingers + ' 指 → 聚成 ' + fingers); }
-    else { setParticleShape('free'); setGestureHint('比 1-5 指改变粒子布局'); }
+    return;
   }
+
+  // 防抖：最近 8 帧手指数投票取众数
+  _fingerHistory.push(rawFingers);
+  if (_fingerHistory.length > 8) _fingerHistory.shift();
+  const freq = {};
+  for (const f of _fingerHistory) freq[f] = (freq[f] || 0) + 1;
+  let fingers = rawFingers, maxFreq = 0;
+  for (const f in freq) { if (freq[f] > maxFreq) { maxFreq = freq[f]; fingers = +f; } }
+  // 要求众数占比过半才生效，避免抖动
+  const stable = maxFreq >= 5;
+
+  // 时间节流：距上次切换至少 600ms 才允许切换（且需稳定）
+  const now = Date.now();
+  const canSwitch = (now - _lastSwitchTime) > 600;
+
+  let targetMode = null, hint = '';
+  if (stable && fingers === 5) { targetMode = 'heart'; hint = '5 指 → I ♥ U'; }
+  else if (stable && fingers >= 1 && fingers <= 4) { targetMode = String(fingers); hint = fingers + ' 指 → 聚成 ' + fingers; }
+  else if (fingers === 0) { targetMode = 'free'; hint = '握拳 → 散开'; }
+
+  if (targetMode && targetMode !== _lastFingerMode && canSwitch) {
+    setParticleShape(targetMode);
+    _lastFingerMode = targetMode;
+    _lastSwitchTime = now;
+  }
+  // 实时显示当前检测到的手指数（用于调试反馈）
+  if (!hint) hint = stable ? ('检测到 ' + fingers + ' 指') : ('比 1-5 指…' + rawFingers);
+  setGestureHint(hint);
 }
 
 // ===================== 初始化 =====================
