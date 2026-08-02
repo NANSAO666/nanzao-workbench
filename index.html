@@ -5393,12 +5393,21 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
   p.phase += 0.02; p.rot += p.rotSpeed;
   if (p.affected) { p.affectedTimer--; if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; } }
   p.vx *= 0.98; p.vy *= 0.98;
-  // 形态模式：粒子缓动聚成数字/I❤U（御剑主题除外，御剑走剑阵逻辑）
+  // 形态模式：粒子缓动聚成数字/I❤U，绕目标点松散漂浮（御剑主题除外）
   if (particleShapeMode !== 'free' && inst && inst._shapePts && inst._shapePts.length && theme.behavior !== 'sword') {
-    p.x += (p.tx - p.x) * 0.09 + Math.sin(p.phase) * 0.35;
-    p.y += (p.ty - p.y) * 0.09 + Math.cos(p.phase * 0.7) * 0.35;
-    p.phase += 0.04;
-    if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.04, 1); }
+    // 缓动趋向目标点（较弱，保留漂浮感）
+    p.x += (p.tx - p.x) * 0.06;
+    p.y += (p.ty - p.y) * 0.06;
+    // 绕目标点做圆周漂浮，形成松散光晕而非死钉一点
+    if (p.orbitR) {
+      p.orbitPhase += p.orbitSpeed || 0.02;
+      p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.04;
+      p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.04;
+    }
+    p.phase += 0.03;
+    // 通透感：降低不透明度，避免密实一团
+    p.alpha = 0.45 + Math.sin(p.phase * 1.5) * 0.2;
+    if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.15, 0.95); }
     return;
   }
   const depth = 0.5 + p.depth;
@@ -5499,18 +5508,21 @@ function drawParticle(ctx, p, theme) {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2); ctx.fill();
   } else {
     const isHeart = particleShapeMode === 'heart';
+    const inShape = particleShapeMode !== 'free';
+    // 形态模式下用放大的 shapeSize，更通透不拥挤
+    const baseSize = inShape ? (p.shapeSize || p.size * 1.6) : p.size;
     const heartColor = isHeart ? ['#ff4d6d','#ff8fa3','#ffb3c1','#c9184a','#ff758f'][Math.floor(p.phase) % 5] : p.color;
     const twinkle = theme.behavior === 'float' ? (0.6 + Math.sin(p.phase * 3) * 0.4) : 1;
     const heartPulse = isHeart ? (1 + Math.sin(p.phase * 2) * 0.4) : 1;
-    ctx.shadowBlur = isAff ? p.size * 6 : (isHeart ? p.size * 8 : p.size * 3);
+    ctx.shadowBlur = isAff ? baseSize * 6 : (isHeart ? baseSize * 8 : baseSize * 3);
     ctx.shadowColor = isAff ? '#22c55e' : heartColor;
     ctx.globalAlpha = p.alpha * twinkle;
-    ctx.beginPath(); ctx.arc(p.x, p.y, (isAff ? p.size * 1.5 : p.size) * heartPulse, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(p.x, p.y, (isAff ? baseSize * 1.5 : baseSize) * heartPulse, 0, Math.PI * 2);
     ctx.fillStyle = isAff ? '#22c55e' : heartColor; ctx.fill();
-    if (theme.behavior === 'float' && p.size > 1.8 && !isHeart) {
+    if (theme.behavior === 'float' && baseSize > 1.8 && !isHeart && !inShape) {
       ctx.globalAlpha = p.alpha * twinkle * 0.5;
       ctx.strokeStyle = isAff ? '#22c55e' : p.color; ctx.lineWidth = 0.6;
-      ctx.beginPath(); ctx.moveTo(p.x - p.size * 2.5, p.y); ctx.lineTo(p.x + p.size * 2.5, p.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x - baseSize * 2.5, p.y); ctx.lineTo(p.x + baseSize * 2.5, p.y); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(p.x, p.y - p.size * 2.5); ctx.lineTo(p.x, p.y + p.size * 2.5); ctx.stroke();
     }
   }
@@ -5540,14 +5552,16 @@ function getTextPoints(text, w, h) {
   _shapeCanvas.width = w; _shapeCanvas.height = h;
   const c = _shapeCanvas.getContext('2d');
   c.clearRect(0, 0, w, h);
-  const fontSize = Math.min(w, h) * (text.length > 2 ? 0.32 : 0.55);
+  // 字体放大让形状舒展（单字符更大，多字符适中）
+  const fontSize = Math.min(w, h) * (text.length > 2 ? 0.4 : 0.7);
   c.fillStyle = '#fff';
   c.font = 'bold ' + fontSize + 'px -apple-system, "PingFang SC", sans-serif';
   c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(text, w / 2, h / 2);
   const img = c.getImageData(0, 0, w, h).data;
   const pts = [];
-  const step = w < 300 ? 5 : (w < 768 ? 7 : 6);
+  // 采样步长加大，让粒子分布更稀疏松散，不挤成一团
+  const step = w < 300 ? 9 : (w < 768 ? 11 : 10);
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
       if (img[(y * w + x) * 4 + 3] > 128) pts.push({ x, y });
@@ -5585,8 +5599,15 @@ function assignShapeTargetsForInst(inst) {
   for (let i = 0; i < inst.particles.length; i++) {
     const p = inst.particles[i];
     const t = pts[i % pts.length];
-    p.tx = t.x + (Math.random() - 0.5) * 5;
-    p.ty = t.y + (Math.random() - 0.5) * 5;
+    // 目标点加大随机散布范围，粒子围绕目标点漂浮而非死钉一点
+    p.tx = t.x + (Math.random() - 0.5) * 14;
+    p.ty = t.y + (Math.random() - 0.5) * 14;
+    // 每个粒子独立的漂浮半径和相位，形成松散的"光晕"效果
+    p.orbitR = 3 + Math.random() * 8;
+    p.orbitPhase = Math.random() * Math.PI * 2;
+    p.orbitSpeed = 0.015 + Math.random() * 0.02;
+    // 形态模式下粒子放大，更通透不拥挤
+    p.shapeSize = (p.size || 1.5) * 1.6;
   }
 }
 
