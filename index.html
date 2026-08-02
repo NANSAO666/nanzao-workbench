@@ -5154,7 +5154,7 @@ let swordCenter = { x: 0, y: 0, tx: 0, ty: 0, active: false, spread: 1 };
 let particleShapeMode = 'free';
 let shapePoints = [];
 
-const gestureCam = { hands: null, video: null, on: false, raf: null, lastSwitch: 0 };
+const gestureCam = { hands: null, video: null, on: false, raf: null, lastSwitch: 0, bridge: null, bridgeCtx: null };
 
 const PARTICLE_THEMES = {
   stars: { name: '星空', colors: ['#ffffff','#ffeaa7','#74b9ff','#a29bfe','#fd79a8'], count: 80, speed: 0.3, size: [0.6, 2.6], behavior: 'float', glow: true },
@@ -5602,13 +5602,32 @@ async function toggleGestureCam() {
     while (typeof Hands === 'undefined' && waited < 8000) { await new Promise(r => setTimeout(r, 200)); waited += 200; }
     if (typeof Hands === 'undefined') { toast('手势库加载失败，请检查网络后重试', 'error'); setGestureHint('手势库未加载'); return; }
     setGestureHint('请求摄像头…');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    const isMobile = window.innerWidth < 768;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: isMobile ? 480 : 640 }, height: { ideal: isMobile ? 360 : 480 } }, audio: false });
     gestureCam.video.srcObject = stream;
     gestureCam.video.setAttribute('playsinline', '');
+    gestureCam.video.muted = true;
     await gestureCam.video.play().catch(() => {});
+    // 等待视频真正就绪（移动端 video.play() 返回后帧未必就绪）
+    setGestureHint('等待视频就绪…');
+    await new Promise((resolve) => {
+      const v = gestureCam.video;
+      if (v.readyState >= 2 && v.videoWidth > 0) return resolve();
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      v.addEventListener('loadeddata', finish, { once: true });
+      v.addEventListener('canplay', finish, { once: true });
+      setTimeout(finish, 3000); // 兜底 3 秒
+    });
+    // 创建 canvas 中间层（移动端直接传 video 给 MediaPipe 常提取不到帧）
+    if (!gestureCam.bridge) {
+      gestureCam.bridge = document.createElement('canvas');
+      gestureCam.bridgeCtx = gestureCam.bridge.getContext('2d');
+    }
     setGestureHint('加载手势模型…');
     gestureCam.hands = new Hands({ locateFile: (f) => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f });
-    gestureCam.hands.setOptions({ selfieMode: true, maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.6 });
+    // 移动端用 modelComplexity:0 避免卡死，桌面端用 1 更精准
+    gestureCam.hands.setOptions({ selfieMode: true, maxNumHands: 1, modelComplexity: isMobile ? 0 : 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
     gestureCam.hands.onResults(onHandsResults);
     gestureCam.on = true;
     const panel = document.getElementById('aiGesturePanel');
@@ -5638,7 +5657,7 @@ function stopGestureCam() {
     gestureCam.video.srcObject = null;
   }
   gestureCam.hands = null; swordCenter.active = false;
-  _fingerHistory = []; _lastFingerMode = 'free'; _lastSwitchTime = 0;
+  _fingerHistory = []; _lastFingerMode = 'free'; _lastSwitchTime = 0; _detectCount = 0;
   const panel = document.getElementById('aiGesturePanel');
   if (panel) panel.classList.add('closed');
   const btn = document.getElementById('aiGestureToggle');
@@ -5655,17 +5674,29 @@ function setGestureHint(text) {
 let _fingerHistory = [];      // 最近帧的手指数
 let _lastFingerMode = 'free'; // 上次生效的形态
 let _lastSwitchTime = 0;      // 上次切换时间戳
+let _detectCount = 0;         // 累计识别到的帧数（诊断用）
 function gestureCamLoop() {
   if (!gestureCam.on) return;
   const v = gestureCam.video;
-  if (v && v.readyState >= 2 && gestureCam.hands) {
-    // 串行处理：onResults 回调结束后再发下一帧，避免帧堆积卡顿
-    gestureCam.hands.send({ image: v }).then(() => {
+  if (v && v.readyState >= 2 && v.videoWidth > 0 && gestureCam.hands) {
+    // 通过 canvas 中间层传给 MediaPipe（移动端直接传 video 常失败）
+    try {
+      const bw = v.videoWidth, bh = v.videoHeight;
+      if (gestureCam.bridge.width !== bw) { gestureCam.bridge.width = bw; gestureCam.bridge.height = bh; }
+      gestureCam.bridgeCtx.drawImage(v, 0, 0, bw, bh);
+      gestureCam.hands.send({ image: gestureCam.bridge }).then(() => {
+        if (gestureCam.on) gestureCam.raf = requestAnimationFrame(gestureCamLoop);
+      }).catch((e) => {
+        console.warn('hands.send failed', e);
+        if (gestureCam.on) gestureCam.raf = requestAnimationFrame(gestureCamLoop);
+      });
+    } catch (e) {
+      console.warn('drawImage failed', e);
       if (gestureCam.on) gestureCam.raf = requestAnimationFrame(gestureCamLoop);
-    }).catch(() => {
-      if (gestureCam.on) gestureCam.raf = requestAnimationFrame(gestureCamLoop);
-    });
+    }
   } else {
+    // 视频未就绪，500ms 后重试并提示
+    if (!v || !v.videoWidth) setGestureHint('视频未就绪，请稍候…');
     gestureCam.raf = requestAnimationFrame(gestureCamLoop);
   }
 }
@@ -5688,12 +5719,13 @@ function countFingers(lm) {
 }
 
 function onHandsResults(results) {
+  _detectCount++;
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
     swordCenter.active = false;
     _fingerHistory = [];
-    setParticleShape('free');
-    _lastFingerMode = 'free';
-    setGestureHint('把手放入画面');
+    // 手离开画面时恢复自由形态（仅当当前不是 free）
+    if (_lastFingerMode !== 'free') { setParticleShape('free'); _lastFingerMode = 'free'; }
+    if (_detectCount % 15 === 0) setGestureHint('识别中…把手放入画面');
     return;
   }
   const lm = results.multiHandLandmarks[0];
