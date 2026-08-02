@@ -75,13 +75,10 @@
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-  /* 全局粒子画布：通过 clip-path 裁剪到所有 .card 卡片区域内可见 */
-  #globalParticleCanvas {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    clip-path: polygon(0 0);
-  }
+  /* 每张 .card 卡片内部独立粒子画布（粒子被卡片 overflow:hidden 自然裁剪，不再用 clip-path） */
+  .card-particle-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
   .card { background: rgba(255, 255, 255, 0.025); }
-  .card > *:not(canvas):not(#aiGesturePanel):not(#aiGestureToggle) { position: relative; z-index: 2; }
+  .card > *:not(.card-particle-canvas) { position: relative; z-index: 1; }
   /* 视频手势识别预览（仅 AI 对话助手） */
   #aiGesturePanel {
     position: absolute; right: 10px; top: 10px; z-index: 8;
@@ -1185,9 +1182,6 @@
 </head>
 <body>
 
-<!-- 全局粒子画布（氛围层，作用于全部卡片） -->
-<canvas id="globalParticleCanvas"></canvas>
-
 <div class="app-container">
 
   <!-- 顶部工具栏 -->
@@ -1428,6 +1422,8 @@ function renderPage() {
     workflow: renderWorkflow,
   };
   (renderers[currentPage] || (() => area.innerHTML = '<div class="empty-state">页面开发中</div>'))();
+  // SPA 切页后 .card DOM 重建，重新注入每张卡片的独立粒子画布
+  if (typeof initCardParticleSystems === 'function') initCardParticleSystems();
 }
 
 // ===================== 提示词库 =====================
@@ -5149,12 +5145,10 @@ async function copyText(text) {
 }
 
 // ===================== 全局粒子系统 + MediaPipe 手势识别 + 御剑特效 =====================
-let globalParticleCanvas, globalCtx;
-let globalParticles = [];
+let cardParticleSystems = []; // [{ el, canvas, ctx, particles, splashes, w, h, _shapePts }]
 let currentParticleTheme = 'stars';
 let globalAnimFrame = null;
 let pointer = { x: -1000, y: -1000, active: false, vx: 0, vy: 0, prevX: 0, prevY: 0, downTime: 0 };
-let splashes = [];
 let swordCenter = { x: 0, y: 0, tx: 0, ty: 0, active: false, spread: 1 };
 // 粒子布局形态：'free' 自由 / '1'-'4' 聚成数字 / 'heart' 聚成 I❤U
 let particleShapeMode = 'free';
@@ -5173,40 +5167,51 @@ const PARTICLE_THEMES = {
 };
 
 function initGlobalParticles() {
-  globalParticleCanvas = document.getElementById('globalParticleCanvas');
-  if (!globalParticleCanvas) return;
-  globalCtx = globalParticleCanvas.getContext('2d');
-  resizeGlobalCanvas();
-  swordCenter.x = window.innerWidth / 2; swordCenter.y = window.innerHeight / 2;
-  swordCenter.tx = swordCenter.x; swordCenter.ty = swordCenter.y;
-  createGlobalParticles();
-  startGlobalAnimation();
+  initCardParticleSystems();
   setupGlobalGesture();
+  startCardAnimation();
+}
+
+// 为每个 .card 注入独立粒子画布（粒子在卡片局部坐标系绘制，由卡片 overflow:hidden 自然裁剪）
+function initCardParticleSystems() {
+  cardParticleSystems.forEach(s => { if (s.canvas && s.canvas.parentNode) s.canvas.parentNode.removeChild(s.canvas); });
+  cardParticleSystems = [];
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card) => {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'card-particle-canvas';
+    card.insertBefore(canvas, card.firstChild); // 粒子画布置于卡片最底层
+    const ctx = canvas.getContext('2d');
+    const inst = { el: card, canvas, ctx, particles: [], splashes: [], w: 0, h: 0, _shapePts: null };
+    cardParticleSystems.push(inst);
+    resizeCardParticleSystem(inst);
+    createCardParticles(inst);
+  });
+}
+
+function resizeCardParticleSystem(inst) {
+  const r = inst.el.getBoundingClientRect();
+  inst.w = Math.max(1, r.width);
+  inst.h = Math.max(1, r.height);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  inst.canvas.width = inst.w * dpr;
+  inst.canvas.height = inst.h * dpr;
+  inst.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function createCardParticles(inst) {
+  inst.particles = []; inst.splashes = []; inst._shapePts = null;
+  const theme = PARTICLE_THEMES[currentParticleTheme];
+  const w = inst.w, h = inst.h;
+  const count = w < 300 ? Math.floor(theme.count * 0.3) : (window.innerWidth < 768 ? Math.floor(theme.count * 0.5) : theme.count);
+  for (let i = 0; i < count; i++) inst.particles.push(createParticle(theme, w, h, i, count));
 }
 
 let _gResizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(_gResizeTimer);
-  _gResizeTimer = setTimeout(() => { if (globalParticleCanvas) { resizeGlobalCanvas(); createGlobalParticles(); } }, 200);
+  _gResizeTimer = setTimeout(() => { for (const inst of cardParticleSystems) { resizeCardParticleSystem(inst); createCardParticles(inst); } }, 200);
 });
-
-function resizeGlobalCanvas() {
-  if (!globalParticleCanvas) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  globalParticleCanvas.width = Math.max(1, window.innerWidth * dpr);
-  globalParticleCanvas.height = Math.max(1, window.innerHeight * dpr);
-  globalParticleCanvas.style.width = window.innerWidth + 'px';
-  globalParticleCanvas.style.height = window.innerHeight + 'px';
-  globalCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function createGlobalParticles() {
-  globalParticles = []; splashes = [];
-  const theme = PARTICLE_THEMES[currentParticleTheme];
-  const w = window.innerWidth, h = window.innerHeight;
-  const count = w < 768 ? Math.floor(theme.count * 0.6) : theme.count;
-  for (let i = 0; i < count; i++) globalParticles.push(createParticle(theme, w, h, i, count));
-}
 
 function createParticle(theme, w, h, idx, total) {
   const base = {
@@ -5272,32 +5277,42 @@ function setupGlobalGesture() {
   }, { passive: true });
 }
 
-function applyTapEffect(x, y) {
+function applyTapEffect(clientX, clientY) {
   const radius = 130;
-  for (let p of globalParticles) {
-    const dist = Math.hypot(p.x - x, p.y - y);
-    if (dist < radius) {
-      const angle = Math.atan2(p.y - y, p.x - x);
-      const force = (radius - dist) / radius * 9;
-      p.vx += Math.cos(angle) * force; p.vy += Math.sin(angle) * force;
-      p.affected = true; p.affectedTimer = 30;
+  for (const inst of cardParticleSystems) {
+    const rect = inst.el.getBoundingClientRect();
+    const lx = clientX - rect.left, ly = clientY - rect.top;
+    if (lx < -radius || lx > inst.w + radius || ly < -radius || ly > inst.h + radius) continue;
+    for (let p of inst.particles) {
+      const dist = Math.hypot(p.x - lx, p.y - ly);
+      if (dist < radius) {
+        const angle = Math.atan2(p.y - ly, p.x - lx);
+        const force = (radius - dist) / radius * 9;
+        p.vx += Math.cos(angle) * force; p.vy += Math.sin(angle) * force;
+        p.affected = true; p.affectedTimer = 30;
+      }
     }
   }
 }
 
-function applySwipeEffect(x, y, vx, vy) {
+function applySwipeEffect(clientX, clientY, vx, vy) {
   const radius = 160;
-  for (let p of globalParticles) {
-    const dist = Math.hypot(p.x - x, p.y - y);
-    if (dist < radius) {
-      const force = (radius - dist) / radius * 6;
-      p.vx += vx * force * 0.12; p.vy += vy * force * 0.12;
-      p.affected = true; p.affectedTimer = 22;
+  for (const inst of cardParticleSystems) {
+    const rect = inst.el.getBoundingClientRect();
+    const lx = clientX - rect.left, ly = clientY - rect.top;
+    if (lx < -radius || lx > inst.w + radius || ly < -radius || ly > inst.h + radius) continue;
+    for (let p of inst.particles) {
+      const dist = Math.hypot(p.x - lx, p.y - ly);
+      if (dist < radius) {
+        const force = (radius - dist) / radius * 6;
+        p.vx += vx * force * 0.12; p.vy += vy * force * 0.12;
+        p.affected = true; p.affectedTimer = 22;
+      }
     }
   }
 }
 
-function startGlobalAnimation() {
+function startCardAnimation() {
   if (globalAnimFrame) cancelAnimationFrame(globalAnimFrame);
   const fps = window.innerWidth < 768 ? 30 : 60;
   const interval = 1000 / fps;
@@ -5306,81 +5321,62 @@ function startGlobalAnimation() {
     globalAnimFrame = requestAnimationFrame(animate);
     if (time - lastTime < interval) return;
     lastTime = time;
-    if (!globalParticleCanvas || !globalCtx) return;
-    const ctx = globalCtx;
-    const w = window.innerWidth, h = window.innerHeight;
     const theme = PARTICLE_THEMES[currentParticleTheme];
-    // 裁剪粒子画布：只在 .card 卡片框区域内可见
-    updateCardClipPath();
-    ctx.fillStyle = theme.behavior === 'rain' ? 'rgba(6,8,14,0.28)' : 'rgba(6,8,14,0.16)';
-    ctx.fillRect(0, 0, w, h);
+    const winW = window.innerWidth, winH = window.innerHeight;
+    // pointer 影响：每帧对每个卡片转换局部坐标（御剑/雨滴主题除外）
     if (pointer.active && theme.behavior !== 'sword' && theme.behavior !== 'rain') handlePointerInfluence();
+    // 御剑主题：剑心位置在全局坐标更新，绘制时再转卡片局部坐标
     if (theme.behavior === 'sword') {
       if (!swordCenter.active && !pointer.active) {
-        swordCenter.tx += (w / 2 - swordCenter.tx) * 0.02;
-        swordCenter.ty += (h / 2 - swordCenter.ty) * 0.02;
+        swordCenter.tx += (winW / 2 - swordCenter.tx) * 0.02;
+        swordCenter.ty += (winH / 2 - swordCenter.ty) * 0.02;
       }
       swordCenter.x += (swordCenter.tx - swordCenter.x) * 0.12;
       swordCenter.y += (swordCenter.ty - swordCenter.y) * 0.12;
     }
-    for (let p of globalParticles) { updateParticle(p, theme, w, h); drawParticle(ctx, p, theme); }
-    drawSplashes(ctx);
-    if (theme.behavior === 'float' || theme.behavior === 'wander') drawConnections(ctx);
-    if (theme.behavior === 'sword') drawSwordCenter(ctx);
+    for (const inst of cardParticleSystems) {
+      if (!inst.canvas || !inst.ctx || inst.w === 0) continue;
+      const ctx = inst.ctx, w = inst.w, h = inst.h;
+      ctx.fillStyle = theme.behavior === 'rain' ? 'rgba(6,8,14,0.28)' : 'rgba(6,8,14,0.16)';
+      ctx.fillRect(0, 0, w, h);
+      // 御剑主题：剑心全局坐标 → 卡片局部坐标
+      let swordLocalX = swordCenter.x, swordLocalY = swordCenter.y;
+      if (theme.behavior === 'sword') {
+        const cardRect = inst.el.getBoundingClientRect();
+        swordLocalX = swordCenter.x - cardRect.left;
+        swordLocalY = swordCenter.y - cardRect.top;
+      }
+      for (let p of inst.particles) { updateParticle(p, theme, w, h, swordLocalX, swordLocalY, inst); drawParticle(ctx, p, theme); }
+      drawSplashesForInst(ctx, inst);
+      if (theme.behavior === 'float' || theme.behavior === 'wander') drawConnectionsForInst(ctx, inst);
+      if (theme.behavior === 'sword') drawSwordCenterLocal(ctx, swordLocalX, swordLocalY);
+    }
   }
   globalAnimFrame = requestAnimationFrame(animate);
 }
 
-// 收集所有 .card 视口矩形，用 clip-path 让粒子只在卡片框内可见
-let _lastClipStr = '';
-let _clipCheckTick = 0;
-function updateCardClipPath() {
-  // 每 6 帧更新一次（性能优化），滚动/尺寸变化时立即更新
-  _clipCheckTick++;
-  if (_clipCheckTick % 6 !== 0 && !window._cardClipDirty) return;
-  window._cardClipDirty = false;
-  const cards = document.querySelectorAll('.card');
-  if (!cards.length) { if (_lastClipStr) { globalParticleCanvas.style.clipPath = 'polygon(0 0)'; _lastClipStr=''; } return; }
-  const rects = [];
-  const winW = window.innerWidth, winH = window.innerHeight;
-  for (const c of cards) {
-    const r = c.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > winH || r.right < 0 || r.left > winW) continue;
-    rects.push([Math.max(0, r.left), Math.max(0, r.top), Math.min(winW, r.right), Math.min(winH, r.bottom)]);
-  }
-  if (!rects.length) { if (_lastClipStr) { globalParticleCanvas.style.clipPath = 'polygon(0 0)'; _lastClipStr=''; } return; }
-  // 用 path() 表示多个矩形（支持更好），回退 polygon 用第一个矩形
-  let str = '';
-  try {
-    str = 'path("' + rects.map(r => `M ${r[0]} ${r[1]} L ${r[2]} ${r[1]} L ${r[2]} ${r[3]} L ${r[0]} ${r[3]} Z`).join(' ') + '")';
-    globalParticleCanvas.style.clipPath = str;
-    _lastClipStr = str;
-  } catch (e) {
-    const r = rects[0];
-    str = `polygon(${r[0]}px ${r[1]}px, ${r[2]}px ${r[1]}px, ${r[2]}px ${r[3]}px, ${r[0]}px ${r[3]}px)`;
-    globalParticleCanvas.style.clipPath = str;
-    _lastClipStr = str;
-  }
-}
-window.addEventListener('scroll', () => { window._cardClipDirty = true; }, { passive: true, capture: true });
-
 function handlePointerInfluence() {
   const radius = 150;
-  for (let p of globalParticles) {
-    const dist = Math.hypot(p.x - pointer.x, p.y - pointer.y);
-    if (dist > radius) continue;
-    const influence = (radius - dist) / radius;
-    p.vx += (pointer.x - p.x) * influence * 0.05;
-    p.vy += (pointer.y - p.y) * influence * 0.05;
-    p.affected = true; p.affectedTimer = 14;
+  for (const inst of cardParticleSystems) {
+    const rect = inst.el.getBoundingClientRect();
+    const lx = pointer.x - rect.left, ly = pointer.y - rect.top;
+    if (lx < -radius || lx > inst.w + radius || ly < -radius || ly > inst.h + radius) continue;
+    for (let p of inst.particles) {
+      const dist = Math.hypot(p.x - lx, p.y - ly);
+      if (dist > radius) continue;
+      const influence = (radius - dist) / radius;
+      p.vx += (lx - p.x) * influence * 0.05;
+      p.vy += (ly - p.y) * influence * 0.05;
+      p.affected = true; p.affectedTimer = 14;
+    }
   }
 }
 
-function drawConnections(ctx) {
-  const maxDist = 90;
-  for (let i = 0; i < globalParticles.length; i++) {
-    for (let j = i + 1; j < globalParticles.length; j++) {
-      const p1 = globalParticles[i], p2 = globalParticles[j];
+function drawConnectionsForInst(ctx, inst) {
+  const ps = inst.particles, maxDist = 90;
+  for (let i = 0; i < ps.length; i++) {
+    for (let j = i + 1; j < ps.length; j++) {
+      const p1 = ps[i], p2 = ps[j];
       const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
       if (dist < maxDist) {
         ctx.save();
@@ -5393,12 +5389,12 @@ function drawConnections(ctx) {
   }
 }
 
-function updateParticle(p, theme, w, h) {
+function updateParticle(p, theme, w, h, swordX, swordY, inst) {
   p.phase += 0.02; p.rot += p.rotSpeed;
   if (p.affected) { p.affectedTimer--; if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; } }
   p.vx *= 0.98; p.vy *= 0.98;
   // 形态模式：粒子缓动聚成数字/I❤U（御剑主题除外，御剑走剑阵逻辑）
-  if (particleShapeMode !== 'free' && shapePoints.length && theme.behavior !== 'sword') {
+  if (particleShapeMode !== 'free' && inst && inst._shapePts && inst._shapePts.length && theme.behavior !== 'sword') {
     p.x += (p.tx - p.x) * 0.09 + Math.sin(p.phase) * 0.35;
     p.y += (p.ty - p.y) * 0.09 + Math.cos(p.phase * 0.7) * 0.35;
     p.phase += 0.04;
@@ -5409,7 +5405,7 @@ function updateParticle(p, theme, w, h) {
   switch (theme.behavior) {
     case 'float': p.x += p.vx + Math.sin(p.phase) * 0.3; p.y += p.vy + Math.cos(p.phase) * 0.2; break;
     case 'rain': p.y += p.vy * 4 + 5 * depth; p.x += Math.sin(p.phase) * 0.3 + p.vx;
-      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; if (Math.random() < 0.25) spawnSplash(p.x, h - 2); } break;
+      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; if (Math.random() < 0.25 && inst) spawnSplash(inst, p.x, h - 2); } break;
     case 'snow': p.y += p.vy + 1 * depth; p.x += Math.sin(p.phase) * 1.5 + p.vx;
       if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
     case 'wander': p.x += p.vx + Math.sin(p.phase) * 1; p.y += p.vy + Math.cos(p.phase * 0.7) * 1;
@@ -5421,8 +5417,8 @@ function updateParticle(p, theme, w, h) {
     case 'sword':
       p.angle += p.rotSpeed * (0.4 + swordCenter.spread * 1.2);
       const sd = p.dist * (0.45 + swordCenter.spread * 0.95);
-      p.x = swordCenter.x + Math.cos(p.angle) * sd;
-      p.y = swordCenter.y + Math.sin(p.angle) * sd;
+      p.x = swordX + Math.cos(p.angle) * sd;
+      p.y = swordY + Math.sin(p.angle) * sd;
       p.rot = p.angle + Math.PI / 2;
       break;
   }
@@ -5435,11 +5431,12 @@ function updateParticle(p, theme, w, h) {
   }
 }
 
-function spawnSplash(x, y) {
-  for (let i = 0; i < 3; i++) splashes.push({ x: x + (Math.random()-0.5)*4, y, vx: (Math.random()-0.5)*2.2, vy: -Math.random()*2.5, life: 14, size: Math.random()*1.5+0.5 });
+function spawnSplash(inst, x, y) {
+  for (let i = 0; i < 3; i++) inst.splashes.push({ x: x + (Math.random()-0.5)*4, y, vx: (Math.random()-0.5)*2.2, vy: -Math.random()*2.5, life: 14, size: Math.random()*1.5+0.5 });
 }
 
-function drawSplashes(ctx) {
+function drawSplashesForInst(ctx, inst) {
+  const splashes = inst.splashes;
   for (let i = splashes.length - 1; i >= 0; i--) {
     const s = splashes[i];
     s.x += s.vx; s.y += s.vy; s.vy += 0.3; s.life--;
@@ -5520,12 +5517,12 @@ function drawParticle(ctx, p, theme) {
   ctx.restore();
 }
 
-function drawSwordCenter(ctx) {
+function drawSwordCenterLocal(ctx, x, y) {
   ctx.save();
-  const grad = ctx.createRadialGradient(swordCenter.x, swordCenter.y, 0, swordCenter.x, swordCenter.y, 34);
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, 34);
   grad.addColorStop(0, 'rgba(96,165,250,0.45)'); grad.addColorStop(1, 'transparent');
-  ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(swordCenter.x, swordCenter.y, 34, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.arc(swordCenter.x, swordCenter.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(x, y, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
@@ -5533,14 +5530,13 @@ function switchParticleTheme(themeName) {
   if (!PARTICLE_THEMES[themeName]) return;
   currentParticleTheme = themeName;
   particleShapeMode = 'free'; shapePoints = [];
-  createGlobalParticles();
+  for (const inst of cardParticleSystems) createCardParticles(inst);
   toast('已切换到 ' + PARTICLE_THEMES[themeName].name + ' 主题', 'success');
 }
 
-// ===================== 粒子形态（数字 / I❤U）文字采样 =====================
+// ===================== 粒子形态（数字 / I❤U）文字采样（按卡片尺寸生成目标点） =====================
 const _shapeCanvas = document.createElement('canvas');
-function getTextPoints(text) {
-  const w = window.innerWidth, h = window.innerHeight;
+function getTextPoints(text, w, h) {
   _shapeCanvas.width = w; _shapeCanvas.height = h;
   const c = _shapeCanvas.getContext('2d');
   c.clearRect(0, 0, w, h);
@@ -5551,7 +5547,7 @@ function getTextPoints(text) {
   c.fillText(text, w / 2, h / 2);
   const img = c.getImageData(0, 0, w, h).data;
   const pts = [];
-  const step = w < 768 ? 7 : 6;
+  const step = w < 300 ? 5 : (w < 768 ? 7 : 6);
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
       if (img[(y * w + x) * 4 + 3] > 128) pts.push({ x, y });
@@ -5566,26 +5562,29 @@ function setParticleShape(mode) {
   if (mode === 'free') {
     shapePoints = [];
     // 退出形态模式，重建原始数量的粒子恢复自由飘动
-    createGlobalParticles();
+    for (const inst of cardParticleSystems) createCardParticles(inst);
     return;
   }
   const text = mode === 'heart' ? 'I ♥ U' : mode;
-  shapePoints = getTextPoints(text);
-  // 补充粒子到接近采样点数，让数字/I♥U 形状饱满（上限 260）
-  const target = Math.min(shapePoints.length, 260);
-  const theme = PARTICLE_THEMES[currentParticleTheme];
-  const w = window.innerWidth, h = window.innerHeight;
-  while (globalParticles.length < target) {
-    globalParticles.push(createParticle(theme, w, h, globalParticles.length, target));
+  for (const inst of cardParticleSystems) {
+    const pts = getTextPoints(text, inst.w, inst.h);
+    inst._shapePts = pts;
+    // 补充粒子到接近采样点数，让数字/I♥U 形状饱满（上限 200）
+    const target = Math.min(pts.length, 200);
+    const theme = PARTICLE_THEMES[currentParticleTheme];
+    while (inst.particles.length < target) {
+      inst.particles.push(createParticle(theme, inst.w, inst.h, inst.particles.length, target));
+    }
+    assignShapeTargetsForInst(inst);
   }
-  assignShapeTargets();
 }
 
-function assignShapeTargets() {
-  if (!shapePoints.length) return;
-  for (let i = 0; i < globalParticles.length; i++) {
-    const p = globalParticles[i];
-    const t = shapePoints[i % shapePoints.length];
+function assignShapeTargetsForInst(inst) {
+  const pts = inst._shapePts;
+  if (!pts || !pts.length) return;
+  for (let i = 0; i < inst.particles.length; i++) {
+    const p = inst.particles[i];
+    const t = pts[i % pts.length];
     p.tx = t.x + (Math.random() - 0.5) * 5;
     p.ty = t.y + (Math.random() - 0.5) * 5;
   }
