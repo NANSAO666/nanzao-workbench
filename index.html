@@ -5152,7 +5152,10 @@ let currentParticleTheme = 'stars';
 let globalAnimFrame = null;
 let pointer = { x: -1000, y: -1000, active: false, vx: 0, vy: 0, prevX: 0, prevY: 0, downTime: 0 };
 let splashes = [];
-let swordCenter = { x: 0, y: 0, tx: 0, ty: 0, active: false };
+let swordCenter = { x: 0, y: 0, tx: 0, ty: 0, active: false, spread: 1 };
+// 粒子布局形态：'free' 自由 / '1'-'4' 聚成数字 / 'heart' 聚成 I❤U
+let particleShapeMode = 'free';
+let shapePoints = [];
 
 const gestureCam = { hands: null, video: null, on: false, raf: null, lastSwitch: 0 };
 
@@ -5165,8 +5168,6 @@ const PARTICLE_THEMES = {
   sakura:{ name: '樱花', colors: ['#fd79a8','#e84393','#fab1a0','#ffeaa7'], count: 65, speed: 1.2, size: [3, 6.5], behavior: 'sakura' },
   sword: { name: '御剑', colors: ['#e2e8f0','#94a3b8','#cbd5e1','#60a5fa','#a5b4fc'], count: 11, speed: 0.4, size: [5, 7], behavior: 'sword' },
 };
-
-const FINGER_THEME_MAP = { 1: 'stars', 2: 'rain', 3: 'snow', 4: 'sakura', 5: 'sword' };
 
 function initGlobalParticles() {
   globalParticleCanvas = document.getElementById('globalParticleCanvas');
@@ -5358,6 +5359,14 @@ function updateParticle(p, theme, w, h) {
   p.phase += 0.02; p.rot += p.rotSpeed;
   if (p.affected) { p.affectedTimer--; if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; } }
   p.vx *= 0.98; p.vy *= 0.98;
+  // 形态模式：粒子缓动聚成数字/I❤U（御剑主题除外，御剑走剑阵逻辑）
+  if (particleShapeMode !== 'free' && shapePoints.length && theme.behavior !== 'sword') {
+    p.x += (p.tx - p.x) * 0.09 + Math.sin(p.phase) * 0.35;
+    p.y += (p.ty - p.y) * 0.09 + Math.cos(p.phase * 0.7) * 0.35;
+    p.phase += 0.04;
+    if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.04, 1); }
+    return;
+  }
   const depth = 0.5 + p.depth;
   switch (theme.behavior) {
     case 'float': p.x += p.vx + Math.sin(p.phase) * 0.3; p.y += p.vy + Math.cos(p.phase) * 0.2; break;
@@ -5372,9 +5381,10 @@ function updateParticle(p, theme, w, h) {
     case 'sakura': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 2 + p.vx; p.phase += 0.01;
       if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
     case 'sword':
-      p.angle += p.rotSpeed;
-      p.x = swordCenter.x + Math.cos(p.angle) * p.dist;
-      p.y = swordCenter.y + Math.sin(p.angle) * p.dist;
+      p.angle += p.rotSpeed * (0.4 + swordCenter.spread * 1.2);
+      const sd = p.dist * (0.45 + swordCenter.spread * 0.95);
+      p.x = swordCenter.x + Math.cos(p.angle) * sd;
+      p.y = swordCenter.y + Math.sin(p.angle) * sd;
       p.rot = p.angle + Math.PI / 2;
       break;
   }
@@ -5453,12 +5463,16 @@ function drawParticle(ctx, p, theme) {
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2); ctx.fill();
   } else {
+    const isHeart = particleShapeMode === 'heart';
+    const heartColor = isHeart ? ['#ff4d6d','#ff8fa3','#ffb3c1','#c9184a','#ff758f'][Math.floor(p.phase) % 5] : p.color;
     const twinkle = theme.behavior === 'float' ? (0.6 + Math.sin(p.phase * 3) * 0.4) : 1;
-    ctx.shadowBlur = isAff ? p.size * 6 : p.size * 3; ctx.shadowColor = isAff ? '#22c55e' : p.color;
+    const heartPulse = isHeart ? (1 + Math.sin(p.phase * 2) * 0.4) : 1;
+    ctx.shadowBlur = isAff ? p.size * 6 : (isHeart ? p.size * 8 : p.size * 3);
+    ctx.shadowColor = isAff ? '#22c55e' : heartColor;
     ctx.globalAlpha = p.alpha * twinkle;
-    ctx.beginPath(); ctx.arc(p.x, p.y, isAff ? p.size * 1.5 : p.size, 0, Math.PI * 2);
-    ctx.fillStyle = isAff ? '#22c55e' : p.color; ctx.fill();
-    if (theme.behavior === 'float' && p.size > 1.8) {
+    ctx.beginPath(); ctx.arc(p.x, p.y, (isAff ? p.size * 1.5 : p.size) * heartPulse, 0, Math.PI * 2);
+    ctx.fillStyle = isAff ? '#22c55e' : heartColor; ctx.fill();
+    if (theme.behavior === 'float' && p.size > 1.8 && !isHeart) {
       ctx.globalAlpha = p.alpha * twinkle * 0.5;
       ctx.strokeStyle = isAff ? '#22c55e' : p.color; ctx.lineWidth = 0.6;
       ctx.beginPath(); ctx.moveTo(p.x - p.size * 2.5, p.y); ctx.lineTo(p.x + p.size * 2.5, p.y); ctx.stroke();
@@ -5480,11 +5494,66 @@ function drawSwordCenter(ctx) {
 function switchParticleTheme(themeName) {
   if (!PARTICLE_THEMES[themeName]) return;
   currentParticleTheme = themeName;
+  particleShapeMode = 'free'; shapePoints = [];
   createGlobalParticles();
   toast('已切换到 ' + PARTICLE_THEMES[themeName].name + ' 主题', 'success');
 }
 
-// ===================== MediaPipe Hands 手势识别（1-5 手指切换主题） =====================
+// ===================== 粒子形态（数字 / I❤U）文字采样 =====================
+const _shapeCanvas = document.createElement('canvas');
+function getTextPoints(text) {
+  const w = window.innerWidth, h = window.innerHeight;
+  _shapeCanvas.width = w; _shapeCanvas.height = h;
+  const c = _shapeCanvas.getContext('2d');
+  c.clearRect(0, 0, w, h);
+  const fontSize = Math.min(w, h) * (text.length > 2 ? 0.32 : 0.55);
+  c.fillStyle = '#fff';
+  c.font = 'bold ' + fontSize + 'px -apple-system, "PingFang SC", sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(text, w / 2, h / 2);
+  const img = c.getImageData(0, 0, w, h).data;
+  const pts = [];
+  const step = w < 768 ? 7 : 6;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      if (img[(y * w + x) * 4 + 3] > 128) pts.push({ x, y });
+    }
+  }
+  return pts;
+}
+
+function setParticleShape(mode) {
+  if (mode === particleShapeMode) return;
+  particleShapeMode = mode;
+  if (mode === 'free') {
+    shapePoints = [];
+    // 退出形态模式，重建原始数量的粒子恢复自由飘动
+    createGlobalParticles();
+    return;
+  }
+  const text = mode === 'heart' ? 'I ♥ U' : mode;
+  shapePoints = getTextPoints(text);
+  // 补充粒子到接近采样点数，让数字/I♥U 形状饱满（上限 260）
+  const target = Math.min(shapePoints.length, 260);
+  const theme = PARTICLE_THEMES[currentParticleTheme];
+  const w = window.innerWidth, h = window.innerHeight;
+  while (globalParticles.length < target) {
+    globalParticles.push(createParticle(theme, w, h, globalParticles.length, target));
+  }
+  assignShapeTargets();
+}
+
+function assignShapeTargets() {
+  if (!shapePoints.length) return;
+  for (let i = 0; i < globalParticles.length; i++) {
+    const p = globalParticles[i];
+    const t = shapePoints[i % shapePoints.length];
+    p.tx = t.x + (Math.random() - 0.5) * 5;
+    p.ty = t.y + (Math.random() - 0.5) * 5;
+  }
+}
+
+// ===================== MediaPipe Hands 手势识别（手势控制粒子布局） =====================
 async function toggleGestureCam() {
   if (gestureCam.on) { stopGestureCam(); return; }
   try {
@@ -5502,8 +5571,8 @@ async function toggleGestureCam() {
     if (panel) panel.classList.remove('closed');
     const btn = document.getElementById('aiGestureToggle');
     if (btn) btn.textContent = '📹 关闭手势';
-    setGestureHint('比出 1-5 根手指');
-    toast('摄像头已开启，比 1-5 切换特效', 'success');
+    setGestureHint(currentParticleTheme === 'sword' ? '移动手控制剑阵' : '比 1-5 指改变粒子');
+    toast('摄像头已开启，手势控制粒子布局', 'success');
     gestureCamLoop();
   } catch (err) {
     console.error(err);
@@ -5556,6 +5625,7 @@ function countFingers(lm) {
 function onHandsResults(results) {
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
     swordCenter.active = false;
+    setParticleShape('free');
     setGestureHint('把手放入画面');
     return;
   }
@@ -5563,15 +5633,19 @@ function onHandsResults(results) {
   const fingers = countFingers(lm);
   const wx = (1 - lm[0].x) * window.innerWidth;
   const wy = lm[0].y * window.innerHeight;
-  swordCenter.tx = wx; swordCenter.ty = wy; swordCenter.active = true;
-  const target = FINGER_THEME_MAP[fingers];
-  setGestureHint(fingers + ' 根手指' + (target ? ' → ' + PARTICLE_THEMES[target].name : ''));
-  const now = Date.now();
-  if (target && now - gestureCam.lastSwitch > 1000) {
-    if (currentParticleTheme !== target) {
-      switchParticleTheme(target);
-      gestureCam.lastSwitch = now;
-    }
+
+  if (currentParticleTheme === 'sword') {
+    // 御剑主题：手腕控制剑阵中心，手张开度控制剑阵半径与转速
+    swordCenter.tx = wx; swordCenter.ty = wy; swordCenter.active = true;
+    const spread = Math.hypot(lm[4].x - lm[20].x, lm[4].y - lm[20].y);
+    swordCenter.spread = Math.max(0.15, Math.min(1, spread * 3.2));
+    setGestureHint('御剑 · 张开度 ' + Math.round(swordCenter.spread * 100) + '%');
+  } else {
+    // 其他主题：手指数改变粒子布局形态（1-4 聚成数字，5 炸开成 I♥U）
+    swordCenter.active = false;
+    if (fingers === 5) { setParticleShape('heart'); setGestureHint('5 指 → I ♥ U'); }
+    else if (fingers >= 1 && fingers <= 4) { setParticleShape(String(fingers)); setGestureHint(fingers + ' 指 → 聚成 ' + fingers); }
+    else { setParticleShape('free'); setGestureHint('比 1-5 指改变粒子布局'); }
   }
 }
 
