@@ -5742,7 +5742,13 @@ function switchParticleTheme(themeName) {
   if (!PARTICLE_THEMES[themeName]) return;
   currentParticleTheme = themeName;
   particleShapeMode = 'free'; shapePoints = [];
-  for (const inst of cardParticleSystems) createCardParticles(inst);
+  // 持久化到设置，刷新/切页后保持
+  appData.settings.particleTheme = themeName;
+  saveData();
+  // 关闭手势摄像头（御剑主题外的手势态会干扰）
+  if (themeName !== 'sword' && gestureCam.on) stopGestureCam();
+  // 重新初始化所有卡片画布并重建粒子，确保当前页面所有 .card 同步生效
+  initCardParticleSystems();
   toast('已切换到 ' + PARTICLE_THEMES[themeName].name + ' 主题', 'success');
 }
 
@@ -6017,6 +6023,11 @@ function init() {
 
   // 渲染首屏
   renderPage();
+
+  // 从设置恢复已保存的粒子主题
+  if (appData.settings.particleTheme && PARTICLE_THEMES[appData.settings.particleTheme]) {
+    currentParticleTheme = appData.settings.particleTheme;
+  }
 
   // 初始化全局粒子系统（作用于全部卡片）
   initGlobalParticles();
