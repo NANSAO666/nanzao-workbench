@@ -5465,18 +5465,21 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
       const tgtG = (inst && inst._swordAttract) ? 1 : 0;
       p.gather += (tgtG - p.gather) * 0.08;
       if (p.gather > 0.02 && inst && inst._swordAttract) {
-        // 飞向手指：每把飞剑有独立的随机偏移，松散聚集在手指周围（非整齐剑阵）
-        if (p.offX === undefined) { p.offX = (Math.random() - 0.5) * 60; p.offY = (Math.random() - 0.5) * 60; }
-        // 偏移随时间缓慢漂移，让聚集有呼吸感
-        p.offX += Math.sin(p.phase) * 0.3; p.offY += Math.cos(p.phase * 0.7) * 0.3;
+        // 飞向手指：飞剑从当前位置飞向手指位置聚集跟随
+        // 小幅随机偏移让聚集松散自然（非整齐剑阵）
+        if (p.offX === undefined) { p.offX = (Math.random() - 0.5) * 20; p.offY = (Math.random() - 0.5) * 20; }
+        p.offX += Math.sin(p.phase) * 0.15; p.offY += Math.cos(p.phase * 0.7) * 0.15;
         p.phase += 0.02;
         const tx = swordX + p.offX;
         const ty = swordY + p.offY;
-        // 飞向目标点（跟随手指）
-        p.x += (tx - p.x) * 0.12;
-        p.y += (ty - p.y) * 0.12;
-        // 剑尖朝向手指（剑身坐标系剑尖在 -y）
-        p.rot = Math.atan2(p.x - swordX, swordY - p.y);
+        // 飞向手指位置（跟随）
+        p.x += (tx - p.x) * 0.14;
+        p.y += (ty - p.y) * 0.14;
+        // 剑尖朝向手指方向：从飞剑位置指向手指的向量角度
+        // 剑身坐标系剑尖在 -y，旋转角 = atan2(手指-飞剑的x, 飞剑-手指的y)
+        const dx = swordX - p.x;
+        const dy = swordY - p.y;
+        p.rot = Math.atan2(dx, -dy);
       } else {
         // 默认散开乱跑：参考 wander 主题，sin/cos 波动飘动 + 边界反弹
         p.x += p.vx + Math.sin(p.phase) * 0.9;
