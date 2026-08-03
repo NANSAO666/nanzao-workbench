@@ -5163,7 +5163,7 @@ const PARTICLE_THEMES = {
   fireflies: { name: '萤火虫', colors: ['#ffeaa7','#fdcb6e','#e17055','#00b894'], count: 55, speed: 0.8, size: [2, 5], behavior: 'wander', glow: true },
   aurora:{ name: '极光', colors: ['#00b894','#00cec9','#0984e3','#6c5ce7','#fd79a8'], count: 45, speed: 0.5, size: [3, 9], behavior: 'wave' },
   sakura:{ name: '樱花', colors: ['#fd79a8','#e84393','#fab1a0','#ffeaa7'], count: 65, speed: 1.2, size: [3, 6.5], behavior: 'sakura' },
-  sword: { name: '御剑', colors: ['#e2e8f0','#94a3b8','#cbd5e1','#60a5fa','#a5b4fc'], count: 11, speed: 0.4, size: [5, 7], behavior: 'sword' },
+  sword: { name: '御剑', colors: ['#e2e8f0','#94a3b8','#cbd5e1','#60a5fa','#a5b4fc','#c4b5fd'], count: 24, speed: 0.4, size: [6, 9], behavior: 'sword' },
 };
 
 function initGlobalParticles() {
@@ -5223,11 +5223,17 @@ function createParticle(theme, w, h, idx, total) {
     affected: false, affectedTimer: 0, depth: Math.random(),
   };
   if (theme.behavior === 'sword') {
+    // 双环剑阵：前一半内环（顺时针），后一半外环（逆时针），更有层次
+    const isOuter = idx >= total / 2;
+    const ringIdx = isOuter ? idx - Math.floor(total / 2) : idx;
+    const ringTotal = Math.floor(total / 2);
+    const baseAngle = (ringIdx / ringTotal) * Math.PI * 2 + (isOuter ? Math.PI / ringTotal : 0);
     return Object.assign(base, {
-      baseAngle: (idx / total) * Math.PI * 2,
-      angle: (idx / total) * Math.PI * 2,
-      dist: 95 + Math.random() * 35,
-      rotSpeed: 0.008 + Math.random() * 0.007,
+      baseAngle,
+      angle: baseAngle,
+      isOuter,
+      dist: isOuter ? (130 + Math.random() * 30) : (75 + Math.random() * 20),
+      rotSpeed: (isOuter ? -1 : 1) * (0.008 + Math.random() * 0.007),
       size: theme.size[0] + Math.random() * (theme.size[1] - theme.size[0]),
       x: w / 2, y: h / 2,
     });
@@ -5460,16 +5466,84 @@ function drawParticle(ctx, p, theme) {
   const isAff = p.affected;
   if (theme.behavior === 'sword') {
     ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-    const L = p.size * 7;
-    ctx.shadowBlur = 12; ctx.shadowColor = p.color;
-    const grad = ctx.createLinearGradient(0, -L / 2, 0, L / 2);
-    grad.addColorStop(0, '#f8fafc'); grad.addColorStop(0.5, p.color); grad.addColorStop(1, '#475569');
-    ctx.fillStyle = grad;
-    ctx.fillRect(-1.4, -L / 2, 2.8, L * 0.75);
-    ctx.beginPath(); ctx.moveTo(0, -L / 2 - 7); ctx.lineTo(-2.2, -L / 2); ctx.lineTo(2.2, -L / 2); ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0; ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-6, L * 0.25, 12, 2.4);
-    ctx.fillStyle = '#64748b'; ctx.fillRect(-1.6, L * 0.25, 3.2, L * 0.18);
-    ctx.beginPath(); ctx.arc(0, L * 0.25 + L * 0.18 + 1, 2.2, 0, Math.PI * 2); ctx.fill();
+    const L = p.size * 8;
+    const bladeLen = L * 0.72;
+    const bladeW = 2.6;
+    // 剑气拖尾（剑尖后方淡光）
+    ctx.shadowBlur = 0;
+    const trailGrad = ctx.createLinearGradient(0, -L / 2 - 6, 0, -L / 2 - 22);
+    trailGrad.addColorStop(0, p.color);
+    trailGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = trailGrad;
+    ctx.globalAlpha = p.alpha * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(-1, -L / 2 - 6); ctx.lineTo(1, -L / 2 - 6);
+    ctx.lineTo(0.5, -L / 2 - 22); ctx.lineTo(-0.5, -L / 2 - 22); ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = p.alpha;
+    // 剑身辉光
+    ctx.shadowBlur = 14; ctx.shadowColor = p.color;
+    // 剑身：双渐变（横向体现剑脊，纵向体现剑尖到剑根）
+    const bladeGrad = ctx.createLinearGradient(0, -L / 2, 0, L / 2);
+    bladeGrad.addColorStop(0, '#ffffff');
+    bladeGrad.addColorStop(0.35, '#f1f5f9');
+    bladeGrad.addColorStop(0.7, p.color);
+    bladeGrad.addColorStop(1, '#64748b');
+    ctx.fillStyle = bladeGrad;
+    // 剑身：从剑尖到剑根的细长多边形（带收窄）
+    ctx.beginPath();
+    ctx.moveTo(0, -L / 2 - 4);                 // 剑尖
+    ctx.lineTo(bladeW, -L / 2 + bladeLen * 0.15);
+    ctx.lineTo(bladeW * 0.85, -L / 2 + bladeLen * 0.95);
+    ctx.lineTo(-bladeW * 0.85, -L / 2 + bladeLen * 0.95);
+    ctx.lineTo(-bladeW, -L / 2 + bladeLen * 0.15);
+    ctx.closePath(); ctx.fill();
+    // 剑脊高光线（中央竖线，体现金属反光）
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.moveTo(0, -L / 2 - 2); ctx.lineTo(0, -L / 2 + bladeLen * 0.92); ctx.stroke();
+    // 剑格（护手）：菱形/十字形
+    const guardY = -L / 2 + bladeLen;
+    ctx.fillStyle = '#fbbf24';
+    ctx.shadowBlur = 6; ctx.shadowColor = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(0, guardY - 2.5);
+    ctx.lineTo(7, guardY + 1);
+    ctx.lineTo(0, guardY + 4.5);
+    ctx.lineTo(-7, guardY + 1);
+    ctx.closePath(); ctx.fill();
+    // 剑格中心宝石
+    ctx.shadowBlur = 4; ctx.shadowColor = '#60a5fa';
+    ctx.fillStyle = '#60a5fa';
+    ctx.beginPath(); ctx.arc(0, guardY + 1, 1.6, 0, Math.PI * 2); ctx.fill();
+    // 剑柄：深色木柄
+    ctx.shadowBlur = 0;
+    const hiltLen = L * 0.2;
+    const hiltGrad = ctx.createLinearGradient(0, guardY + 2, 0, guardY + 2 + hiltLen);
+    hiltGrad.addColorStop(0, '#78350f'); hiltGrad.addColorStop(0.5, '#92400e'); hiltGrad.addColorStop(1, '#451a03');
+    ctx.fillStyle = hiltGrad;
+    ctx.fillRect(-2, guardY + 2, 4, hiltLen);
+    // 剑柄缠绳（斜纹）
+    ctx.strokeStyle = '#b45309'; ctx.lineWidth = 0.5;
+    for (let i = 0; i < 4; i++) {
+      const yy = guardY + 3 + i * (hiltLen / 4);
+      ctx.beginPath(); ctx.moveTo(-2, yy); ctx.lineTo(2, yy + 1.5); ctx.stroke();
+    }
+    // 剑首（柄端圆球）
+    ctx.fillStyle = '#fbbf24'; ctx.shadowBlur = 5; ctx.shadowColor = '#fbbf24';
+    ctx.beginPath(); ctx.arc(0, guardY + 2 + hiltLen + 1.5, 2.4, 0, Math.PI * 2); ctx.fill();
+    // 剑穗（飘动的细线，随相位摆动）
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 0.8; ctx.globalAlpha = p.alpha * 0.7;
+    const sway = Math.sin(p.phase * 2) * 4;
+    ctx.beginPath();
+    ctx.moveTo(0, guardY + 2 + hiltLen + 3.5);
+    ctx.quadraticCurveTo(sway, guardY + 2 + hiltLen + 9, sway * 1.5, guardY + 2 + hiltLen + 14);
+    ctx.stroke();
+    // 剑穗末端小流苏
+    ctx.fillStyle = '#fbbf24'; ctx.globalAlpha = p.alpha * 0.85;
+    ctx.beginPath(); ctx.arc(sway * 1.5, guardY + 2 + hiltLen + 14, 1.4, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = p.alpha;
   } else if (theme.behavior === 'rain') {
     const len = 8 + p.vy * 4;
     const grad = ctx.createLinearGradient(p.x, p.y - len, p.x, p.y);
@@ -5531,10 +5605,28 @@ function drawParticle(ctx, p, theme) {
 
 function drawSwordCenterLocal(ctx, x, y) {
   ctx.save();
-  const grad = ctx.createRadialGradient(x, y, 0, x, y, 34);
-  grad.addColorStop(0, 'rgba(96,165,250,0.45)'); grad.addColorStop(1, 'transparent');
-  ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(x, y, 34, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+  const t = Date.now() / 1000;
+  const pulse = 1 + Math.sin(t * 3) * 0.15;
+  // 外层柔光
+  const grad1 = ctx.createRadialGradient(x, y, 0, x, y, 48 * pulse);
+  grad1.addColorStop(0, 'rgba(96,165,250,0.5)');
+  grad1.addColorStop(0.5, 'rgba(96,165,250,0.18)');
+  grad1.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad1; ctx.beginPath(); ctx.arc(x, y, 48 * pulse, 0, Math.PI * 2); ctx.fill();
+  // 能量环（旋转的双圈）
+  ctx.strokeStyle = 'rgba(147,197,253,0.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x, y, 22, t * 1.5, t * 1.5 + Math.PI * 1.4); ctx.stroke();
+  ctx.strokeStyle = 'rgba(196,181,253,0.5)';
+  ctx.beginPath(); ctx.arc(x, y, 30, -t * 1.2, -t * 1.2 + Math.PI * 1.2); ctx.stroke();
+  // 内核辉光
+  const grad2 = ctx.createRadialGradient(x, y, 0, x, y, 12);
+  grad2.addColorStop(0, '#ffffff');
+  grad2.addColorStop(0.4, '#bfdbfe');
+  grad2.addColorStop(1, 'rgba(96,165,250,0)');
+  ctx.fillStyle = grad2; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+  // 中心实点
+  ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 12; ctx.shadowColor = '#60a5fa';
+  ctx.beginPath(); ctx.arc(x, y, 4 * pulse, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
@@ -5723,18 +5815,28 @@ function gestureCamLoop() {
 }
 
 // 手指弯曲检测：四指用"指尖 y < PIP y"（手朝上时指尖在上方），拇指用指尖与 IP/MCP 横向比较
+// 手指伸直检测：基于"指尖相对 PIP 关节向远离掌心方向延伸"
+// 用指尖到手腕距离 vs PIP 到手腕距离的比值判断，对手部朝向不敏感
 function countFingers(lm) {
   let count = 0;
-  // 拇指：比较拇指尖(4)到拇指 IP(3) 与 IP(3)到 MCP(2) 的距离方向
-  // 用拇指尖到手腕(0)距离 vs 拇指 MCP(2)到手腕距离
-  const thumbExt = Math.hypot(lm[4].x - lm[0].x, lm[4].y - lm[0].y) >
-                   Math.hypot(lm[2].x - lm[0].x, lm[2].y - lm[0].y) * 1.15;
-  if (thumbExt) count++;
-  // 四指：指尖(tip)比 PIP 关节更靠上（y 更小=更靠上，因为图片坐标 y 向下）
-  // [食指8/6, 中指12/10, 无名指16/14, 小指20/18]，PIP 是 tip-2
+  const wrist = lm[0];
+  // 辅助：点 a 到点 b 的距离
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  // 拇指：拇指尖(4)到手腕距离 vs 拇指MCP(2)到手腕距离，且拇指尖与食指MCP(5)有横向距离
+  const thumbTipToWrist = dist(lm[4], wrist);
+  const thumbMcpToWrist = dist(lm[2], wrist);
+  // 拇指伸直时尖比 MCP 明显更远离手腕
+  if (thumbTipToWrist > thumbMcpToWrist * 1.25) count++;
+  // 四指：指尖(tip)比 PIP 关节更远离手腕（向指尖方向延伸）
+  // 同时要求指尖 y 比 PIP y 小（朝上时），双重判断减少误判
   const fingers = [[8, 6], [12, 10], [16, 14], [20, 18]];
   for (const [tip, pip] of fingers) {
-    if (lm[tip].y < lm[pip].y - 0.02) count++;
+    const tipToWrist = dist(lm[tip], wrist);
+    const pipToWrist = dist(lm[pip], wrist);
+    // 指尖比 PIP 更远离手腕（伸直方向）+ 指尖在 PIP 上方（y更小）
+    const farEnough = tipToWrist > pipToWrist * 1.08;
+    const above = lm[tip].y < lm[pip].y - 0.015;
+    if (farEnough && above) count++;
   }
   return count;
 }
