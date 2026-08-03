@@ -194,7 +194,7 @@
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     padding: 18px;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     box-shadow:
@@ -222,7 +222,6 @@
   }
   .card:hover {
     border-color: rgba(255, 255, 255, 0.18);
-    transform: translateY(-2px);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.08) inset,
       0 12px 40px rgba(0, 0, 0, 0.35),
@@ -648,13 +647,12 @@
     border-radius: 16px;
     padding: 0;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: z-index 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s, box-shadow 0.25s, background 0.25s;
     cursor: pointer;
     margin-bottom: -8px;
     position: relative;
   }
   .stack-3d-card:hover {
-    transform: translateX(0) scale(1) !important;
     z-index: 10 !important;
     border-color: rgba(34,197,94,0.3);
     box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(34,197,94,0.08);
@@ -4861,8 +4859,6 @@ function downloadWorkflowResults() {
 (function() {
   const isMobile = 'ontouchstart' in window;
 
-  const cards = [];
-
   function initCardEffects() {
     const targets = document.querySelectorAll('.card:not(.no-particle), .stack-3d-card:not(.no-particle)');
     targets.forEach(el => {
@@ -4871,7 +4867,6 @@ function downloadWorkflowResults() {
       el.style.position = 'relative';
       el.style.overflow = 'hidden';
       el.style.transformStyle = 'preserve-3d';
-      el.style.transition = 'transform 0.1s ease-out';
       el.style.willChange = 'transform';
 
       // 光晕层
@@ -4884,24 +4879,41 @@ function downloadWorkflowResults() {
       glow.style.cssText = 'position:absolute;top:-2px;left:-2px;right:-2px;bottom:-2px;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity 0.4s;filter:blur(8px);background:linear-gradient(135deg,rgba(34,197,94,0.2),transparent 50%,rgba(59,130,246,0.15));';
       el.appendChild(glow);
 
+      let rafId = null;
+      let targetRotX = 0, targetRotY = 0;
+      let currentRotX = 0, currentRotY = 0;
+
+      function applyTransform() {
+        // 平滑插值跟随
+        currentRotX += (targetRotX - currentRotX) * 0.2;
+        currentRotY += (targetRotY - currentRotY) * 0.2;
+        el.style.transform = `perspective(1000px) rotateX(${currentRotX}deg) rotateY(${currentRotY}deg) scale3d(1.03,1.03,1.03)`;
+        if (Math.abs(targetRotX - currentRotX) > 0.05 || Math.abs(targetRotY - currentRotY) > 0.05) {
+          rafId = requestAnimationFrame(applyTransform);
+        } else {
+          rafId = null;
+        }
+      }
+
       const onMove = (cx, cy) => {
         const rect = el.getBoundingClientRect();
         const mx = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
         const my = Math.max(0, Math.min(1, (cy - rect.top) / rect.height));
 
-        const rotX = (my - 0.5) * -10;
-        const rotY = (mx - 0.5) * 10;
-        el.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(8px)`;
-        el.style.transition = 'transform 0.08s ease-out';
+        // 增大倾斜角度，效果更明显
+        targetRotX = (my - 0.5) * -20;
+        targetRotY = (mx - 0.5) * 20;
 
-        shine.style.background = `radial-gradient(circle at ${mx*100}% ${my*100}%, rgba(255,255,255,0.12) 0%, transparent 50%)`;
+        if (!rafId) rafId = requestAnimationFrame(applyTransform);
+
+        shine.style.background = `radial-gradient(circle at ${mx*100}% ${my*100}%, rgba(255,255,255,0.2) 0%, transparent 60%)`;
         shine.style.opacity = '1';
         glow.style.opacity = '1';
       };
 
       const onLeave = () => {
-        el.style.transform = '';
-        el.style.transition = 'transform 0.3s ease-out';
+        targetRotX = 0; targetRotY = 0;
+        if (!rafId) rafId = requestAnimationFrame(applyTransform);
         shine.style.opacity = '0';
         glow.style.opacity = '0';
       };
@@ -4912,7 +4924,12 @@ function downloadWorkflowResults() {
           onMove(t.clientX, t.clientY);
           el.classList.add('touching');
         }, { passive: true });
-        el.addEventListener('touchend', () => { onLeave(); el.classList.remove('touching'); });
+        el.addEventListener('touchmove', (e) => {
+          const t = e.touches[0];
+          onMove(t.clientX, t.clientY);
+        }, { passive: true });
+        el.addEventListener('touchend', () => { onLeave(); el.classList.remove('touching'); }, { passive: true });
+        el.addEventListener('touchcancel', () => { onLeave(); el.classList.remove('touching'); }, { passive: true });
       } else {
         el.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
         el.addEventListener('mouseleave', onLeave);
