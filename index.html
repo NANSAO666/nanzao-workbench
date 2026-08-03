@@ -187,6 +187,10 @@
   .page-actions { display: flex; gap: 8px; }
 
   /* 玻璃泡泡卡片 */
+  @keyframes cardEntrance {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
   .card {
     background: rgba(255, 255, 255, 0.035);
     backdrop-filter: blur(16px);
@@ -200,6 +204,7 @@
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.06) inset,
       0 8px 32px rgba(0, 0, 0, 0.25);
+    animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
   .card::before {
     content: '';
@@ -4943,10 +4948,19 @@ function downloadWorkflowResults() {
     window.renderPage = function() {
       origRenderPage();
       setTimeout(initCardEffects, 150);
+      setTimeout(applyCardEntrance, 200);
     };
   }
   // 首屏初始化
   setTimeout(initCardEffects, 300);
+  setTimeout(applyCardEntrance, 350);
+
+  function applyCardEntrance() {
+    const cards = document.querySelectorAll('.card:not(.no-particle), .stack-3d-card:not(.no-particle)');
+    cards.forEach((el, i) => {
+      el.style.animationDelay = `${i * 0.06}s`;
+    });
+  }
 })();
 
 // ===================== 辅助函数 =====================
