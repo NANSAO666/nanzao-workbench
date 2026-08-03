@@ -5020,6 +5020,10 @@ function downloadWorkflowResults() {
     const cards = document.querySelectorAll('.card:not(.no-particle), .stack-3d-card:not(.no-particle)');
     cards.forEach((el, i) => {
       el.style.animationDelay = `${i * 0.06}s`;
+      // 动画结束后清除 animation，避免 transform 与 JS 3D 倾斜冲突
+      el.addEventListener('animationend', () => {
+        el.style.animation = 'none';
+      }, { once: true });
     });
   }
 })();
