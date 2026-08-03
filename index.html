@@ -4854,274 +4854,82 @@ function downloadWorkflowResults() {
   toast('文件已下载', 'success');
 }
 
-// ===================== 3D 流体粒子卡片系统（高性能版） =====================
-// 优化：单一全局rAF + Canvas连线 + 只改transform + IntersectionObserver + 降帧率
-// 注：此旧版粒子系统已弃用，改用 initCardParticleSystems（支持主题切换）。
-// 整段直接 return 禁用，避免与主题粒子系统叠加显示。
+// ===================== 卡片 3D 倾斜 + 光晕交互效果（轻量版） =====================
+// 注：旧版粒子系统已弃用，改用 initCardParticleSystems（支持主题切换）。
+// 仅保留卡片交互效果（3D 倾斜 + 光晕），不含粒子点阵。
 
 (function() {
-  return;
   const isMobile = 'ontouchstart' in window;
-  const MAX_DOTS = isMobile ? 8 : 15;
-  const TARGET_FPS = isMobile ? 30 : 60;
-  const FRAME_INTERVAL = 1000 / TARGET_FPS;
-  const CONNECT_DIST = 80;
 
   const cards = [];
-  let lastFrameTime = 0;
-  let rafId = null;
 
-  class ParticleCard {
-    constructor(el) {
-      this.el = el;
-      this.mouseX = 0.5;
-      this.mouseY = 0.5;
-      this.hovering = false;
-      this.visible = true;
-      this.w = el.offsetWidth;
-      this.h = el.offsetHeight;
-      this.dots = [];
-      this._destroyed = false;
-
+  function initCardEffects() {
+    const targets = document.querySelectorAll('.card:not(.no-particle), .stack-3d-card:not(.no-particle)');
+    targets.forEach(el => {
+      if (el._cardEffectBound) return;
+      el._cardEffectBound = true;
       el.style.position = 'relative';
       el.style.overflow = 'hidden';
+      el.style.transformStyle = 'preserve-3d';
+      el.style.transition = 'transform 0.1s ease-out';
+      el.style.willChange = 'transform';
 
-      // Canvas 层（连线 + 粒子圆点，GPU加速）
-      this.canvas = document.createElement('canvas');
-      this.canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;';
-      el.insertBefore(this.canvas, el.firstChild);
-      this.ctx = this.canvas.getContext('2d');
+      // 光晕层
+      const shine = document.createElement('div');
+      shine.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:2;border-radius:inherit;opacity:0;transition:opacity 0.3s;';
+      el.appendChild(shine);
 
-      // 光晕
-      this.shine = document.createElement('div');
-      this.shine.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:2;border-radius:inherit;opacity:0;transition:opacity 0.3s;';
-      el.appendChild(this.shine);
+      // 外发光层
+      const glow = document.createElement('div');
+      glow.style.cssText = 'position:absolute;top:-2px;left:-2px;right:-2px;bottom:-2px;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity 0.4s;filter:blur(8px);background:linear-gradient(135deg,rgba(34,197,94,0.2),transparent 50%,rgba(59,130,246,0.15));';
+      el.appendChild(glow);
 
-      this.glow = document.createElement('div');
-      this.glow.style.cssText = 'position:absolute;top:-2px;left:-2px;right:-2px;bottom:-2px;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity 0.4s;filter:blur(6px);';
-      el.appendChild(this.glow);
-
-      this._resizeCanvas();
-      this._initDots();
-      this._bindEvents();
-
-      // IntersectionObserver - 只在可见时动画
-      this._observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => { this.visible = entry.isIntersecting; });
-      }, { threshold: 0.1 });
-      this._observer.observe(el);
-    }
-
-    _resizeCanvas() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      this.w = this.el.offsetWidth;
-      this.h = this.el.offsetHeight;
-      this.canvas.width = this.w * dpr;
-      this.canvas.height = this.h * dpr;
-      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    _initDots() {
-      this.dots = [];
-      const count = Math.min(MAX_DOTS, Math.max(6, Math.floor(this.w * this.h / 12000)));
-      for (let i = 0; i < count; i++) {
-        this.dots.push({
-          x: Math.random() * this.w,
-          y: Math.random() * this.h,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
-          r: Math.random() * 2 + 1.5,
-          hue: Math.random() > 0.5 ? 142 : 210,
-          baseAlpha: Math.random() * 0.35 + 0.15,
-        });
-      }
-    }
-
-    _bindEvents() {
       const onMove = (cx, cy) => {
-        const rect = this.el.getBoundingClientRect();
-        this.mouseX = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
-        this.mouseY = Math.max(0, Math.min(1, (cy - rect.top) / rect.height));
-        this.hovering = true;
+        const rect = el.getBoundingClientRect();
+        const mx = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
+        const my = Math.max(0, Math.min(1, (cy - rect.top) / rect.height));
 
-        const rotX = (this.mouseY - 0.5) * -10;
-        const rotY = (this.mouseX - 0.5) * 10;
-        this.el.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(8px)`;
-        this.el.style.transition = 'transform 0.08s ease-out';
+        const rotX = (my - 0.5) * -10;
+        const rotY = (mx - 0.5) * 10;
+        el.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(8px)`;
+        el.style.transition = 'transform 0.08s ease-out';
 
-        this.shine.style.background = `radial-gradient(circle at ${this.mouseX*100}% ${this.mouseY*100}%, rgba(255,255,255,0.15) 0%, transparent 50%)`;
-        this.shine.style.opacity = '1';
-        this.glow.style.background = 'linear-gradient(135deg, rgba(34,197,94,0.25), transparent 50%, rgba(59,130,246,0.2))';
-        this.glow.style.opacity = '1';
+        shine.style.background = `radial-gradient(circle at ${mx*100}% ${my*100}%, rgba(255,255,255,0.12) 0%, transparent 50%)`;
+        shine.style.opacity = '1';
+        glow.style.opacity = '1';
       };
 
       const onLeave = () => {
-        this.hovering = false;
-        this.el.style.transform = '';
-        this.el.style.transition = 'transform 0.4s ease-out';
-        this.shine.style.opacity = '0';
-        this.glow.style.opacity = '0';
+        el.style.transform = '';
+        el.style.transition = 'transform 0.3s ease-out';
+        shine.style.opacity = '0';
+        glow.style.opacity = '0';
       };
 
-      if (!isMobile) {
-        this.el.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-        this.el.addEventListener('mouseleave', onLeave);
-        this.el.addEventListener('mouseenter', () => { this.hovering = true; });
+      if (isMobile) {
+        el.addEventListener('touchstart', (e) => {
+          const t = e.touches[0];
+          onMove(t.clientX, t.clientY);
+          el.classList.add('touching');
+        }, { passive: true });
+        el.addEventListener('touchend', () => { onLeave(); el.classList.remove('touching'); });
       } else {
-        this.el.addEventListener('touchstart', (e) => onMove(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-        this.el.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-        this.el.addEventListener('touchend', onLeave, { passive: true });
+        el.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+        el.addEventListener('mouseleave', onLeave);
       }
-    }
-
-    update() {
-      if (!this.visible || this._destroyed) return;
-      const ctx = this.ctx;
-      const w = this.w;
-      const h = this.h;
-      const dots = this.dots;
-      const mx = this.mouseX * w;
-      const my = this.mouseY * h;
-      const hovering = this.hovering;
-
-      ctx.clearRect(0, 0, w, h);
-
-      // 更新粒子位置
-      for (let i = 0; i < dots.length; i++) {
-        const p = dots[i];
-
-        if (hovering) {
-          const dx = mx - p.x;
-          const dy = my - p.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120 && dist > 0) {
-            const force = (120 - dist) / 120 * 0.025;
-            p.vx += dx * force;
-            p.vy += dy * force;
-          }
-        }
-
-        p.vx *= 0.97;
-        p.vy *= 0.97;
-        p.vx += (Math.random() - 0.5) * 0.06;
-        p.vy += (Math.random() - 0.5) * 0.06;
-        p.x += p.vx;
-        p.y += p.vy;
-
-        if (p.x < 0) { p.x = 0; p.vx *= -0.5; }
-        if (p.x > w) { p.x = w; p.vx *= -0.5; }
-        if (p.y < 0) { p.y = 0; p.vy *= -0.5; }
-        if (p.y > h) { p.y = h; p.vy *= -0.5; }
-      }
-
-      // Canvas 绘制连线
-      for (let i = 0; i < dots.length; i++) {
-        for (let j = i + 1; j < dots.length; j++) {
-          const dx = dots[i].x - dots[j].x;
-          const dy = dots[i].y - dots[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < CONNECT_DIST) {
-            ctx.beginPath();
-            ctx.moveTo(dots[i].x, dots[i].y);
-            ctx.lineTo(dots[j].x, dots[j].y);
-            const la = (1 - dist / CONNECT_DIST) * (hovering ? 0.45 : 0.12);
-            ctx.strokeStyle = `hsla(${dots[i].hue},75%,60%,${la})`;
-            ctx.lineWidth = hovering ? 1 : 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-
-      // Canvas 绘制粒子圆点
-      for (let i = 0; i < dots.length; i++) {
-        const p = dots[i];
-        const a = hovering ? p.baseAlpha * 2.5 : p.baseAlpha;
-        const r = hovering ? p.r * 1.4 : p.r;
-
-        // 发光
-        if (hovering) {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(${p.hue},80%,60%,${a * 0.12})`;
-          ctx.fill();
-        }
-
-        // 圆点
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${p.hue},85%,65%,${a})`;
-        ctx.fill();
-      }
-    }
-
-    destroy() {
-      this._destroyed = true;
-      this._observer?.disconnect();
-      this.canvas.remove();
-      this.shine.remove();
-      this.glow.remove();
-    }
-  }
-
-  // 全局动画循环
-  function globalAnimate(timestamp) {
-    rafId = requestAnimationFrame(globalAnimate);
-    if (timestamp - lastFrameTime < FRAME_INTERVAL) return;
-    lastFrameTime = timestamp;
-
-    for (let i = cards.length - 1; i >= 0; i--) {
-      if (cards[i]._destroyed) {
-        cards.splice(i, 1);
-        continue;
-      }
-      cards[i].update();
-    }
-  }
-
-  // 公开 API
-  window.initParticleCards = function() {
-    // 清理旧卡片
-    for (let i = cards.length - 1; i >= 0; i--) {
-      cards[i].destroy();
-    }
-    cards.length = 0;
-
-    const targets = document.querySelectorAll('.card:not(.no-particle), .stat-card:not(.no-particle)');
-    targets.forEach(el => {
-      if (el.offsetWidth < 50 || el.offsetHeight < 50) return;
-      // 避免重复初始化
-      if (el.querySelector('canvas.particle-canvas-init')) return;
-      el.classList.add('particle-card');
-      const pc = new ParticleCard(el);
-      cards.push(pc);
     });
+  }
 
-    // 启动全局动画（只启动一次）
-    if (!rafId) {
-      rafId = requestAnimationFrame(globalAnimate);
-    }
-  };
-
-  // 窗口 resize 时重新初始化
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      for (let i = 0; i < cards.length; i++) {
-        cards[i]._resizeCanvas();
-        cards[i]._initDots();
-      }
-    }, 200);
-  });
-
-  // 在每次页面渲染后初始化粒子
+  // 每次页面渲染后初始化卡片效果
   const origRenderPage = window.renderPage;
   if (origRenderPage) {
     window.renderPage = function() {
       origRenderPage();
-      setTimeout(window.initParticleCards, 150);
+      setTimeout(initCardEffects, 150);
     };
   }
+  // 首屏初始化
+  setTimeout(initCardEffects, 300);
 })();
 
 // ===================== 辅助函数 =====================
