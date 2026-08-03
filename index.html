@@ -5451,17 +5451,24 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
   }
   const depth = 0.5 + p.depth;
   switch (theme.behavior) {
-    case 'float': p.x += p.vx + Math.sin(p.phase) * 0.3; p.y += p.vy + Math.cos(p.phase) * 0.2; break;
+    case 'float': p.x += p.vx + Math.sin(p.phase) * 0.3; p.y += p.vy + Math.cos(p.phase) * 0.2;
+      if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); } if (p.x > w) { p.x = w; p.vx = -Math.abs(p.vx); }
+      if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); } if (p.y > h) { p.y = h; p.vy = -Math.abs(p.vy); } break;
     case 'rain': p.y += p.vy * 4 + 5 * depth; p.x += Math.sin(p.phase) * 0.3 + p.vx;
-      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; if (Math.random() < 0.25 && inst) spawnSplash(inst, p.x, h - 2); } break;
+      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; if (Math.random() < 0.25 && inst) spawnSplash(inst, p.x, h - 2); }
+      if (p.x < 0) p.x = 0; if (p.x > w) p.x = w; break;
     case 'snow': p.y += p.vy + 1 * depth; p.x += Math.sin(p.phase) * 1.5 + p.vx;
-      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
+      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; }
+      if (p.x < 0) p.x = 0; if (p.x > w) p.x = w; break;
     case 'wander': p.x += p.vx + Math.sin(p.phase) * 1; p.y += p.vy + Math.cos(p.phase * 0.7) * 1;
-      if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1; break;
+      if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); } if (p.x > w) { p.x = w; p.vx = -Math.abs(p.vx); }
+      if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); } if (p.y > h) { p.y = h; p.vy = -Math.abs(p.vy); } break;
     case 'wave': p.x += p.vx; p.y += Math.sin(p.phase + p.x * 0.01) * 2 + p.vy;
-      if (p.x < 0 || p.x > w) p.vx *= -1; break;
+      if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); } if (p.x > w) { p.x = w; p.vx = -Math.abs(p.vx); }
+      if (p.y < 0) { p.y = 0; } if (p.y > h) { p.y = h; } break;
     case 'sakura': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 2 + p.vx; p.phase += 0.01;
-      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
+      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; }
+      if (p.x < 0) p.x = 0; if (p.x > w) p.x = w; break;
     case 'sword':
       // 3D 姿态持续更新（俯仰+偏航）
       p.pitch += p.pitchSpeed;
@@ -5499,10 +5506,6 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
         p.rot = Math.atan2(p.vy + Math.cos(p.phase * 0.7), p.vx + Math.sin(p.phase)) + Math.PI / 2;
       }
       break;
-  }
-  if (theme.behavior === 'float' || theme.behavior === 'wander') {
-    if (p.x < -50) p.x = w + 50; if (p.x > w + 50) p.x = -50;
-    if (p.y < -50) p.y = h + 50; if (p.y > h + 50) p.y = -50;
   }
   if (theme.behavior !== 'sword') {
     if (p.affected) p.alpha = Math.min(p.alpha + 0.05, 1); else p.alpha = Math.max(p.alpha - 0.01, 0.3);
