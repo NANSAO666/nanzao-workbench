@@ -5203,7 +5203,13 @@ function createCardParticles(inst) {
   inst.particles = []; inst.splashes = []; inst._shapePts = null;
   const theme = PARTICLE_THEMES[currentParticleTheme];
   const w = inst.w, h = inst.h;
-  const count = w < 300 ? Math.floor(theme.count * 0.3) : (window.innerWidth < 768 ? Math.floor(theme.count * 0.5) : theme.count);
+  // 御剑主题是结构化剑阵，数量不足会散架，移动端也不减半
+  let count;
+  if (theme.behavior === 'sword') {
+    count = theme.count;
+  } else {
+    count = w < 300 ? Math.floor(theme.count * 0.3) : (window.innerWidth < 768 ? Math.floor(theme.count * 0.5) : theme.count);
+  }
   for (let i = 0; i < count; i++) inst.particles.push(createParticle(theme, w, h, i, count));
 }
 
@@ -5228,11 +5234,15 @@ function createParticle(theme, w, h, idx, total) {
     const ringIdx = isOuter ? idx - Math.floor(total / 2) : idx;
     const ringTotal = Math.floor(total / 2);
     const baseAngle = (ringIdx / ringTotal) * Math.PI * 2 + (isOuter ? Math.PI / ringTotal : 0);
+    // 剑阵半径按卡片尺寸自适应，确保飞剑不会被卡片裁剪掉
+    const minDim = Math.min(w, h);
+    const innerR = minDim * (0.18 + Math.random() * 0.05);
+    const outerR = minDim * (0.32 + Math.random() * 0.06);
     return Object.assign(base, {
       baseAngle,
       angle: baseAngle,
       isOuter,
-      dist: isOuter ? (130 + Math.random() * 30) : (75 + Math.random() * 20),
+      dist: isOuter ? outerR : innerR,
       rotSpeed: (isOuter ? -1 : 1) * (0.008 + Math.random() * 0.007),
       size: theme.size[0] + Math.random() * (theme.size[1] - theme.size[0]),
       x: w / 2, y: h / 2,
