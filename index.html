@@ -5866,6 +5866,7 @@ function onHandsResults(results) {
   _detectCount++;
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
     swordCenter.active = false;
+    pointer.active = false;
     _fingerHistory = [];
     // 手离开画面时恢复自由形态（仅当当前不是 free）
     if (_lastFingerMode !== 'free') { setParticleShape('free'); _lastFingerMode = 'free'; }
@@ -5877,6 +5878,12 @@ function onHandsResults(results) {
   // selfieMode 已镜像，直接用原始坐标映射到屏幕
   const wx = lm[0].x * window.innerWidth;
   const wy = lm[0].y * window.innerHeight;
+
+  // 同步更新 pointer，让所有主题的粒子都能响应手势
+  pointer.prevX = pointer.x; pointer.prevY = pointer.y;
+  pointer.x = wx; pointer.y = wy;
+  pointer.vx = pointer.x - pointer.prevX; pointer.vy = pointer.y - pointer.prevY;
+  pointer.active = true;
 
   if (currentParticleTheme === 'sword') {
     // 御剑主题：手腕控制剑阵中心，手张开度控制剑阵半径与转速
