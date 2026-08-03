@@ -5163,7 +5163,7 @@ const gestureCam = { hands: null, video: null, on: false, raf: null, lastSwitch:
 const PARTICLE_THEMES = {
   stars: { name: '星空', colors: ['#ffffff','#ffeaa7','#74b9ff','#a29bfe','#fd79a8'], count: 80, speed: 0.3, size: [0.6, 2.6], behavior: 'float', glow: true },
   rain:  { name: '雨滴', colors: ['#a8d8ff','#74b9ff','#0984e3','#dfe6e9'], count: 140, speed: 4, size: [1, 2], behavior: 'rain' },
-  snow:  { name: '飘雪', colors: ['#ffffff','#dfe6e9','#b2bec3'], count: 90, speed: 1.4, size: [1.8, 4.5], behavior: 'snow', glow: true },
+  snow:  { name: '飘雪', colors: ['#ffffff','#dfe6e9','#b2bec3'], count: 50, speed: 1.0, size: [1.5, 3.5], behavior: 'snow', glow: true },
   fireflies: { name: '萤火虫', colors: ['#ffeaa7','#fdcb6e','#e17055','#00b894'], count: 55, speed: 0.8, size: [2, 5], behavior: 'wander', glow: true },
   aurora:{ name: '极光', colors: ['#00b894','#00cec9','#0984e3','#6c5ce7','#fd79a8'], count: 45, speed: 0.5, size: [3, 9], behavior: 'wave' },
   sakura:{ name: '樱花', colors: ['#fd79a8','#e84393','#fab1a0','#ffeaa7'], count: 65, speed: 1.2, size: [3, 6.5], behavior: 'sakura' },
@@ -5666,15 +5666,10 @@ function drawParticle(ctx, p, theme) {
     ctx.beginPath(); ctx.moveTo(p.x, p.y - len); ctx.lineTo(p.x, p.y); ctx.stroke();
   } else if (theme.behavior === 'snow') {
     ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-    ctx.shadowBlur = isAff ? p.size * 5 : p.size * 2; ctx.shadowColor = isAff ? '#22c55e' : '#ffffff';
-    ctx.strokeStyle = isAff ? '#22c55e' : p.color; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+    ctx.shadowBlur = isAff ? p.size * 3 : p.size; ctx.shadowColor = isAff ? '#22c55e' : '#ffffff';
+    ctx.fillStyle = isAff ? '#22c55e' : p.color;
     const r = p.size;
-    for (let i = 0; i < 6; i++) {
-      ctx.rotate(Math.PI / 3);
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, r); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, r * 0.6); ctx.lineTo(r * 0.28, r * 0.85); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, r * 0.6); ctx.lineTo(-r * 0.28, r * 0.85); ctx.stroke();
-    }
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
   } else if (theme.behavior === 'sakura') {
     ctx.translate(p.x, p.y); ctx.rotate(p.rot);
     ctx.shadowBlur = isAff ? p.size * 4 : 0; ctx.shadowColor = isAff ? '#22c55e' : p.color;
