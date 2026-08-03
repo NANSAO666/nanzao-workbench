@@ -191,6 +191,59 @@
     from { opacity: 0; transform: translateY(24px) scale(0.96); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
+
+  /* Splash Screen */
+  @keyframes splashPulse {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes splashGlow {
+    0%, 100% { box-shadow: 0 0 40px rgba(34,197,94,0.3), 0 0 80px rgba(34,197,94,0.1); }
+    50% { box-shadow: 0 0 60px rgba(34,197,94,0.5), 0 0 120px rgba(34,197,94,0.2); }
+  }
+  @keyframes splashFadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+  }
+  @keyframes splashLine {
+    from { width: 0; }
+    to { width: 60px; }
+  }
+  .splash-screen {
+    position: fixed; inset: 0; z-index: 99999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #0a0a0a;
+    transition: opacity 0.6s ease;
+  }
+  .splash-screen.splash-hide {
+    animation: splashFadeOut 0.6s ease forwards;
+  }
+  .splash-logo {
+    width: 80px; height: 80px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; color: #fff;
+    animation: splashPulse 0.8s cubic-bezier(0.16, 1, 0.3, 1) both, splashGlow 2s ease-in-out infinite;
+    margin-bottom: 24px;
+  }
+  .splash-title {
+    font-size: 28px; font-weight: 700; color: #f0f0f0;
+    letter-spacing: -0.5px;
+    animation: splashPulse 0.8s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .splash-subtitle {
+    font-size: 14px; color: rgba(255,255,255,0.4);
+    margin-top: 8px;
+    animation: splashPulse 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .splash-line {
+    width: 60px; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    margin-top: 32px;
+    animation: splashLine 1s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
   .card {
     background: rgba(255, 255, 255, 0.035);
     backdrop-filter: blur(16px);
@@ -1185,6 +1238,14 @@
 </style>
 </head>
 <body>
+
+<!-- Splash Screen -->
+<div class="splash-screen" id="splashScreen">
+  <div class="splash-logo">⚡</div>
+  <div class="splash-title">南崽工作台</div>
+  <div class="splash-subtitle">智能工作助手</div>
+  <div class="splash-line"></div>
+</div>
 
 <div class="app-container">
 
@@ -5873,6 +5934,15 @@ function init() {
 
   // 初始化全局粒子系统（作用于全部卡片）
   initGlobalParticles();
+
+  // 隐藏启动动画
+  setTimeout(() => {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+      splash.classList.add('splash-hide');
+      setTimeout(() => splash.remove(), 600);
+    }
+  }, 1500);
 }
 
 init();
