@@ -4856,8 +4856,11 @@ function downloadWorkflowResults() {
 
 // ===================== 3D 流体粒子卡片系统（高性能版） =====================
 // 优化：单一全局rAF + Canvas连线 + 只改transform + IntersectionObserver + 降帧率
+// 注：此旧版粒子系统已弃用，改用 initCardParticleSystems（支持主题切换）。
+// 整段直接 return 禁用，避免与主题粒子系统叠加显示。
 
 (function() {
+  return;
   const isMobile = 'ontouchstart' in window;
   const MAX_DOTS = isMobile ? 8 : 15;
   const TARGET_FPS = isMobile ? 30 : 60;
