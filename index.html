@@ -75,10 +75,11 @@
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-  /* 每张 .card 卡片内部独立粒子画布（粒子被卡片 overflow:hidden 自然裁剪，不再用 clip-path） */
+  /* 每张卡片内部独立粒子画布（粒子被卡片 overflow:hidden 自然裁剪，不再用 clip-path） */
   .card-particle-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
   .card { background: rgba(255, 255, 255, 0.025); }
   .card > *:not(.card-particle-canvas) { position: relative; z-index: 1; }
+  .stack-3d-card > *:not(.card-particle-canvas) { position: relative; z-index: 1; }
   /* 视频手势识别预览（仅 AI 对话助手） */
   #aiGesturePanel {
     position: absolute; right: 10px; top: 10px; z-index: 8;
@@ -5172,11 +5173,12 @@ function initGlobalParticles() {
   startCardAnimation();
 }
 
-// 为每个 .card 注入独立粒子画布（粒子在卡片局部坐标系绘制，由卡片 overflow:hidden 自然裁剪）
+// 为每个卡片容器注入独立粒子画布（粒子在卡片局部坐标系绘制，由卡片 overflow:hidden 自然裁剪）
+// 支持 .card 与待办堆叠卡片 .stack-3d-card
 function initCardParticleSystems() {
   cardParticleSystems.forEach(s => { if (s.canvas && s.canvas.parentNode) s.canvas.parentNode.removeChild(s.canvas); });
   cardParticleSystems = [];
-  const cards = document.querySelectorAll('.card');
+  const cards = document.querySelectorAll('.card, .stack-3d-card');
   cards.forEach((card) => {
     const canvas = document.createElement('canvas');
     canvas.className = 'card-particle-canvas';
