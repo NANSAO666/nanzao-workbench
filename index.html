@@ -5229,18 +5229,22 @@ function createParticle(theme, w, h, idx, total) {
     affected: false, affectedTimer: 0, depth: Math.random(),
   };
   if (theme.behavior === 'sword') {
-    // 散开分布：每把飞剑独立角度+随机半径，避免聚成紧凑环形
-    const minDim = Math.min(w, h);
-    const baseAngle = (idx / total) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
-    const dist = minDim * (0.1 + Math.random() * 0.22);
+    // 飞剑默认散开乱跑：独立速度+位置，3D 深度（0=远 1=近）
+    const depth = Math.random();
     return Object.assign(base, {
-      baseAngle,
-      angle: baseAngle,
-      isOuter: idx % 2 === 0,
-      dist,
-      rotSpeed: (idx % 2 === 0 ? 1 : -1) * (0.006 + Math.random() * 0.009),
-      size: theme.size[0] + Math.random() * (theme.size[1] - theme.size[0]),
-      x: w / 2, y: h / 2,
+      x: Math.random() * w, y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: (Math.random() - 0.5) * 1.2,
+      depth,
+      size: theme.size[0] + depth * (theme.size[1] - theme.size[0]),
+      // 3D 倾斜：俯仰角(pitch)+偏航角(yaw)模拟立体旋转
+      pitch: Math.random() * Math.PI * 2,
+      yaw: Math.random() * Math.PI * 2,
+      pitchSpeed: (Math.random() - 0.5) * 0.04,
+      yawSpeed: (Math.random() - 0.5) * 0.05,
+      // 聚拢模式用：目标位置插值
+      gather: 0,
+      gatherX: 0, gatherY: 0,
     });
   }
   return Object.assign(base, {
@@ -5258,15 +5262,27 @@ function setupGlobalGesture() {
     pointer.x = e.clientX; pointer.y = e.clientY;
     pointer.vx = pointer.x - pointer.prevX; pointer.vy = pointer.y - pointer.prevY;
     pointer.active = true;
-    if (!swordCenter.active) { swordCenter.tx = pointer.x; swordCenter.ty = pointer.y; }
+    // 御剑主题：鼠标移动即聚拢飞剑到指针位置（未开摄像头时）
+    if (currentParticleTheme === 'sword' && !gestureCam.on) {
+      swordCenter.tx = pointer.x; swordCenter.ty = pointer.y; swordCenter.active = true;
+      swordCenter.spread = 0.7;
+    }
   });
-  window.addEventListener('mouseleave', () => { pointer.active = false; });
+  window.addEventListener('mouseleave', () => {
+    pointer.active = false;
+    if (currentParticleTheme === 'sword' && !gestureCam.on) swordCenter.active = false;
+  });
   window.addEventListener('click', (e) => { if (currentParticleTheme !== 'sword') applyTapEffect(e.clientX, e.clientY); });
   window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
       pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY;
       pointer.prevX = pointer.x; pointer.prevY = pointer.y;
       pointer.active = true; pointer.downTime = Date.now();
+      // 御剑主题：触摸即聚拢
+      if (currentParticleTheme === 'sword' && !gestureCam.on) {
+        swordCenter.tx = pointer.x; swordCenter.ty = pointer.y; swordCenter.active = true;
+        swordCenter.spread = 0.7;
+      }
     }
   }, { passive: true });
   window.addEventListener('touchmove', (e) => {
@@ -5274,7 +5290,10 @@ function setupGlobalGesture() {
       pointer.prevX = pointer.x; pointer.prevY = pointer.y;
       pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY;
       pointer.vx = pointer.x - pointer.prevX; pointer.vy = pointer.y - pointer.prevY;
-      if (!swordCenter.active) { swordCenter.tx = pointer.x; swordCenter.ty = pointer.y; }
+      if (currentParticleTheme === 'sword' && !gestureCam.on) {
+        swordCenter.tx = pointer.x; swordCenter.ty = pointer.y; swordCenter.active = true;
+        swordCenter.spread = 0.7;
+      }
     }
   }, { passive: true });
   window.addEventListener('touchend', () => {
@@ -5285,6 +5304,8 @@ function setupGlobalGesture() {
       else if (sp > 6) applySwipeEffect(pointer.x, pointer.y, pointer.vx, pointer.vy);
     }
     pointer.active = false;
+    // 御剑主题：手离开即散开
+    if (currentParticleTheme === 'sword' && !gestureCam.on) swordCenter.active = false;
   }, { passive: true });
 }
 
@@ -5336,14 +5357,12 @@ function startCardAnimation() {
     const winW = window.innerWidth, winH = window.innerHeight;
     // pointer 影响：每帧对每个卡片转换局部坐标（御剑/雨滴主题除外）
     if (pointer.active && theme.behavior !== 'sword' && theme.behavior !== 'rain') handlePointerInfluence();
-    // 御剑主题：剑心位置在全局坐标更新，绘制时再转卡片局部坐标
+    // 御剑主题：手势激活时剑心跟随手腕，未激活时不设剑心（飞剑散开乱跑）
     if (theme.behavior === 'sword') {
-      if (!swordCenter.active && !pointer.active) {
-        swordCenter.tx += (winW / 2 - swordCenter.tx) * 0.02;
-        swordCenter.ty += (winH / 2 - swordCenter.ty) * 0.02;
+      if (swordCenter.active) {
+        swordCenter.x += (swordCenter.tx - swordCenter.x) * 0.18;
+        swordCenter.y += (swordCenter.ty - swordCenter.y) * 0.18;
       }
-      swordCenter.x += (swordCenter.tx - swordCenter.x) * 0.12;
-      swordCenter.y += (swordCenter.ty - swordCenter.y) * 0.12;
     }
     for (const inst of cardParticleSystems) {
       if (!inst.canvas || !inst.ctx || inst.w === 0) continue;
@@ -5360,7 +5379,8 @@ function startCardAnimation() {
       for (let p of inst.particles) { updateParticle(p, theme, w, h, swordLocalX, swordLocalY, inst); drawParticle(ctx, p, theme); }
       drawSplashesForInst(ctx, inst);
       if (theme.behavior === 'float' || theme.behavior === 'wander') drawConnectionsForInst(ctx, inst);
-      if (theme.behavior === 'sword') drawSwordCenterLocal(ctx, swordLocalX, swordLocalY);
+      // 御剑主题：仅手势激活时显示剑心（聚拢指示）
+      if (theme.behavior === 'sword' && swordCenter.active) drawSwordCenterLocal(ctx, swordLocalX, swordLocalY);
     }
   }
   globalAnimFrame = requestAnimationFrame(animate);
@@ -5435,11 +5455,40 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
     case 'sakura': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 2 + p.vx; p.phase += 0.01;
       if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
     case 'sword':
-      p.angle += p.rotSpeed * (0.4 + swordCenter.spread * 1.0);
-      const sd = p.dist * (0.7 + swordCenter.spread * 0.9);
-      p.x = swordX + Math.cos(p.angle) * sd;
-      p.y = swordY + Math.sin(p.angle) * sd;
-      p.rot = p.angle + Math.PI / 2;
+      // 3D 姿态持续更新（俯仰+偏航旋转）
+      p.pitch += p.pitchSpeed;
+      p.yaw += p.yawSpeed;
+      p.rot = p.yaw;
+      // 聚拢强度：手势激活时 gather→1，离开时 gather→0
+      const tgt = swordCenter.active ? 1 : 0;
+      p.gather += (tgt - p.gather) * 0.06;
+      if (p.gather > 0.02) {
+        // 手势聚拢：飞剑向剑心收拢，半径随张开度变化
+        const minDim = Math.min(w, h);
+        const ringR = minDim * (0.12 + swordCenter.spread * 0.28) * (0.5 + p.depth * 0.7);
+        const ang = p.baseAngle !== undefined ? p.baseAngle : (p.phase + p.yaw);
+        p.baseAngle = ang + 0.008 * (p.depth > 0.5 ? 1 : -1);
+        const gx = swordX + Math.cos(p.baseAngle) * ringR;
+        const gy = swordY + Math.sin(p.baseAngle) * ringR;
+        p.x += (gx - p.x) * 0.1;
+        p.y += (gy - p.y) * 0.1;
+        // 聚拢时剑尖朝外，垂直于半径
+        p.rot = p.baseAngle + Math.PI / 2;
+      } else {
+        // 默认散开乱跑：自由飘动 + 边界反弹
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 10) { p.x = 10; p.vx = Math.abs(p.vx); }
+        if (p.x > w - 10) { p.x = w - 10; p.vx = -Math.abs(p.vx); }
+        if (p.y < 10) { p.y = 10; p.vy = Math.abs(p.vy); }
+        if (p.y > h - 10) { p.y = h - 10; p.vy = -Math.abs(p.vy); }
+        // 随机微扰让运动更自然
+        p.vx += (Math.random() - 0.5) * 0.08;
+        p.vy += (Math.random() - 0.5) * 0.08;
+        const sp = Math.hypot(p.vx, p.vy);
+        const maxSp = 1.8;
+        if (sp > maxSp) { p.vx = p.vx / sp * maxSp; p.vy = p.vy / sp * maxSp; }
+      }
       break;
   }
   if (theme.behavior === 'float' || theme.behavior === 'wander') {
@@ -5470,11 +5519,20 @@ function drawParticle(ctx, p, theme) {
   ctx.save(); ctx.globalAlpha = p.alpha;
   const isAff = p.affected;
   if (theme.behavior === 'sword') {
+    // 3D 视觉：深度越近越大越亮，越远越小越暗（透视感）
+    const depthScale = 0.5 + p.depth * 0.7;        // 0.5~1.2
+    const depthAlpha = 0.35 + p.depth * 0.65;       // 0.35~1.0
+    ctx.globalAlpha = p.alpha * depthAlpha;
     ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    // 3D 倾斜：用 pitch 模拟俯仰（绕水平轴翻转），scaleY 实现透视压扁
+    const pitchScale = Math.abs(Math.cos(p.pitch)) * 0.7 + 0.3; // 0.3~1.0
+    ctx.scale(depthScale, depthScale * pitchScale);
     const L = p.size * 8;
     const bladeLen = L * 0.78;
     const bladeW = 2.8;
     const t = Date.now() * 0.001;
+    // 深度阴影：近处投影更深，远处更淡，增强立体层次
+    ctx.shadowBlur = 6 + p.depth * 8; ctx.shadowColor = p.color;
     // 1. 等离子粒子拖尾（剑尖后方粒子流）
     ctx.shadowBlur = 8; ctx.shadowColor = p.color;
     for (let i = 0; i < 5; i++) {
