@@ -5229,21 +5229,16 @@ function createParticle(theme, w, h, idx, total) {
     affected: false, affectedTimer: 0, depth: Math.random(),
   };
   if (theme.behavior === 'sword') {
-    // 双环剑阵：前一半内环（顺时针），后一半外环（逆时针），更有层次
-    const isOuter = idx >= total / 2;
-    const ringIdx = isOuter ? idx - Math.floor(total / 2) : idx;
-    const ringTotal = Math.floor(total / 2);
-    const baseAngle = (ringIdx / ringTotal) * Math.PI * 2 + (isOuter ? Math.PI / ringTotal : 0);
-    // 剑阵半径按卡片尺寸自适应，确保飞剑不会被卡片裁剪掉
+    // 散开分布：每把飞剑独立角度+随机半径，避免聚成紧凑环形
     const minDim = Math.min(w, h);
-    const innerR = minDim * (0.18 + Math.random() * 0.05);
-    const outerR = minDim * (0.32 + Math.random() * 0.06);
+    const baseAngle = (idx / total) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+    const dist = minDim * (0.1 + Math.random() * 0.22);
     return Object.assign(base, {
       baseAngle,
       angle: baseAngle,
-      isOuter,
-      dist: isOuter ? outerR : innerR,
-      rotSpeed: (isOuter ? -1 : 1) * (0.008 + Math.random() * 0.007),
+      isOuter: idx % 2 === 0,
+      dist,
+      rotSpeed: (idx % 2 === 0 ? 1 : -1) * (0.006 + Math.random() * 0.009),
       size: theme.size[0] + Math.random() * (theme.size[1] - theme.size[0]),
       x: w / 2, y: h / 2,
     });
@@ -5440,8 +5435,8 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
     case 'sakura': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 2 + p.vx; p.phase += 0.01;
       if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
     case 'sword':
-      p.angle += p.rotSpeed * (0.4 + swordCenter.spread * 1.2);
-      const sd = p.dist * (0.45 + swordCenter.spread * 0.95);
+      p.angle += p.rotSpeed * (0.4 + swordCenter.spread * 1.0);
+      const sd = p.dist * (0.7 + swordCenter.spread * 0.9);
       p.x = swordX + Math.cos(p.angle) * sd;
       p.y = swordY + Math.sin(p.angle) * sd;
       p.rot = p.angle + Math.PI / 2;
