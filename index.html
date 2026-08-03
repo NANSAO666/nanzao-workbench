@@ -5357,30 +5357,33 @@ function startCardAnimation() {
     const winW = window.innerWidth, winH = window.innerHeight;
     // pointer 影响：每帧对每个卡片转换局部坐标（御剑/雨滴主题除外）
     if (pointer.active && theme.behavior !== 'sword' && theme.behavior !== 'rain') handlePointerInfluence();
-    // 御剑主题：手势激活时剑心跟随手腕，未激活时不设剑心（飞剑散开乱跑）
-    if (theme.behavior === 'sword') {
-      if (swordCenter.active) {
-        swordCenter.x += (swordCenter.tx - swordCenter.x) * 0.18;
-        swordCenter.y += (swordCenter.ty - swordCenter.y) * 0.18;
-      }
+    // 御剑主题：剑心平滑跟随手势/指针位置（全局坐标）
+    if (theme.behavior === 'sword' && swordCenter.active) {
+      swordCenter.x += (swordCenter.tx - swordCenter.x) * 0.18;
+      swordCenter.y += (swordCenter.ty - swordCenter.y) * 0.18;
     }
     for (const inst of cardParticleSystems) {
       if (!inst.canvas || !inst.ctx || inst.w === 0) continue;
       const ctx = inst.ctx, w = inst.w, h = inst.h;
       ctx.fillStyle = theme.behavior === 'rain' ? 'rgba(6,8,14,0.28)' : 'rgba(6,8,14,0.16)';
       ctx.fillRect(0, 0, w, h);
-      // 御剑主题：剑心全局坐标 → 卡片局部坐标
-      let swordLocalX = swordCenter.x, swordLocalY = swordCenter.y;
-      if (theme.behavior === 'sword') {
+      // 御剑主题：仅当剑心落在卡片内时，该卡片飞剑才聚拢（否则自由散开）
+      let swordLocalX = 0, swordLocalY = 0;
+      inst._swordAttract = false;
+      if (theme.behavior === 'sword' && swordCenter.active) {
         const cardRect = inst.el.getBoundingClientRect();
-        swordLocalX = swordCenter.x - cardRect.left;
-        swordLocalY = swordCenter.y - cardRect.top;
+        const lx = swordCenter.x - cardRect.left;
+        const ly = swordCenter.y - cardRect.top;
+        if (lx >= -10 && lx <= w + 10 && ly >= -10 && ly <= h + 10) {
+          inst._swordAttract = true;
+          swordLocalX = lx; swordLocalY = ly;
+        }
       }
       for (let p of inst.particles) { updateParticle(p, theme, w, h, swordLocalX, swordLocalY, inst); drawParticle(ctx, p, theme); }
       drawSplashesForInst(ctx, inst);
       if (theme.behavior === 'float' || theme.behavior === 'wander') drawConnectionsForInst(ctx, inst);
-      // 御剑主题：仅手势激活时显示剑心（聚拢指示）
-      if (theme.behavior === 'sword' && swordCenter.active) drawSwordCenterLocal(ctx, swordLocalX, swordLocalY);
+      // 御剑主题：仅在该卡片被聚拢时显示剑心
+      if (theme.behavior === 'sword' && inst._swordAttract) drawSwordCenterLocal(ctx, swordLocalX, swordLocalY);
     }
   }
   globalAnimFrame = requestAnimationFrame(animate);
@@ -5455,39 +5458,35 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
     case 'sakura': p.y += p.vy + 1; p.x += Math.sin(p.phase) * 2 + p.vx; p.phase += 0.01;
       if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; } break;
     case 'sword':
-      // 3D 姿态持续更新（俯仰+偏航旋转）
+      // 3D 姿态持续更新（俯仰+偏航）
       p.pitch += p.pitchSpeed;
       p.yaw += p.yawSpeed;
-      p.rot = p.yaw;
-      // 聚拢强度：手势激活时 gather→1，离开时 gather→0
-      const tgt = swordCenter.active ? 1 : 0;
-      p.gather += (tgt - p.gather) * 0.06;
-      if (p.gather > 0.02) {
-        // 手势聚拢：飞剑向剑心收拢，半径随张开度变化
+      // 聚拢强度：仅当指针/手势落在该卡片内时聚拢，否则完全散开
+      const tgtG = (inst && inst._swordAttract) ? 1 : 0;
+      p.gather += (tgtG - p.gather) * 0.08;
+      if (p.gather > 0.02 && inst && inst._swordAttract) {
+        // 手势聚拢：飞剑向剑心收拢成环
         const minDim = Math.min(w, h);
-        const ringR = minDim * (0.12 + swordCenter.spread * 0.28) * (0.5 + p.depth * 0.7);
-        const ang = p.baseAngle !== undefined ? p.baseAngle : (p.phase + p.yaw);
-        p.baseAngle = ang + 0.008 * (p.depth > 0.5 ? 1 : -1);
+        const ringR = minDim * (0.12 + swordCenter.spread * 0.22) * (0.5 + p.depth * 0.7);
+        if (p.baseAngle === undefined) p.baseAngle = (p.phase + p.yaw);
+        p.baseAngle += 0.01 * (p.depth > 0.5 ? 1 : -1);
         const gx = swordX + Math.cos(p.baseAngle) * ringR;
         const gy = swordY + Math.sin(p.baseAngle) * ringR;
-        p.x += (gx - p.x) * 0.1;
-        p.y += (gy - p.y) * 0.1;
-        // 聚拢时剑尖朝外，垂直于半径
+        p.x += (gx - p.x) * 0.12;
+        p.y += (gy - p.y) * 0.12;
         p.rot = p.baseAngle + Math.PI / 2;
       } else {
-        // 默认散开乱跑：自由飘动 + 边界反弹
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 10) { p.x = 10; p.vx = Math.abs(p.vx); }
-        if (p.x > w - 10) { p.x = w - 10; p.vx = -Math.abs(p.vx); }
-        if (p.y < 10) { p.y = 10; p.vy = Math.abs(p.vy); }
-        if (p.y > h - 10) { p.y = h - 10; p.vy = -Math.abs(p.vy); }
-        // 随机微扰让运动更自然
-        p.vx += (Math.random() - 0.5) * 0.08;
-        p.vy += (Math.random() - 0.5) * 0.08;
-        const sp = Math.hypot(p.vx, p.vy);
-        const maxSp = 1.8;
-        if (sp > maxSp) { p.vx = p.vx / sp * maxSp; p.vy = p.vy / sp * maxSp; }
+        // 默认散开乱跑：参考 wander 主题，sin/cos 波动飘动 + 边界反弹
+        p.x += p.vx + Math.sin(p.phase) * 0.9;
+        p.y += p.vy + Math.cos(p.phase * 0.7) * 0.9;
+        p.phase += 0.02;
+        const m = 12;
+        if (p.x < m) { p.x = m; p.vx = Math.abs(p.vx); }
+        if (p.x > w - m) { p.x = w - m; p.vx = -Math.abs(p.vx); }
+        if (p.y < m) { p.y = m; p.vy = Math.abs(p.vy); }
+        if (p.y > h - m) { p.y = h - m; p.vy = -Math.abs(p.vy); }
+        // 朝向运动方向，自然真实
+        p.rot = Math.atan2(p.vy + Math.cos(p.phase * 0.7), p.vx + Math.sin(p.phase)) + Math.PI / 2;
       }
       break;
   }
