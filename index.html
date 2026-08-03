@@ -5461,20 +5461,21 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
       // 3D 姿态持续更新（俯仰+偏航）
       p.pitch += p.pitchSpeed;
       p.yaw += p.yawSpeed;
-      // 聚拢强度：仅当指针/手势落在该卡片内时聚拢，否则完全散开
+      // 指引强度：指针/手势落在卡片内时剑尖指向手指，否则散开
       const tgtG = (inst && inst._swordAttract) ? 1 : 0;
-      p.gather += (tgtG - p.gather) * 0.08;
+      p.gather += (tgtG - p.gather) * 0.1;
       if (p.gather > 0.02 && inst && inst._swordAttract) {
-        // 手势聚拢：飞剑向剑心收拢成环
-        const minDim = Math.min(w, h);
-        const ringR = minDim * (0.12 + swordCenter.spread * 0.22) * (0.5 + p.depth * 0.7);
-        if (p.baseAngle === undefined) p.baseAngle = (p.phase + p.yaw);
-        p.baseAngle += 0.01 * (p.depth > 0.5 ? 1 : -1);
-        const gx = swordX + Math.cos(p.baseAngle) * ringR;
-        const gy = swordY + Math.sin(p.baseAngle) * ringR;
-        p.x += (gx - p.x) * 0.12;
-        p.y += (gy - p.y) * 0.12;
-        p.rot = p.baseAngle + Math.PI / 2;
+        // 手势指引：飞剑保持散开飘动，但剑尖全部指向手指位置（swordX,swordY）
+        p.x += p.vx + Math.sin(p.phase) * 0.6;
+        p.y += p.vy + Math.cos(p.phase * 0.7) * 0.6;
+        p.phase += 0.015;
+        const m = 12;
+        if (p.x < m) { p.x = m; p.vx = Math.abs(p.vx); }
+        if (p.x > w - m) { p.x = w - m; p.vx = -Math.abs(p.vx); }
+        if (p.y < m) { p.y = m; p.vy = Math.abs(p.vy); }
+        if (p.y > h - m) { p.y = h - m; p.vy = -Math.abs(p.vy); }
+        // 剑尖朝向手指方向（剑身坐标系：剑尖在 -y 方向，故角度=atan2(dx,-dy)）
+        p.rot = Math.atan2(p.x - swordX, swordY - p.y);
       } else {
         // 默认散开乱跑：参考 wander 主题，sin/cos 波动飘动 + 边界反弹
         p.x += p.vx + Math.sin(p.phase) * 0.9;
