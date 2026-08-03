@@ -5162,7 +5162,7 @@ const gestureCam = { hands: null, video: null, on: false, raf: null, lastSwitch:
 
 const PARTICLE_THEMES = {
   stars: { name: '星空', colors: ['#ffffff','#ffeaa7','#74b9ff','#a29bfe','#fd79a8'], count: 80, speed: 0.3, size: [0.6, 2.6], behavior: 'float', glow: true },
-  rain:  { name: '雨滴', colors: ['#a8d8ff','#74b9ff','#0984e3','#dfe6e9'], count: 140, speed: 4, size: [1, 2], behavior: 'rain' },
+  rain:  { name: '雨滴', colors: ['#a8d8ff','#74b9ff','#0984e3','#dfe6e9'], count: 200, speed: 6, size: [1, 3], behavior: 'rain' },
   snow:  { name: '飘雪', colors: ['#ffffff','#dfe6e9','#b2bec3'], count: 50, speed: 1.0, size: [1.5, 3.5], behavior: 'snow', glow: true },
   fireflies: { name: '萤火虫', colors: ['#ffeaa7','#fdcb6e','#e17055','#00b894'], count: 55, speed: 0.8, size: [2, 5], behavior: 'wander', glow: true },
   aurora:{ name: '极光', colors: ['#00b894','#00cec9','#0984e3','#6c5ce7','#fd79a8'], count: 45, speed: 0.5, size: [3, 9], behavior: 'wave' },
@@ -5386,7 +5386,6 @@ function startCardAnimation() {
       }
       for (let p of inst.particles) { updateParticle(p, theme, w, h, swordLocalX, swordLocalY, inst); drawParticle(ctx, p, theme); }
       drawSplashesForInst(ctx, inst);
-      if (theme.behavior === 'float' || theme.behavior === 'wander') drawConnectionsForInst(ctx, inst);
       // 御剑主题：仅在该卡片被聚拢时显示剑心
       if (theme.behavior === 'sword' && inst._swordAttract) drawSwordCenterLocal(ctx, swordLocalX, swordLocalY);
     }
@@ -5454,9 +5453,9 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
     case 'float': p.x += p.vx + Math.sin(p.phase) * 0.3; p.y += p.vy + Math.cos(p.phase) * 0.2;
       if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); } if (p.x > w) { p.x = w; p.vx = -Math.abs(p.vx); }
       if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); } if (p.y > h) { p.y = h; p.vy = -Math.abs(p.vy); } break;
-    case 'rain': p.y += p.vy * 4 + 5 * depth; p.x += Math.sin(p.phase) * 0.3 + p.vx;
-      if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; if (Math.random() < 0.25 && inst) spawnSplash(inst, p.x, h - 2); }
-      if (p.x < 0) p.x = 0; if (p.x > w) p.x = w; break;
+    case 'rain': p.y += p.vy * 5 + 6 * depth; p.x += Math.sin(p.phase) * 0.5 + p.vx + 0.3;
+      if (p.y > h) { p.y = -Math.random() * 30 - 5; p.x = Math.random() * w; p.vy = 0; if (Math.random() < 0.2 && inst) spawnSplash(inst, p.x, h - 2); }
+      if (p.x < -5) p.x = w + 5; if (p.x > w + 5) p.x = -5; break;
     case 'snow': p.y += p.vy + 1 * depth; p.x += Math.sin(p.phase) * 1.5 + p.vx;
       if (p.y > h) { p.y = -10; p.x = Math.random() * w; p.vy = 0; }
       if (p.x < 0) p.x = 0; if (p.x > w) p.x = w; break;
@@ -5660,12 +5659,14 @@ function drawParticle(ctx, p, theme) {
     }
     ctx.globalAlpha = p.alpha;
   } else if (theme.behavior === 'rain') {
-    const len = 8 + p.vy * 4;
-    const grad = ctx.createLinearGradient(p.x, p.y - len, p.x, p.y);
+    const len = 10 + p.vy * 5;
+    const tilt = 3; // 雨滴倾斜角度
+    const grad = ctx.createLinearGradient(p.x - tilt, p.y - len, p.x + tilt, p.y);
     grad.addColorStop(0, 'rgba(168,216,255,0)');
+    grad.addColorStop(0.7, p.color);
     grad.addColorStop(1, p.color);
-    ctx.strokeStyle = grad; ctx.lineWidth = p.size; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(p.x, p.y - len); ctx.lineTo(p.x, p.y); ctx.stroke();
+    ctx.strokeStyle = grad; ctx.lineWidth = p.size * 0.7; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(p.x - tilt, p.y - len); ctx.lineTo(p.x + tilt, p.y); ctx.stroke();
   } else if (theme.behavior === 'snow') {
     ctx.translate(p.x, p.y); ctx.rotate(p.rot);
     ctx.shadowBlur = p.size; ctx.shadowColor = '#ffffff';
