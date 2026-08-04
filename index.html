@@ -5289,20 +5289,6 @@ function startCardAnimation() {
       const ctx = inst.ctx, w = inst.w, h = inst.h;
       ctx.fillStyle = theme.behavior === 'rain' ? 'rgba(6,8,14,0.28)' : 'rgba(6,8,14,0.16)';
       ctx.fillRect(0, 0, w, h);
-
-      // 形状模式调试：在画布左上角显示状态
-      if (particleShapeMode !== 'free') {
-        ctx.save();
-        ctx.fillStyle = 'rgba(34,197,94,0.9)';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'left';
-        const ptsLen = inst._shapePts ? inst._shapePts.length : 0;
-        const pCnt = inst.particles.length;
-        const tx0 = inst.particles[0] ? inst.particles[0].tx?.toFixed(0) : '?';
-        const ty0 = inst.particles[0] ? inst.particles[0].ty?.toFixed(0) : '?';
-        ctx.fillText('SHAPE:' + particleShapeMode + ' PTS:' + ptsLen + ' P:' + pCnt + ' T:' + tx0 + ',' + ty0, 8, 16);
-        ctx.restore();
-      }
       // 御剑主题：仅当剑心落在卡片内时，该卡片飞剑才聚拢（否则自由散开）
       let swordLocalX = 0, swordLocalY = 0;
       inst._swordAttract = false;
@@ -5362,26 +5348,33 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
   p.phase += 0.02; p.rot += p.rotSpeed;
   if (p.affected) { p.affectedTimer--; if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; } }
   p.vx *= 0.98; p.vy *= 0.98;
-  // 形态模式调试：记录条件状态
-  p._dbgNotShape = false;
   // 形态模式：粒子缓动聚成数字/I❤U（御剑主题除外）
   if (particleShapeMode !== 'free' && inst && inst._shapePts && inst._shapePts.length && theme.behavior !== 'sword') {
     p._dbgShape = true;
-    // 强力聚形：提高缓动系数，快速到达目标点
-    p.x += (p.tx - p.x) * 0.35;
-    p.y += (p.ty - p.y) * 0.35;
-    // 轻微漂浮（比之前小很多，避免打乱形状）
+    // 平滑过渡因子（从0渐变到1，实现散开→聚拢的流畅动画）
+    if (p._shapeMorph === undefined) p._shapeMorph = 0;
+    p._shapeMorph = Math.min(1, p._shapeMorph + 0.04);
+    const morph = p._shapeMorph;
+    // 缓动趋向目标点（过渡因子控制力度）
+    const ease = 0.12 + morph * 0.25;
+    p.x += (p.tx - p.x) * ease;
+    p.y += (p.ty - p.y) * ease;
+    // 微小漂浮（呼吸感）
     if (p.orbitR) {
-      p.orbitPhase += p.orbitSpeed || 0.015;
-      p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.015;
-      p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.015;
+      p.orbitPhase += p.orbitSpeed || 0.02;
+      p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.02 * (1 - morph * 0.5);
+      p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.02 * (1 - morph * 0.5);
     }
-    p.phase += 0.03;
-    // 提高透明度，形状更亮
-    p.alpha = 0.7 + Math.sin(p.phase * 1.5) * 0.2;
-    if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.1, 0.95); }
+    p.phase += 0.04;
+    // 脉动透明度（闪烁感）
+    p.alpha = (0.6 + Math.sin(p.phase * 1.8) * 0.25) * morph + (1 - morph) * p.alpha;
+    if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.12, 0.98); }
+    // 记录形状模式给渲染用
+    p._inShape = true;
     return;
   }
+  p._inShape = false;
+  p._shapeMorph = 0;
   const depth = 0.5 + p.depth;
   switch (theme.behavior) {
     case 'float': p.x += p.vx + Math.sin(p.phase) * 0.3; p.y += p.vy + Math.cos(p.phase) * 0.2;
@@ -5627,22 +5620,57 @@ function drawParticle(ctx, p, theme) {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2); ctx.fill();
   } else {
     const isHeart = particleShapeMode === 'heart';
-    const inShape = particleShapeMode !== 'free';
-    // 形态模式下用放大的 shapeSize，更通透不拥挤
-    const baseSize = inShape ? (p.shapeSize || p.size * 1.6) : p.size;
-    const heartColor = isHeart ? ['#ff4d6d','#ff8fa3','#ffb3c1','#c9184a','#ff758f'][Math.floor(p.phase) % 5] : p.color;
+    const inShape = p._inShape === true;
+    const morph = p._shapeMorph || 0;
+    // 形态模式下粒子更大、更亮
+    const baseSize = inShape ? (p.shapeSize || p.size * 1.8) : p.size;
+    // 心形用暖色系，数字用主题色+白色混合
+    let drawColor = p.color;
+    if (isHeart) {
+      // 心形：红色到粉色渐变
+      const heartColors = ['#ff1744','#ff4569','#ff6b9d','#ff8fa3','#ffb3c1','#e91e63','#f50057'];
+      drawColor = heartColors[Math.floor(p.phase * 0.5) % heartColors.length];
+    } else if (inShape) {
+      // 数字模式：在原色基础上加白色高光
+      drawColor = p.color;
+    }
+    // 闪烁效果
     const twinkle = theme.behavior === 'float' ? (0.6 + Math.sin(p.phase * 3) * 0.4) : 1;
-    const heartPulse = isHeart ? (1 + Math.sin(p.phase * 2) * 0.4) : 1;
-    ctx.shadowBlur = isHeart ? baseSize * 8 : baseSize * 3;
-    ctx.shadowColor = heartColor;
-    ctx.globalAlpha = p.alpha * twinkle;
-    ctx.beginPath(); ctx.arc(p.x, p.y, baseSize * heartPulse, 0, Math.PI * 2);
-    ctx.fillStyle = heartColor; ctx.fill();
-    if (theme.behavior === 'float' && baseSize > 1.8 && !isHeart && !inShape) {
-      ctx.globalAlpha = p.alpha * twinkle * 0.5;
-      ctx.strokeStyle = p.color; ctx.lineWidth = 0.6;
-      ctx.beginPath(); ctx.moveTo(p.x - baseSize * 2.5, p.y); ctx.lineTo(p.x + baseSize * 2.5, p.y); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(p.x, p.y - p.size * 2.5); ctx.lineTo(p.x, p.y + p.size * 2.5); ctx.stroke();
+    // 脉动效果（形状模式下更明显）
+    const pulse = inShape ? (1 + Math.sin(p.phase * 2.5) * 0.3 * morph) : 1;
+    const drawSize = baseSize * pulse;
+    if (inShape) {
+      // 形状模式：三层渲染（外光晕 → 中层 → 核心）
+      // 1. 外光晕（大半径、低透明度）
+      const glowGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, drawSize * 4);
+      glowGrad.addColorStop(0, drawColor);
+      glowGrad.addColorStop(0.3, drawColor);
+      glowGrad.addColorStop(1, 'transparent');
+      ctx.globalAlpha = p.alpha * 0.15 * morph;
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 4, 0, Math.PI * 2); ctx.fill();
+      // 2. 中层光（中等半径、中等透明度）
+      ctx.globalAlpha = p.alpha * 0.4 * morph;
+      ctx.fillStyle = drawColor;
+      ctx.shadowBlur = drawSize * 6; ctx.shadowColor = drawColor;
+      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 1.8, 0, Math.PI * 2); ctx.fill();
+      // 3. 核心亮点（小半径、高透明度、白色）
+      ctx.globalAlpha = p.alpha * morph;
+      ctx.shadowBlur = drawSize * 3;
+      ctx.fillStyle = isHeart ? '#ffffff' : '#ffffff';
+      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 0.6, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // 非形状模式：原有渲染
+      ctx.shadowBlur = baseSize * 3; ctx.shadowColor = drawColor;
+      ctx.globalAlpha = p.alpha * twinkle;
+      ctx.beginPath(); ctx.arc(p.x, p.y, baseSize, 0, Math.PI * 2);
+      ctx.fillStyle = drawColor; ctx.fill();
+      if (theme.behavior === 'float' && baseSize > 1.8) {
+        ctx.globalAlpha = p.alpha * twinkle * 0.5;
+        ctx.strokeStyle = p.color; ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(p.x - baseSize * 2.5, p.y); ctx.lineTo(p.x + baseSize * 2.5, p.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p.x, p.y - p.size * 2.5); ctx.lineTo(p.x, p.y + p.size * 2.5); ctx.stroke();
+      }
     }
   }
   ctx.restore();
@@ -5746,120 +5774,142 @@ async function getTextPoints(text, w, h) {
   return generateShapeMath(text, w, h);
 }
 
-// 用数学公式生成形状点
+// 用数学公式生成形状点（精雕细琢版）
 function generateShapeMath(text, w, h) {
   const pts = [];
   const cx = w / 2, cy = h / 2;
-  const scale = Math.min(w, h) * 0.35;
+  const scale = Math.min(w, h) * 0.32;
+  const thickness = Math.max(2, scale * 0.08); // 笔画粗细
 
-  // 添加离散点的辅助函数（带轻微抖动）
-  function addPt(x, y) { pts.push({ x: x + (Math.random() - 0.5) * 3, y: y + (Math.random() - 0.5) * 3 }); }
-  // 沿线段采样点（更密集）
-  function addLine(x1, y1, x2, y2, count) {
-    for (let i = 0; i <= count; i++) {
-      const t = i / count;
-      addPt(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t);
+  // 添加点（带极轻微抖动，保持锐利）
+  function addPt(x, y) { pts.push({ x: x + (Math.random() - 0.5) * 2, y: y + (Math.random() - 0.5) * 2 }); }
+
+  // 沿线段密集采样（加粗：偏移多条平行线）
+  function addThickLine(x1, y1, x2, y2, count) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.01) return;
+    // 垂直方向偏移
+    const nx = -dy / len, ny = dx / len;
+    const layers = Math.max(1, Math.floor(thickness / 1.5));
+    for (let l = -layers; l <= layers; l++) {
+      const ox = nx * l * 1.2, oy = ny * l * 1.2;
+      const cnt = Math.max(count, Math.floor(len / 2));
+      for (let i = 0; i <= cnt; i++) {
+        const t = i / cnt;
+        addPt(x1 + dx * t + ox, y1 + dy * t + oy);
+      }
     }
   }
-  // 沿圆弧采样
-  function addArc(cx, cy, r, startAngle, endAngle, count) {
-    for (let i = 0; i <= count; i++) {
-      const a = startAngle + (endAngle - startAngle) * (i / count);
-      addPt(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+
+  // 沿圆弧密集采样（加粗）
+  function addThickArc(acx, acy, r, startAngle, endAngle, count) {
+    const layers = Math.max(1, Math.floor(thickness / 1.5));
+    const arcLen = Math.abs(endAngle - startAngle) * r;
+    const cnt = Math.max(count, Math.floor(arcLen / 2));
+    for (let l = -layers; l <= layers; l++) {
+      const rr = r + l * 1.2;
+      for (let i = 0; i <= cnt; i++) {
+        const a = startAngle + (endAngle - startAngle) * (i / cnt);
+        addPt(acx + Math.cos(a) * rr, acy + Math.sin(a) * rr);
+      }
+    }
+  }
+
+  // 区域填充（用于心形等需要填充的形状）
+  function fillArea(fcx, fcy, fr, density) {
+    for (let i = 0; i < density; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * fr;
+      addPt(fcx + Math.cos(a) * r, fcy + Math.sin(a) * r);
     }
   }
 
   if (text === '1') {
-    // 数字1：一竖 + 顶部小短横 + 底部衬线
+    // 数字1：粗竖线 + 顶部斜横 + 底座
     const top = cy - scale, bot = cy + scale;
-    // 顶部横
-    addLine(cx - scale * 0.3, top - scale * 0.12, cx + scale * 0.15, top - scale * 0.12, 14);
-    // 竖线（加粗：用3条平行线）
-    addLine(cx, top, cx, bot, 50);
-    addLine(cx - scale * 0.06, top, cx - scale * 0.06, bot, 45);
-    addLine(cx + scale * 0.06, top, cx + scale * 0.06, bot, 45);
-    // 底部短衬线
-    addLine(cx - scale * 0.15, bot, cx + scale * 0.1, bot, 10);
+    // 顶部斜横（左高右低，连到竖线顶部）
+    addThickLine(cx - scale * 0.35, top - scale * 0.1, cx + scale * 0.1, top, 20);
+    // 主竖线（粗）
+    addThickLine(cx, top, cx, bot, 80);
+    // 底座（短横）
+    addThickLine(cx - scale * 0.2, bot, cx + scale * 0.2, bot, 16);
   } else if (text === '2') {
-    // 数字2：上半圆弧 + 横 + 右下竖
-    const r = scale * 0.7;
+    // 数字2：上圆弧 + 斜线 + 底横
+    const r = scale * 0.65;
     const topY = cy - scale;
-    // 上半圆（从左到右，顺时针）——更密集
-    addArc(cx, topY + r, r, Math.PI, Math.PI * 2, 45);
-    // 斜向下
-    addLine(cx + r, topY + r, cx - r * 0.9, cy + scale, 35);
-    // 底部横（加粗）
-    addLine(cx - r * 0.9, cy + scale, cx + r, cy + scale, 30);
-    addLine(cx - r * 0.9, cy + scale - scale * 0.06, cx + r, cy + scale - scale * 0.06, 28);
+    // 上半圆弧（从左到右）
+    addThickArc(cx, topY + r, r, Math.PI, Math.PI * 2, 60);
+    // 斜线（右上到左下）
+    addThickLine(cx + r, topY + r, cx - r * 0.85, cy + scale, 50);
+    // 底部横线（粗）
+    addThickLine(cx - r * 0.85, cy + scale, cx + r, cy + scale, 40);
   } else if (text === '3') {
-    // 数字3：上弧 + 中横 + 下弧
-    const r = scale * 0.6;
-    const topY = cy - scale * 0.75;
+    // 数字3：上弧 + 中尖 + 下弧
+    const r = scale * 0.55;
+    const topY = cy - scale * 0.7;
     const midY = cy;
-    const botY = cy + scale * 0.75;
-    // 上半弧
-    addArc(cx, topY, r, -0.4 * Math.PI, Math.PI * 0.9, 40);
-    // 中间连接
-    addLine(cx - r * 0.2, midY - r * 0.2, cx + r * 0.8, midY, 15);
-    // 下半弧
-    addArc(cx, botY, r, -0.9 * Math.PI, Math.PI * 0.4, 40);
+    const botY = cy + scale * 0.7;
+    // 上半弧（从左侧到右侧，经过顶部）
+    addThickArc(cx, topY, r, -0.5 * Math.PI, Math.PI, 50);
+    // 中间尖角连接
+    addThickLine(cx - r * 0.15, midY - r * 0.3, cx + r * 0.6, midY, 18);
+    // 下半弧（从左侧到右侧，经过底部）
+    addThickArc(cx, botY, r, Math.PI, Math.PI * 2.5, 50);
   } else if (text === '4') {
-    // 数字4：左竖 + 中横 + 右竖
+    // 数字4：左斜竖 + 中横 + 右竖
     const top = cy - scale, bot = cy + scale;
-    const left = cx - scale * 0.75, right = cx + scale * 0.75;
-    // 左竖（只到中间以下一点）
-    addLine(left, top, left, cy + scale * 0.35, 35);
-    addLine(left - scale * 0.05, top, left - scale * 0.05, cy + scale * 0.3, 30);
-    // 中横（加粗）
-    addLine(left, cy, right, cy, 30);
-    addLine(left, cy - scale * 0.06, right, cy - scale * 0.06, 28);
-    // 右竖
-    addLine(right, top, right, bot, 40);
-    addLine(right + scale * 0.05, top, right + scale * 0.05, bot, 35);
+    const left = cx - scale * 0.7, right = cx + scale * 0.7;
+    // 左竖（从顶部到中下）
+    addThickLine(left, top, left, cy + scale * 0.3, 55);
+    // 中横（粗，贯穿）
+    addThickLine(left - scale * 0.05, cy, right, cy, 40);
+    // 右竖（从顶部到底部）
+    addThickLine(right, top, right, bot, 60);
   } else if (text === 'I ♥ U' || text === 'I ❤ U') {
-    // I LOVE YOU：I + 心形 + U
-    // I
-    const iLeft = cx - scale * 1.35;
-    addLine(iLeft, cy - scale, iLeft, cy + scale, 35);
-    addLine(iLeft - scale * 0.08, cy - scale, iLeft - scale * 0.08, cy + scale, 30);
-    addLine(iLeft + scale * 0.08, cy - scale, iLeft + scale * 0.08, cy + scale, 30);
+    // I ♥ U
+    const colGap = scale * 1.1;
+
+    // I（左边）
+    const ix = cx - colGap;
+    addThickLine(ix, cy - scale * 0.8, ix, cy + scale * 0.8, 40);
     // I 上下横
-    addLine(iLeft - scale * 0.2, cy - scale, iLeft + scale * 0.2, cy - scale, 12);
-    addLine(iLeft - scale * 0.2, cy + scale, iLeft + scale * 0.2, cy + scale, 12);
+    addThickLine(ix - scale * 0.15, cy - scale * 0.8, ix + scale * 0.15, cy - scale * 0.8, 12);
+    addThickLine(ix - scale * 0.15, cy + scale * 0.8, ix + scale * 0.15, cy + scale * 0.8, 12);
 
-    // 心形（用参数方程，更密集）
+    // 心形（中间）—— 外轮廓 + 内部填充
     const hx = cx, hy = cy;
-    const hr = scale * 0.4;
-    for (let t = 0; t <= Math.PI * 2; t += 0.05) {
+    const hr = scale * 0.5;
+    // 心形外轮廓（参数方程，非常密集）
+    for (let t = 0; t <= Math.PI * 2; t += 0.03) {
       const x = 16 * Math.pow(Math.sin(t), 3);
       const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-      addPt(hx + x * hr * 0.08, hy - y * hr * 0.08);
+      const px = hx + x * hr * 0.06;
+      const py = hy - y * hr * 0.06;
+      // 加粗：在轮廓附近添加多个点
+      for (let l = -2; l <= 2; l++) {
+        const rr = 1 + l * 0.5;
+        addPt(hx + x * hr * 0.06 * rr, hy - y * hr * 0.06 * rr);
+      }
     }
-    // 心形内部填充点（更多）
-    for (let i = 0; i < 60; i++) {
+    // 心形内部填充（密集）
+    for (let i = 0; i < 120; i++) {
       const t = Math.random() * Math.PI * 2;
-      const r = Math.random() * 0.75;
+      const r = Math.sqrt(Math.random()) * 0.85;
       const x = 16 * Math.pow(Math.sin(t), 3);
       const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-      addPt(hx + x * hr * 0.08 * r, hy - y * hr * 0.08 * r);
+      addPt(hx + x * hr * 0.06 * r, hy - y * hr * 0.06 * r);
     }
 
-    // U
-    const uCx = cx + scale * 1.2;
-    const uW = scale * 0.75, uH = scale;
+    // U（右边）
+    const ux = cx + colGap;
+    const uw = scale * 0.5, uh = scale * 0.8;
     // 左竖
-    addLine(uCx - uW, cy - uH, uCx - uW, cy + uH * 0.3, 30);
-    addLine(uCx - uW - scale * 0.06, cy - uH, uCx - uW - scale * 0.06, cy + uH * 0.25, 28);
-    // 底部圆弧（更密集）
-    addArc(uCx, cy + uH * 0.3, uW, Math.PI, Math.PI * 2, 35);
+    addThickLine(ux - uw, cy - uh, ux - uw, cy + uh * 0.2, 35);
+    // 底部圆弧
+    addThickArc(ux, cy + uh * 0.2, uw, Math.PI, Math.PI * 2, 40);
     // 右竖
-    addLine(uCx + uW, cy + uH * 0.3, uCx + uW, cy - uH, 30);
-    addLine(uCx + uW + scale * 0.06, cy + uH * 0.3, uCx + uW + scale * 0.06, cy - uH, 28);
-  }
-
-  // 如果点数不够，补一些随机点
-  while (pts.length < 80) {
-    addPt(cx + (Math.random() - 0.5) * scale, cy + (Math.random() - 0.5) * scale);
+    addThickLine(ux + uw, cy + uh * 0.2, ux + uw, cy - uh, 35);
   }
 
   console.log('[形状] 数学公式生成点数:', pts.length);
@@ -5914,15 +5964,17 @@ function assignShapeTargetsForInst(inst) {
   for (let i = 0; i < inst.particles.length; i++) {
     const p = inst.particles[i];
     const t = pts[i % pts.length];
-    // 减小随机散布范围，形状更清晰锐利
-    p.tx = t.x + (Math.random() - 0.5) * 6;
-    p.ty = t.y + (Math.random() - 0.5) * 6;
-    // 每个粒子独立的漂浮半径和相位（很小，避免打乱形状）
-    p.orbitR = 1 + Math.random() * 3;
+    // 极小随机散布，形状锐利
+    p.tx = t.x + (Math.random() - 0.5) * 4;
+    p.ty = t.y + (Math.random() - 0.5) * 4;
+    // 每个粒子独立的漂浮参数
+    p.orbitR = 1 + Math.random() * 2;
     p.orbitPhase = Math.random() * Math.PI * 2;
-    p.orbitSpeed = 0.01 + Math.random() * 0.015;
+    p.orbitSpeed = 0.015 + Math.random() * 0.02;
     // 形态模式下粒子放大
-    p.shapeSize = (p.size || 1.5) * 1.5;
+    p.shapeSize = (p.size || 1.5) * 2;
+    // 重置过渡因子，实现从散开到聚拢的动画
+    p._shapeMorph = 0;
   }
 }
 
