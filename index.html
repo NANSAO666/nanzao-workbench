@@ -5109,17 +5109,24 @@ function resizeCardParticleSystem(inst) {
 }
 
 function createCardParticles(inst) {
-  inst.particles = []; inst.splashes = []; inst._shapePts = null;
+  const hadShape = inst._shapePts && inst._shapePts.length;
+  inst.particles = []; inst.splashes = [];
+  // 注意：不清空 _shapePts，避免形状模式下被误重置
   const theme = PARTICLE_THEMES[currentParticleTheme];
   const w = inst.w, h = inst.h;
   // 御剑主题是结构化剑阵，数量不足会散架，移动端也不减半
+  // 形状模式下至少保证 80 个粒子（移动端也能看清形状）
   let count;
   if (theme.behavior === 'sword') {
     count = theme.count;
+  } else if (hadShape || particleShapeMode !== 'free') {
+    count = Math.max(80, w < 300 ? Math.floor(theme.count * 0.5) : theme.count);
   } else {
     count = w < 300 ? Math.floor(theme.count * 0.3) : (window.innerWidth < 768 ? Math.floor(theme.count * 0.5) : theme.count);
   }
   for (let i = 0; i < count; i++) inst.particles.push(createParticle(theme, w, h, i, count));
+  // 如果之前有形状，重新分配目标点
+  if (hadShape) assignShapeTargetsForInst(inst);
 }
 
 let _gResizeTimer = null;
@@ -5916,18 +5923,20 @@ function onHandsResults(results) {
   else if (stable && fingers >= 1 && fingers <= 4) { targetMode = String(fingers); hint = fingers + ' 指 → 聚成 ' + fingers; }
   else if (stable && fingers === 0) { targetMode = 'free'; hint = '握拳 → 散开'; }
 
-  if (_detectCount % 10 === 0) {
-    console.log('[手势调试] 原始手指数:', rawFingers, '稳定后:', fingers, '稳定:', stable, '众数:', maxFreq, '/6', '目标:', targetMode, '可切换:', canSwitch, '上次:', _lastFingerMode);
+  // 移动端调试：把关键信息显示在 hint 里
+  if (!hint) {
+    hint = '指:' + rawFingers + ' 稳:' + (stable ? fingers : '?') + '/' + maxFreq + ' 模:' + (particleShapeMode === 'free' ? '散' : particleShapeMode);
+  } else {
+    hint = hint + ' [' + rawFingers + '/' + maxFreq + ']';
   }
 
   if (targetMode && targetMode !== _lastFingerMode && canSwitch) {
     console.log('[手势调试] ✅ 触发切换:', _lastFingerMode, '→', targetMode);
+    toast('手势切换：' + (targetMode === 'heart' ? 'I ❤ U' : targetMode === 'free' ? '散开' : '聚成 ' + targetMode), 'success');
     setParticleShape(targetMode);
     _lastFingerMode = targetMode;
     _lastSwitchTime = now;
   }
-  // 实时显示当前检测到的手指数（用于调试反馈）
-  if (!hint) hint = stable ? ('检测到 ' + fingers + ' 指') : ('识别中… ' + rawFingers + ' 指');
   setGestureHint(hint);
 }
 
