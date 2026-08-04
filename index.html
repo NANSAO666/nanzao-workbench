@@ -5665,18 +5665,18 @@ function getTextPoints(text, w, h) {
   const c = _shapeCanvas.getContext('2d');
   c.clearRect(0, 0, w, h);
   // 字体放大让形状舒展（单字符更大，多字符适中）
-  const fontSize = Math.min(w, h) * (text.length > 2 ? 0.4 : 0.7);
+  const fontSize = Math.min(w, h) * (text.length > 2 ? 0.45 : 0.72);
   c.fillStyle = '#fff';
   c.font = 'bold ' + fontSize + 'px -apple-system, "PingFang SC", sans-serif';
   c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(text, w / 2, h / 2);
   const img = c.getImageData(0, 0, w, h).data;
   const pts = [];
-  // 采样步长加大，让粒子分布更稀疏松散，不挤成一团
-  const step = w < 300 ? 9 : (w < 768 ? 11 : 10);
+  // 采样步长减小，确保细笔画（如数字1）也能采到足够点
+  const step = w < 300 ? 6 : (w < 768 ? 7 : 8);
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
-      if (img[(y * w + x) * 4 + 3] > 128) pts.push({ x, y });
+      if (img[(y * w + x) * 4 + 3] > 64) pts.push({ x, y });
     }
   }
   return pts;
@@ -5695,8 +5695,9 @@ function setParticleShape(mode) {
   for (const inst of cardParticleSystems) {
     const pts = getTextPoints(text, inst.w, inst.h);
     inst._shapePts = pts;
-    // 补充粒子到接近采样点数，让数字/I♥U 形状饱满（上限 200）
-    const target = Math.min(pts.length, 200);
+    // 补充粒子到接近采样点数，让数字/I♥U 形状饱满（上限 300）
+    // 采样点太少时至少保证 60 个粒子，避免形状不清晰
+    const target = Math.max(Math.min(pts.length, 300), 60);
     const theme = PARTICLE_THEMES[currentParticleTheme];
     while (inst.particles.length < target) {
       inst.particles.push(createParticle(theme, inst.w, inst.h, inst.particles.length, target));
