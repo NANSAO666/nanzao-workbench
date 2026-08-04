@@ -894,7 +894,7 @@
 
   /* AI对话 */
   .chat-container { display: flex; flex-direction: column; height: calc(100vh - 200px); }
-  .chat-messages { flex: 1; overflow-y: auto; padding: 10px 4px; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 10px 4px; background: transparent !important; }
   .chat-msg { display: flex; margin-bottom: 16px; }
   .chat-msg.user { justify-content: flex-end; }
   .chat-bubble {
@@ -1881,9 +1881,9 @@ function renderAI() {
               appData.aiSessions.map(s => `<option value="${s.id}" ${currentAISession?.id===s.id?'selected':''}>${escapeHtml((s.title || '新对话').substring(0,20))} · ${new Date(s.updatedAt||s.createdAt).toLocaleDateString()}</option>`).join('')}
           </select>
         </div>
-        <div class="card mobile-chat-card" style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative;">
+        <div class="card mobile-chat-card" style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative;background:rgba(255,255,255,0.015);">
           ${particleHtml}
-          <div class="chat-messages" id="aiMessages" style="flex:1;min-height:0;overflow-y:auto;position:relative;z-index:6;"></div>
+          <div class="chat-messages" id="aiMessages" style="flex:1;min-height:0;overflow-y:auto;position:relative;z-index:1;"></div>
           <div class="chat-input-area" style="flex-shrink:0;">
             <textarea class="textarea" id="aiInput" style="min-height:44px;resize:none;font-size:16px;" placeholder="输入你的问题..." onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()"></textarea>
             <div style="display:flex;gap:8px;">
@@ -1909,9 +1909,9 @@ function renderAI() {
           <div class="card-title">会话列表</div>
           <div id="aiSessionsList"></div>
         </div>
-        <div class="card" style="flex:1;display:flex;flex-direction:column;position:relative;">
+        <div class="card" style="flex:1;display:flex;flex-direction:column;position:relative;background:rgba(255,255,255,0.015);">
           ${particleHtml}
-          <div class="chat-messages" id="aiMessages" style="position:relative;z-index:6;"></div>
+          <div class="chat-messages" id="aiMessages" style="position:relative;z-index:1;"></div>
           <div class="chat-input-area">
             <textarea class="textarea" id="aiInput" style="min-height:60px;resize:none;" placeholder="输入你的问题... (Ctrl+Enter 发送)" onkeydown="if(event.ctrlKey&&event.key==='Enter')sendAIMessage()"></textarea>
             <div class="flex flex-col gap-2">
@@ -5640,25 +5640,17 @@ function drawParticle(ctx, p, theme) {
     const pulse = inShape ? (1 + Math.sin(p.phase * 2.5) * 0.3 * morph) : 1;
     const drawSize = baseSize * pulse;
     if (inShape) {
-      // 形状模式：三层渲染（外光晕 → 中层 → 核心）
-      // 1. 外光晕（大半径、低透明度）
-      const glowGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, drawSize * 4);
-      glowGrad.addColorStop(0, drawColor);
-      glowGrad.addColorStop(0.3, drawColor);
-      glowGrad.addColorStop(1, 'transparent');
-      ctx.globalAlpha = p.alpha * 0.15 * morph;
-      ctx.fillStyle = glowGrad;
-      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 4, 0, Math.PI * 2); ctx.fill();
-      // 2. 中层光（中等半径、中等透明度）
-      ctx.globalAlpha = p.alpha * 0.4 * morph;
+      // 形状模式：两层渲染（发光 + 核心），去掉 createRadialGradient 提升性能
+      // 1. 外层发光（shadowBlur 实现，比 createRadialGradient 快很多）
+      ctx.globalAlpha = p.alpha * 0.5 * morph;
       ctx.fillStyle = drawColor;
-      ctx.shadowBlur = drawSize * 6; ctx.shadowColor = drawColor;
-      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 1.8, 0, Math.PI * 2); ctx.fill();
-      // 3. 核心亮点（小半径、高透明度、白色）
+      ctx.shadowBlur = drawSize * 4; ctx.shadowColor = drawColor;
+      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 1.5, 0, Math.PI * 2); ctx.fill();
+      // 2. 核心亮点（白色高亮）
       ctx.globalAlpha = p.alpha * morph;
-      ctx.shadowBlur = drawSize * 3;
-      ctx.fillStyle = isHeart ? '#ffffff' : '#ffffff';
-      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = drawSize * 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 0.5, 0, Math.PI * 2); ctx.fill();
     } else {
       // 非形状模式：原有渲染
       ctx.shadowBlur = baseSize * 3; ctx.shadowColor = drawColor;
@@ -5778,8 +5770,9 @@ async function getTextPoints(text, w, h) {
 function generateShapeMath(text, w, h) {
   const pts = [];
   const cx = w / 2, cy = h / 2;
-  const scale = Math.min(w, h) * 0.32;
-  const thickness = Math.max(2, scale * 0.08); // 笔画粗细
+  // 缩小 scale 避免形状超出卡片边界被 overflow:hidden 裁切
+  const scale = Math.min(w, h) * 0.26;
+  const thickness = Math.max(2, scale * 0.07); // 笔画粗细
 
   // 添加点（带极轻微抖动，保持锐利）
   function addPt(x, y) { pts.push({ x: x + (Math.random() - 0.5) * 2, y: y + (Math.random() - 0.5) * 2 }); }
