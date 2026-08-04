@@ -5096,6 +5096,12 @@ function initCardParticleSystems() {
     resizeCardParticleSystem(inst);
     createCardParticles(inst);
   });
+  // 如果当前处于形状模式，重新应用形状（重建卡片后_shapePts会丢失）
+  if (particleShapeMode !== 'free') {
+    const savedMode = particleShapeMode;
+    particleShapeMode = 'free'; // 临时重置，让 setParticleShape 能触发
+    setParticleShape(savedMode);
+  }
 }
 
 function resizeCardParticleSystem(inst) {
@@ -5271,8 +5277,8 @@ function startCardAnimation() {
     lastTime = time;
     const theme = PARTICLE_THEMES[currentParticleTheme];
     const winW = window.innerWidth, winH = window.innerHeight;
-    // pointer 影响：每帧对每个卡片转换局部坐标（御剑/雨滴主题除外）
-    if (pointer.active && theme.behavior !== 'sword' && theme.behavior !== 'rain') handlePointerInfluence();
+    // pointer 影响：每帧对每个卡片转换局部坐标（形状模式/御剑/雨滴主题除外）
+    if (pointer.active && particleShapeMode === 'free' && theme.behavior !== 'sword' && theme.behavior !== 'rain') handlePointerInfluence();
     // 御剑主题：剑心平滑跟随手势/指针位置（全局坐标）
     if (theme.behavior === 'sword' && swordCenter.active) {
       swordCenter.x += (swordCenter.tx - swordCenter.x) * 0.18;
@@ -5344,18 +5350,17 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
   p.vx *= 0.98; p.vy *= 0.98;
   // 形态模式：粒子缓动聚成数字/I❤U，绕目标点松散漂浮（御剑主题除外）
   if (particleShapeMode !== 'free' && inst && inst._shapePts && inst._shapePts.length && theme.behavior !== 'sword') {
-    // 缓动趋向目标点（较弱，保留漂浮感）
-    p.x += (p.tx - p.x) * 0.06;
-    p.y += (p.ty - p.y) * 0.06;
+    // 提高缓动速度，让聚形更明显
+    p.x += (p.tx - p.x) * 0.15;
+    p.y += (p.ty - p.y) * 0.15;
     // 绕目标点做圆周漂浮，形成松散光晕而非死钉一点
     if (p.orbitR) {
       p.orbitPhase += p.orbitSpeed || 0.02;
-      p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.04;
-      p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.04;
+      p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.03;
+      p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.03;
     }
     p.phase += 0.03;
-    // 通透感：降低不透明度，避免密实一团
-    p.alpha = 0.45 + Math.sin(p.phase * 1.5) * 0.2;
+    p.alpha = 0.55 + Math.sin(p.phase * 1.5) * 0.25;
     if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.15, 0.95); }
     return;
   }
