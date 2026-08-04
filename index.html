@@ -5649,11 +5649,10 @@ function switchParticleTheme(themeName) {
   if (!PARTICLE_THEMES[themeName]) return;
   currentParticleTheme = themeName;
   particleShapeMode = 'free'; shapePoints = [];
+  _lastFingerMode = 'free';
   // 持久化到设置，刷新/切页后保持
   appData.settings.particleTheme = themeName;
   saveData();
-  // 关闭手势摄像头（御剑主题外的手势态会干扰）
-  if (themeName !== 'sword' && gestureCam.on) stopGestureCam();
   // 重新初始化所有卡片画布并重建粒子，确保当前页面所有 .card 同步生效
   initCardParticleSystems();
   toast('已切换到 ' + PARTICLE_THEMES[themeName].name + ' 主题', 'success');
@@ -5843,21 +5842,19 @@ function countFingers(lm) {
   const wrist = lm[0];
   // 辅助：点 a 到点 b 的距离
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  // 拇指：拇指尖(4)到手腕距离 vs 拇指MCP(2)到手腕距离，且拇指尖与食指MCP(5)有横向距离
+  // 拇指：拇指尖(4)到手腕距离 vs 拇指MCP(2)到手腕距离
   const thumbTipToWrist = dist(lm[4], wrist);
   const thumbMcpToWrist = dist(lm[2], wrist);
-  // 拇指伸直时尖比 MCP 明显更远离手腕
-  if (thumbTipToWrist > thumbMcpToWrist * 1.25) count++;
+  // 阈值放宽：拇指伸直时尖比 MCP 更远离手腕即可
+  if (thumbTipToWrist > thumbMcpToWrist * 1.12) count++;
   // 四指：指尖(tip)比 PIP 关节更远离手腕（向指尖方向延伸）
-  // 同时要求指尖 y 比 PIP y 小（朝上时），双重判断减少误判
+  // 主要用距离比值判断，不再强制要求手朝上（y更小），适应各种手部角度
   const fingers = [[8, 6], [12, 10], [16, 14], [20, 18]];
   for (const [tip, pip] of fingers) {
     const tipToWrist = dist(lm[tip], wrist);
     const pipToWrist = dist(lm[pip], wrist);
-    // 指尖比 PIP 更远离手腕（伸直方向）+ 指尖在 PIP 上方（y更小）
-    const farEnough = tipToWrist > pipToWrist * 1.08;
-    const above = lm[tip].y < lm[pip].y - 0.015;
-    if (farEnough && above) count++;
+    // 阈值放宽：指尖比 PIP 更远离手腕即可判定伸直
+    if (tipToWrist > pipToWrist * 1.03) count++;
   }
   return count;
 }
@@ -5890,28 +5887,27 @@ function onHandsResults(results) {
     swordCenter.tx = wx; swordCenter.ty = wy; swordCenter.active = true;
     const spread = Math.hypot(lm[4].x - lm[20].x, lm[4].y - lm[20].y);
     swordCenter.spread = Math.max(0.15, Math.min(1, spread * 3.2));
-    setGestureHint('御剑 · 张开度 ' + Math.round(swordCenter.spread * 100) + '%');
+    setGestureHint('御剑模式 · 张开度 ' + Math.round(swordCenter.spread * 100) + '%（切换其他主题可用手势）');
     return;
   }
 
-  // 防抖：最近 8 帧手指数投票取众数
+  // 防抖：最近 6 帧手指数投票取众数
   _fingerHistory.push(rawFingers);
-  if (_fingerHistory.length > 8) _fingerHistory.shift();
+  if (_fingerHistory.length > 6) _fingerHistory.shift();
   const freq = {};
   for (const f of _fingerHistory) freq[f] = (freq[f] || 0) + 1;
   let fingers = rawFingers, maxFreq = 0;
   for (const f in freq) { if (freq[f] > maxFreq) { maxFreq = freq[f]; fingers = +f; } }
-  // 要求众数占比过半才生效，避免抖动
-  const stable = maxFreq >= 5;
+  // 要求众数占比过半才生效，避免抖动（6帧中至少3帧一致）
+  const stable = maxFreq >= 3;
 
-  // 时间节流：距上次切换至少 600ms 才允许切换（且需稳定）
+  // 时间节流：距上次切换至少 400ms 才允许切换（且需稳定）
   const now = Date.now();
-  const canSwitch = (now - _lastSwitchTime) > 600;
+  const canSwitch = (now - _lastSwitchTime) > 400;
 
   let targetMode = null, hint = '';
-  if (stable && fingers === 5) { targetMode = 'heart'; hint = '5 指 → I ♥ U'; }
-  else if (stable && fingers >= 1 && fingers <= 4) { targetMode = String(fingers); hint = fingers + ' 指 → 聚成 ' + fingers; }
-  else if (fingers === 0) { targetMode = 'free'; hint = '握拳 → 散开'; }
+  if (stable && fingers === 5) { targetMode = 'heart'; hint = '5 指 → I ❤ U'; }
+  else if (stable && fingers === 0) { targetMode = 'free'; hint = '握拳 → 散开'; }
 
   if (targetMode && targetMode !== _lastFingerMode && canSwitch) {
     setParticleShape(targetMode);
@@ -5919,7 +5915,7 @@ function onHandsResults(results) {
     _lastSwitchTime = now;
   }
   // 实时显示当前检测到的手指数（用于调试反馈）
-  if (!hint) hint = stable ? ('检测到 ' + fingers + ' 指') : ('比 1-5 指…' + rawFingers);
+  if (!hint) hint = stable ? ('检测到 ' + fingers + ' 指') : ('识别中… ' + rawFingers + ' 指');
   setGestureHint(hint);
 }
 
