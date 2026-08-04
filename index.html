@@ -5289,6 +5289,20 @@ function startCardAnimation() {
       const ctx = inst.ctx, w = inst.w, h = inst.h;
       ctx.fillStyle = theme.behavior === 'rain' ? 'rgba(6,8,14,0.28)' : 'rgba(6,8,14,0.16)';
       ctx.fillRect(0, 0, w, h);
+
+      // 形状模式调试：在画布左上角显示状态
+      if (particleShapeMode !== 'free') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(34,197,94,0.9)';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        const ptsLen = inst._shapePts ? inst._shapePts.length : 0;
+        const pCnt = inst.particles.length;
+        const tx0 = inst.particles[0] ? inst.particles[0].tx?.toFixed(0) : '?';
+        const ty0 = inst.particles[0] ? inst.particles[0].ty?.toFixed(0) : '?';
+        ctx.fillText('SHAPE:' + particleShapeMode + ' PTS:' + ptsLen + ' P:' + pCnt + ' T:' + tx0 + ',' + ty0, 8, 16);
+        ctx.restore();
+      }
       // 御剑主题：仅当剑心落在卡片内时，该卡片飞剑才聚拢（否则自由散开）
       let swordLocalX = 0, swordLocalY = 0;
       inst._swordAttract = false;
@@ -5348,8 +5362,11 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
   p.phase += 0.02; p.rot += p.rotSpeed;
   if (p.affected) { p.affectedTimer--; if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; } }
   p.vx *= 0.98; p.vy *= 0.98;
+  // 形态模式调试：记录条件状态
+  p._dbgNotShape = false;
   // 形态模式：粒子缓动聚成数字/I❤U（御剑主题除外）
   if (particleShapeMode !== 'free' && inst && inst._shapePts && inst._shapePts.length && theme.behavior !== 'sword') {
+    p._dbgShape = true;
     // 强力聚形：提高缓动系数，快速到达目标点
     p.x += (p.tx - p.x) * 0.35;
     p.y += (p.ty - p.y) * 0.35;
@@ -5709,9 +5726,23 @@ function setParticleShape(mode) {
   const text = mode === 'heart' ? 'I ♥ U' : mode;
   console.log('[手势调试] 生成文字:', text, '卡片数量:', cardParticleSystems.length);
   for (const inst of cardParticleSystems) {
+    console.log('[手势调试] 卡片尺寸', inst.w, 'x', inst.h);
+    // 如果卡片尺寸为0（可能还没渲染出来），延迟重试
+    if (inst.w <= 1 || inst.h <= 1) {
+      console.log('[手势调试] 卡片尺寸为0，延迟重试');
+      setTimeout(() => {
+        resizeCardParticleSystem(inst);
+        if (inst.w > 1 && inst.h > 1 && particleShapeMode !== 'free') {
+          const pts = getTextPoints(particleShapeMode === 'heart' ? 'I ♥ U' : particleShapeMode, inst.w, inst.h);
+          inst._shapePts = pts;
+          assignShapeTargetsForInst(inst);
+        }
+      }, 200);
+      continue;
+    }
     const pts = getTextPoints(text, inst.w, inst.h);
     inst._shapePts = pts;
-    console.log('[手势调试] 卡片尺寸', inst.w, 'x', inst.h, '采样点数:', pts.length);
+    console.log('[手势调试] 采样点数:', pts.length);
     // 大量粒子让形状饱满清晰（上限 500，最少 120）
     const target = Math.max(Math.min(pts.length, 500), 120);
     const theme = PARTICLE_THEMES[currentParticleTheme];
