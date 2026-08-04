@@ -5348,20 +5348,21 @@ function updateParticle(p, theme, w, h, swordX, swordY, inst) {
   p.phase += 0.02; p.rot += p.rotSpeed;
   if (p.affected) { p.affectedTimer--; if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; } }
   p.vx *= 0.98; p.vy *= 0.98;
-  // 形态模式：粒子缓动聚成数字/I❤U，绕目标点松散漂浮（御剑主题除外）
+  // 形态模式：粒子缓动聚成数字/I❤U（御剑主题除外）
   if (particleShapeMode !== 'free' && inst && inst._shapePts && inst._shapePts.length && theme.behavior !== 'sword') {
-    // 提高缓动速度，让聚形更明显
-    p.x += (p.tx - p.x) * 0.15;
-    p.y += (p.ty - p.y) * 0.15;
-    // 绕目标点做圆周漂浮，形成松散光晕而非死钉一点
+    // 强力聚形：提高缓动系数，快速到达目标点
+    p.x += (p.tx - p.x) * 0.35;
+    p.y += (p.ty - p.y) * 0.35;
+    // 轻微漂浮（比之前小很多，避免打乱形状）
     if (p.orbitR) {
-      p.orbitPhase += p.orbitSpeed || 0.02;
-      p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.03;
-      p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.03;
+      p.orbitPhase += p.orbitSpeed || 0.015;
+      p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.015;
+      p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.015;
     }
     p.phase += 0.03;
-    p.alpha = 0.55 + Math.sin(p.phase * 1.5) * 0.25;
-    if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.15, 0.95); }
+    // 提高透明度，形状更亮
+    p.alpha = 0.7 + Math.sin(p.phase * 1.5) * 0.2;
+    if (particleShapeMode === 'heart') { p.alpha = Math.min(p.alpha + 0.1, 0.95); }
     return;
   }
   const depth = 0.5 + p.depth;
@@ -5711,9 +5712,8 @@ function setParticleShape(mode) {
     const pts = getTextPoints(text, inst.w, inst.h);
     inst._shapePts = pts;
     console.log('[手势调试] 卡片尺寸', inst.w, 'x', inst.h, '采样点数:', pts.length);
-    // 补充粒子到接近采样点数，让数字/I♥U 形状饱满（上限 300）
-    // 采样点太少时至少保证 60 个粒子，避免形状不清晰
-    const target = Math.max(Math.min(pts.length, 300), 60);
+    // 大量粒子让形状饱满清晰（上限 500，最少 120）
+    const target = Math.max(Math.min(pts.length, 500), 120);
     const theme = PARTICLE_THEMES[currentParticleTheme];
     while (inst.particles.length < target) {
       inst.particles.push(createParticle(theme, inst.w, inst.h, inst.particles.length, target));
@@ -5729,15 +5729,15 @@ function assignShapeTargetsForInst(inst) {
   for (let i = 0; i < inst.particles.length; i++) {
     const p = inst.particles[i];
     const t = pts[i % pts.length];
-    // 目标点加大随机散布范围，粒子围绕目标点漂浮而非死钉一点
-    p.tx = t.x + (Math.random() - 0.5) * 14;
-    p.ty = t.y + (Math.random() - 0.5) * 14;
-    // 每个粒子独立的漂浮半径和相位，形成松散的"光晕"效果
-    p.orbitR = 3 + Math.random() * 8;
+    // 减小随机散布范围，形状更清晰锐利
+    p.tx = t.x + (Math.random() - 0.5) * 6;
+    p.ty = t.y + (Math.random() - 0.5) * 6;
+    // 每个粒子独立的漂浮半径和相位（很小，避免打乱形状）
+    p.orbitR = 1 + Math.random() * 3;
     p.orbitPhase = Math.random() * Math.PI * 2;
-    p.orbitSpeed = 0.015 + Math.random() * 0.02;
-    // 形态模式下粒子放大，更通透不拥挤
-    p.shapeSize = (p.size || 1.5) * 1.6;
+    p.orbitSpeed = 0.01 + Math.random() * 0.015;
+    // 形态模式下粒子放大
+    p.shapeSize = (p.size || 1.5) * 1.5;
   }
 }
 
