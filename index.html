@@ -98,6 +98,26 @@
     border-radius: 4px;
   }
   #aiGestureHint.hidden { opacity: 0; pointer-events: none; }
+  /* 闭眼展示模式 */
+  #showcaseOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 9999; background: #000; display: none;
+  }
+  #showcaseOverlay.active { display: block; }
+  #showcaseCanvas { width: 100%; height: 100%; display: block; }
+  #showcaseClose {
+    position: fixed; top: 20px; right: 20px; z-index: 10000;
+    width: 44px; height: 44px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.15); color: #fff; font-size: 20px;
+    cursor: pointer; backdrop-filter: blur(8px); display: none;
+  }
+  #showcaseClose.active { display: block; }
+  #showcaseHint {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    z-index: 10000; color: rgba(255,255,255,0.6); font-size: 14px;
+    text-align: center; pointer-events: none; display: none;
+  }
+  #showcaseHint.active { display: block; }
   /* 书签页面全局粒子画布 */
   #bookmarkParticleCanvas {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -1467,9 +1487,12 @@ function toggleSidebar() {
 }
 
 function switchPage(page) {
-  // 离开 AI 页面时停止计时器
+  // 离开 AI 页面时停止计时器 + 移除手势按钮
   if (currentPage === 'ai' && page !== 'ai') {
     stopAiIdleTimer();
+    const controls = document.getElementById('aiGestureControls');
+    if (controls) controls.remove();
+    if (gestureCam.on) stopGestureCam();
   }
 
   // 离开书签页面时停止书签粒子
@@ -1886,8 +1909,17 @@ function renderAI() {
     </div>
     <div id="aiGestureHint">手势识别未开启</div>
   `;
-  // 手势控制按钮HTML模板（已在全局 init() 中插入，此处不再重复）
-  const gestureButtonsHtml = '';
+
+  // 手势控制按钮 — 只在AI页面插入body
+  if (!document.getElementById('aiGestureControls')) {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="aiGestureControls" style="position:fixed;right:20px;top:80px;z-index:1000;display:flex;flex-direction:column;gap:10px;">
+        <button id="aiGestureHintToggle" onclick="toggleGestureHint()" title="显示/隐藏手势提示" style="width:36px;height:36px;padding:0;font-size:18px;line-height:36px;border:none;border-radius:50%;background:rgba(34,197,94,0.9);color:white;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);">👁</button>
+        <button id="aiGestureToggle" onclick="toggleGestureCam()" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #22c55e;background:rgba(34,197,94,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.4);font-weight:600;">📹 开启手势</button>
+        <button id="showcaseToggle" onclick="toggleShowcaseMode()" title="闭眼展示模式" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #a855f7;background:rgba(168,85,247,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(168,85,247,0.4);font-weight:600;">✨ 展示模式</button>
+      </div>
+    `);
+  }
 
   if (isMobile) {
     area.innerHTML = `
@@ -3673,18 +3705,18 @@ function renderBookmarksPage() {
       </div>
     </div>
     ${groups.map(g => `
-      <div class="card mb-3 no-particle" style="position:relative;z-index:1;background:rgba(255,255,255,0.03);">
+      <div class="card mb-3" style="position:relative;z-index:1;background:rgba(255,255,255,0.03);">
         <div class="card-title">${g}</div>
         <div class="grid-cards" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
           ${appData.bookmarks.filter(b => (b.group||'未分组')===g).map(b => `
-            <div class="card no-particle" style="background:rgba(255,255,255,0.04);">
+            <div class="card" style="background:rgba(255,255,255,0.04);">
               <div class="flex justify-between items-start">
                 <div class="flex-1 min-w-0">
                   <div class="font-semibold truncate">${escapeHtml(b.name)}</div>
                   <div class="text-xs text-gray truncate">${escapeHtml(b.url)}</div>
                 </div>
                 <div class="flex gap-1 ml-2">
-                  <button class="btn btn-secondary btn-sm" onclick="window.open('${escapeHtml(b.url)}','_blank')"></button>
+                  <button class="btn btn-secondary btn-sm" onclick="window.open('${escapeHtml(b.url)}','_blank')">🔗</button>
                   <button class="btn btn-secondary btn-sm" onclick="deleteBookmark('${b.id}')">🗑️</button>
                 </div>
               </div>
@@ -5083,7 +5115,7 @@ function downloadWorkflowResults() {
   const isMobile = 'ontouchstart' in window;
 
   function initCardEffects() {
-    const targets = document.querySelectorAll('.card:not(.no-particle), .stack-3d-card:not(.no-particle)');
+    const targets = document.querySelectorAll('.card:not(.no-canvas-particle), .stack-3d-card:not(.no-canvas-particle)');
     targets.forEach(el => {
       if (el._cardEffectBound) return;
       el._cardEffectBound = true;
@@ -5174,7 +5206,7 @@ function downloadWorkflowResults() {
   setTimeout(applyCardEntrance, 350);
 
   function applyCardEntrance() {
-    const cards = document.querySelectorAll('.card:not(.no-particle), .stack-3d-card:not(.no-particle)');
+    const cards = document.querySelectorAll('.card:not(.no-canvas-particle), .stack-3d-card:not(.no-canvas-particle)');
     cards.forEach((el, i) => {
       el.style.animationDelay = `${i * 0.06}s`;
       // 动画结束后清除 animation，避免 transform 与 JS 3D 倾斜冲突
@@ -5245,7 +5277,7 @@ function initCardParticleSystems() {
   cardParticleSystems = [];
   // 书签页面使用全局单画布，跳过卡片粒子
   if (currentPage === 'bookmarks') return;
-  const cards = document.querySelectorAll('.card, .stack-3d-card');
+  const cards = document.querySelectorAll('.card:not(.no-canvas-particle), .stack-3d-card:not(.no-canvas-particle)');
   cards.forEach((card) => {
     const canvas = document.createElement('canvas');
     canvas.className = 'card-particle-canvas';
@@ -6223,6 +6255,303 @@ function setGestureHint(text) {
   if (el) el.textContent = text;
 }
 
+// ==================== 展示模式（闭眼模式）— 全屏粒子特效 + 手势控制聚拢形状 ====================
+let showcaseMode = false;
+let showcaseCanvas = null;
+let showcaseCtx = null;
+let showcaseAnimFrame = null;
+let showcaseParticles = [];
+let showcaseDpr = 1;
+let showcaseShapePts = [];
+let showcaseShapeMode = 'free';
+
+function toggleShowcaseMode() {
+  if (showcaseMode) exitShowcaseMode();
+  else enterShowcaseMode();
+}
+
+function enterShowcaseMode() {
+  showcaseMode = true;
+  showcaseDpr = window.devicePixelRatio || 1;
+  showcaseShapeMode = 'free';
+  showcaseShapePts = [];
+
+  // 隐藏聊天界面和手势按钮
+  const chatArea = document.getElementById('contentArea');
+  if (chatArea) chatArea.style.display = 'none';
+  const controls = document.getElementById('aiGestureControls');
+  if (controls) controls.style.display = 'none';
+
+  // 启动手势摄像头（如果未开启），用于控制粒子形状
+  if (!gestureCam.on) {
+    toggleGestureCam();
+  }
+  // 轮询等待hands就绪后设置路由包装器
+  (function waitForHands() {
+    if (gestureCam.hands) {
+      gestureCam.hands.onResults((results) => {
+        if (showcaseMode) onShowcaseHandsResults(results);
+        else onHandsResults(results);
+      });
+    } else if (showcaseMode && gestureCam.on) {
+      setTimeout(waitForHands, 300);
+    }
+  })();
+
+  // 创建全屏画布
+  showcaseCanvas = document.createElement('canvas');
+  showcaseCanvas.id = 'showcaseCanvas';
+  document.body.appendChild(showcaseCanvas);
+  resizeShowcaseCanvas();
+  showcaseCtx = showcaseCanvas.getContext('2d');
+
+  // 创建展示粒子（复用当前主题）
+  createShowcaseParticles();
+
+  // 关闭按钮
+  const closeBtn = document.createElement('button');
+  closeBtn.id = 'showcaseCloseBtn';
+  closeBtn.innerHTML = '';
+  closeBtn.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.5);color:white;font-size:24px;cursor:pointer;backdrop-filter:blur(10px);';
+  closeBtn.onclick = exitShowcaseMode;
+  document.body.appendChild(closeBtn);
+
+  // 提示文字
+  const hint = document.createElement('div');
+  hint.id = 'showcaseHint';
+  hint.innerHTML = '👋 挥手互动 | 比1-5指聚成数字 | 5指聚成I❤U | 握拳散开 | 点 ✕ 退出';
+  hint.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:10000;color:rgba(255,255,255,0.7);font-size:14px;text-align:center;pointer-events:none;max-width:90%;line-height:1.6;';
+  document.body.appendChild(hint);
+
+  animateShowcase();
+  toast('已进入展示模式', 'success');
+}
+
+function exitShowcaseMode() {
+  showcaseMode = false;
+
+  const chatArea = document.getElementById('contentArea');
+  if (chatArea) chatArea.style.display = '';
+  const controls = document.getElementById('aiGestureControls');
+  if (controls) controls.style.display = '';
+
+  if (showcaseCanvas) { showcaseCanvas.remove(); showcaseCanvas = null; showcaseCtx = null; }
+  if (showcaseAnimFrame) { cancelAnimationFrame(showcaseAnimFrame); showcaseAnimFrame = null; }
+  const closeBtn = document.getElementById('showcaseCloseBtn');
+  if (closeBtn) closeBtn.remove();
+  const hint = document.getElementById('showcaseHint');
+  if (hint) hint.remove();
+  showcaseParticles = [];
+  showcaseShapePts = [];
+
+  toast('已退出展示模式', 'success');
+}
+
+function resizeShowcaseCanvas() {
+  if (!showcaseCanvas) return;
+  const dpr = showcaseDpr || (window.devicePixelRatio || 1);
+  showcaseCanvas.width = window.innerWidth * dpr;
+  showcaseCanvas.height = window.innerHeight * dpr;
+  showcaseCanvas.style.width = window.innerWidth + 'px';
+  showcaseCanvas.style.height = window.innerHeight + 'px';
+  if (showcaseCtx) showcaseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function createShowcaseParticles() {
+  showcaseParticles = [];
+  const theme = PARTICLE_THEMES[currentParticleTheme] || PARTICLE_THEMES.float;
+  const w = window.innerWidth, h = window.innerHeight;
+  const count = Math.min(200, Math.floor((w * h) / 6000));
+  for (let i = 0; i < count; i++) {
+    showcaseParticles.push({
+      x: Math.random() * w, y: Math.random() * h,
+      vx: (Math.random() - 0.5) * theme.speed,
+      vy: Math.random() * theme.speed * 0.5 + 0.2,
+      size: Math.random() * (theme.size[1] - theme.size[0]) + theme.size[0],
+      color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
+      alpha: 0.7, phase: Math.random() * Math.PI * 2,
+      rot: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.04,
+      affected: false, affectedTimer: 0,
+      tx: 0, ty: 0, _shapeMorph: 0, orbitR: 0, orbitPhase: 0, orbitSpeed: 0, _inShape: false,
+    });
+  }
+}
+
+async function setShowcaseShape(mode) {
+  if (mode === showcaseShapeMode) return;
+  showcaseShapeMode = mode;
+  if (mode === 'free') { showcaseShapePts = []; createShowcaseParticles(); return; }
+  const text = mode === 'heart' ? 'I ♥ U' : mode;
+  const w = window.innerWidth, h = window.innerHeight;
+  const pts = await getTextPoints(text, w, h);
+  showcaseShapePts = pts;
+  const target = Math.max(Math.min(pts.length, 200), 50);
+  if (showcaseParticles.length > target) showcaseParticles.length = target;
+  while (showcaseParticles.length < target) {
+    const theme = PARTICLE_THEMES[currentParticleTheme] || PARTICLE_THEMES.float;
+    showcaseParticles.push({
+      x: Math.random() * w, y: Math.random() * h,
+      vx: (Math.random() - 0.5) * theme.speed, vy: Math.random() * theme.speed * 0.5 + 0.2,
+      size: Math.random() * (theme.size[1] - theme.size[0]) + theme.size[0],
+      color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
+      alpha: 0.8, phase: Math.random() * Math.PI * 2, rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.04, affected: false, affectedTimer: 0,
+      tx: 0, ty: 0, _shapeMorph: 0, orbitR: 0, orbitPhase: 0, orbitSpeed: 0, _inShape: false,
+    });
+  }
+  for (let i = 0; i < showcaseParticles.length; i++) {
+    const p = showcaseParticles[i];
+    const t = pts[i % pts.length];
+    p.tx = t.x + (Math.random() - 0.5) * 5;
+    p.ty = t.y + (Math.random() - 0.5) * 5;
+    p.orbitR = 1 + Math.random() * 2;
+    p.orbitPhase = Math.random() * Math.PI * 2;
+    p.orbitSpeed = 0.015 + Math.random() * 0.02;
+    p._shapeMorph = 0;
+  }
+}
+
+function animateShowcase() {
+  if (!showcaseCtx || !showcaseCanvas) return;
+  const ctx = showcaseCtx;
+  const w = window.innerWidth, h = window.innerHeight;
+
+  ctx.fillStyle = 'rgba(6, 8, 14, 0.16)';
+  ctx.fillRect(0, 0, w, h);
+
+  for (const p of showcaseParticles) {
+    p.phase += 0.02;
+    p.rot += p.rotSpeed;
+
+    if (showcaseShapeMode !== 'free' && showcaseShapePts.length > 0) {
+      if (p._shapeMorph === undefined) p._shapeMorph = 0;
+      p._shapeMorph = Math.min(1, p._shapeMorph + 0.04);
+      const morph = p._shapeMorph;
+      const ease = 0.12 + morph * 0.25;
+      p.x += (p.tx - p.x) * ease;
+      p.y += (p.ty - p.y) * ease;
+      if (p.orbitR) {
+        p.orbitPhase += p.orbitSpeed || 0.02;
+        p.x += Math.cos(p.orbitPhase) * p.orbitR * 0.02 * (1 - morph * 0.5);
+        p.y += Math.sin(p.orbitPhase) * p.orbitR * 0.02 * (1 - morph * 0.5);
+      }
+      p.alpha = (0.6 + Math.sin(p.phase * 1.8) * 0.25) * morph + (1 - morph) * 0.7;
+      p._inShape = true;
+    } else {
+      p._inShape = false;
+      p._shapeMorph = 0;
+      p.x += p.vx + Math.sin(p.phase) * 0.3;
+      p.y += p.vy + Math.cos(p.phase) * 0.2;
+      if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); }
+      if (p.x > w) { p.x = w; p.vx = -Math.abs(p.vx); }
+      if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); }
+      if (p.y > h) { p.y = h; p.vy = -Math.abs(p.vy); }
+      if (p.affected) {
+        p.affectedTimer--;
+        if (p.affectedTimer <= 0) { p.affected = false; p.vx *= 0.5; p.vy *= 0.5; }
+        p.alpha = Math.min(p.alpha + 0.05, 1);
+      } else {
+        p.alpha = Math.max(p.alpha - 0.01, 0.4);
+      }
+    }
+
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.beginPath();
+    ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    ctx.globalAlpha = p.alpha * 0.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, p.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.globalAlpha = 1;
+  showcaseAnimFrame = requestAnimationFrame(animateShowcase);
+}
+
+// 展示模式下的手势识别（复用MediaPipe）
+function showcaseGestureLoop() {
+  if (!showcaseMode) return;
+  const v = gestureCam.video;
+  if (v && v.readyState >= 2 && v.videoWidth > 0 && gestureCam.hands) {
+    try {
+      const bw = v.videoWidth, bh = v.videoHeight;
+      if (gestureCam.bridge.width !== bw) { gestureCam.bridge.width = bw; gestureCam.bridge.height = bh; }
+      gestureCam.bridgeCtx.drawImage(v, 0, 0, bw, bh);
+      gestureCam.hands.send({ image: gestureCam.bridge }).then(() => {
+        if (showcaseMode) gestureCam.raf = requestAnimationFrame(showcaseGestureLoop);
+      }).catch(() => { if (showcaseMode) gestureCam.raf = requestAnimationFrame(showcaseGestureLoop); });
+    } catch (e) { if (showcaseMode) gestureCam.raf = requestAnimationFrame(showcaseGestureLoop); }
+  } else {
+    gestureCam.raf = requestAnimationFrame(showcaseGestureLoop);
+  }
+}
+
+// 展示模式手势结果处理
+function onShowcaseHandsResults(results) {
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    if (showcaseShapeMode !== 'free') setShowcaseShape('free');
+    return;
+  }
+  const lm = results.multiHandLandmarks[0];
+  const rawFingers = countFingers(lm);
+  const wx = lm[0].x * window.innerWidth;
+  const wy = lm[0].y * window.innerHeight;
+
+  // 同步pointer让粒子响应手势位置
+  pointer.prevX = pointer.x; pointer.prevY = pointer.y;
+  pointer.x = wx; pointer.y = wy;
+  pointer.vx = pointer.x - pointer.prevX; pointer.vy = pointer.y - pointer.prevY;
+  pointer.active = true;
+
+  // 手势影响粒子（排斥/吸引）
+  const radius = 150;
+  for (const p of showcaseParticles) {
+    const dist = Math.hypot(p.x - wx, p.y - wy);
+    if (dist < radius) {
+      const influence = (radius - dist) / radius;
+      p.vx += (wx - p.x) * influence * 0.05;
+      p.vy += (wy - p.y) * influence * 0.05;
+      p.affected = true; p.affectedTimer = 14;
+    }
+  }
+
+  // 手指数投票
+  _fingerHistory.push(rawFingers);
+  if (_fingerHistory.length > 6) _fingerHistory.shift();
+  const freq = {};
+  for (const f of _fingerHistory) freq[f] = (freq[f] || 0) + 1;
+  let fingers = rawFingers, maxFreq = 0;
+  for (const f in freq) { if (freq[f] > maxFreq) { maxFreq = freq[f]; fingers = +f; } }
+  const stable = maxFreq >= 3;
+  const now = Date.now();
+  const canSwitch = (now - _lastSwitchTime) > 400;
+
+  let targetMode = null, hint = '';
+  if (stable && fingers === 5) { targetMode = 'heart'; hint = '5指 → I ❤ U'; }
+  else if (stable && fingers >= 1 && fingers <= 4) { targetMode = String(fingers); hint = fingers + '指 → 聚成' + fingers; }
+  else if (stable && fingers === 0) { targetMode = 'free'; hint = '握拳 → 散开'; }
+
+  if (!hint) hint = '指:' + rawFingers + ' 稳:' + (stable ? fingers : '?');
+
+  if (targetMode && targetMode !== _lastFingerMode && canSwitch) {
+    toast('手势切换：' + (targetMode === 'heart' ? 'I ❤ U' : targetMode === 'free' ? '散开' : '聚成' + targetMode), 'success');
+    setShowcaseShape(targetMode);
+    _lastFingerMode = targetMode;
+    _lastSwitchTime = now;
+  }
+
+  const hintEl = document.getElementById('showcaseHint');
+  if (hintEl) hintEl.textContent = hint + ' | 点 ✕ 退出';
+}
+
+window.addEventListener('resize', () => { if (showcaseMode) resizeShowcaseCanvas(); });
+
 // 手势防抖：最近若干帧手指数投票 + 切换时间节流
 let _fingerHistory = [];      // 最近帧的手指数
 let _lastFingerMode = 'free'; // 上次生效的形态
@@ -6369,16 +6698,6 @@ function init() {
 
   // 初始化全局粒子系统（作用于全部卡片）
   initGlobalParticles();
-
-  // 全局插入手势控制按钮（放在 body 末尾，所有页面可见）
-  if (!document.getElementById('aiGestureControls')) {
-    document.body.insertAdjacentHTML('beforeend', `
-      <div id="aiGestureControls" style="position:fixed;right:20px;top:80px;z-index:1000;display:flex;flex-direction:column;gap:10px;">
-        <button id="aiGestureHintToggle" onclick="toggleGestureHint()" title="显示/隐藏手势提示" style="width:36px;height:36px;padding:0;font-size:18px;line-height:36px;border:none;border-radius:50%;background:rgba(34,197,94,0.9);color:white;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);">👁</button>
-        <button id="aiGestureToggle" onclick="toggleGestureCam()" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #22c55e;background:rgba(34,197,94,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.4);font-weight:600;">📹 开启手势</button>
-      </div>
-    `);
-  }
 
   // 隐藏启动动画
   setTimeout(() => {
