@@ -5692,25 +5692,35 @@ function switchParticleTheme(themeName) {
 const _shapeCanvas = document.createElement('canvas');
 // 用数学公式生成形状点（100%可靠，不依赖Canvas文字渲染和字体加载）
 function getTextPoints(text, w, h) {
-  // 优先尝试 Canvas 方式，如果成功且点数 > 0 就用
+  // 优先尝试 Canvas 方式
   try {
-    _shapeCanvas.width = w; _shapeCanvas.height = h;
-    const c = _shapeCanvas.getContext('2d');
+    // 临时创建canvas并加入DOM（某些移动端浏览器离屏canvas取像素会失败）
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.style.cssText = 'position:fixed;left:-9999px;top:-9999px;pointer-events:none;';
+    document.body.appendChild(canvas);
+    const c = canvas.getContext('2d');
     c.clearRect(0, 0, w, h);
-    const fontSize = Math.min(w, h) * (text.length > 2 ? 0.45 : 0.72);
+    // 字体放大+加粗+通用字体族，确保移动端也能渲染
+    const fontSize = Math.min(w, h) * (text.length > 2 ? 0.5 : 0.78);
     c.fillStyle = '#fff';
-    c.font = 'bold ' + fontSize + 'px -apple-system, "PingFang SC", sans-serif';
+    c.font = '900 ' + fontSize + 'px "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(text, w / 2, h / 2);
     const img = c.getImageData(0, 0, w, h).data;
     const pts = [];
-    const step = w < 300 ? 5 : (w < 768 ? 6 : 7);
+    // 步长减小，采样更密集
+    const step = w < 300 ? 4 : (w < 768 ? 5 : 6);
     for (let y = 0; y < h; y += step) {
       for (let x = 0; x < w; x += step) {
-        if (img[(y * w + x) * 4 + 3] > 32) pts.push({ x, y });
+        if (img[(y * w + x) * 4 + 3] > 20) pts.push({ x, y });
       }
     }
-    if (pts.length > 0) return pts;
+    document.body.removeChild(canvas);
+    if (pts.length > 0) {
+      console.log('[形状] Canvas方式成功，采样点数:', pts.length);
+      return pts;
+    }
   } catch(e) { console.log('[形状] Canvas方式失败:', e); }
 
   // Canvas 方式失败，用数学公式兜底（100%可靠）
@@ -5725,102 +5735,112 @@ function generateShapeMath(text, w, h) {
   const scale = Math.min(w, h) * 0.35;
 
   // 添加离散点的辅助函数（带轻微抖动）
-  function addPt(x, y) { pts.push({ x: x + (Math.random() - 0.5) * 4, y: y + (Math.random() - 0.5) * 4 }); }
-  // 沿线段采样点
+  function addPt(x, y) { pts.push({ x: x + (Math.random() - 0.5) * 3, y: y + (Math.random() - 0.5) * 3 }); }
+  // 沿线段采样点（更密集）
   function addLine(x1, y1, x2, y2, count) {
     for (let i = 0; i <= count; i++) {
       const t = i / count;
       addPt(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t);
     }
   }
+  // 沿圆弧采样
+  function addArc(cx, cy, r, startAngle, endAngle, count) {
+    for (let i = 0; i <= count; i++) {
+      const a = startAngle + (endAngle - startAngle) * (i / count);
+      addPt(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+  }
 
   if (text === '1') {
-    // 数字1：一竖 + 顶部小短横
+    // 数字1：一竖 + 顶部小短横 + 底部衬线
     const top = cy - scale, bot = cy + scale;
-    addLine(cx - scale * 0.15, top, cx - scale * 0.15, top - scale * 0.15, 6);
-    addLine(cx - scale * 0.25, top - scale * 0.15, cx + scale * 0.1, top - scale * 0.15, 8);
-    addLine(cx, top, cx, bot, 25);
+    // 顶部横
+    addLine(cx - scale * 0.3, top - scale * 0.12, cx + scale * 0.15, top - scale * 0.12, 14);
+    // 竖线（加粗：用3条平行线）
+    addLine(cx, top, cx, bot, 50);
+    addLine(cx - scale * 0.06, top, cx - scale * 0.06, bot, 45);
+    addLine(cx + scale * 0.06, top, cx + scale * 0.06, bot, 45);
+    // 底部短衬线
+    addLine(cx - scale * 0.15, bot, cx + scale * 0.1, bot, 10);
   } else if (text === '2') {
     // 数字2：上半圆弧 + 横 + 右下竖
     const r = scale * 0.7;
     const topY = cy - scale;
-    // 上半圆（从左到右，顺时针）
-    for (let a = Math.PI; a <= Math.PI * 2; a += 0.15) {
-      addPt(cx + Math.cos(a) * r, topY + r + Math.sin(a) * r);
-    }
+    // 上半圆（从左到右，顺时针）——更密集
+    addArc(cx, topY + r, r, Math.PI, Math.PI * 2, 45);
     // 斜向下
-    addLine(cx + r, topY + r, cx - r, cy + scale, 20);
-    // 底部横
-    addLine(cx - r, cy + scale, cx + r, cy + scale, 15);
+    addLine(cx + r, topY + r, cx - r * 0.9, cy + scale, 35);
+    // 底部横（加粗）
+    addLine(cx - r * 0.9, cy + scale, cx + r, cy + scale, 30);
+    addLine(cx - r * 0.9, cy + scale - scale * 0.06, cx + r, cy + scale - scale * 0.06, 28);
   } else if (text === '3') {
     // 数字3：上弧 + 中横 + 下弧
-    const r = scale * 0.55;
-    const topY = cy - scale * 0.8;
+    const r = scale * 0.6;
+    const topY = cy - scale * 0.75;
     const midY = cy;
-    const botY = cy + scale * 0.8;
-    // 上半弧（从 0.2π 到 1.3π，顺时针）
-    for (let a = -0.3 * Math.PI; a <= Math.PI * 0.9; a += 0.15) {
-      addPt(cx + Math.sin(a) * r, topY + Math.cos(a) * r);
-    }
+    const botY = cy + scale * 0.75;
+    // 上半弧
+    addArc(cx, topY, r, -0.4 * Math.PI, Math.PI * 0.9, 40);
     // 中间连接
-    addLine(cx - r * 0.3, midY - r * 0.3, cx + r * 0.7, midY, 8);
+    addLine(cx - r * 0.2, midY - r * 0.2, cx + r * 0.8, midY, 15);
     // 下半弧
-    for (let a = -0.9 * Math.PI; a <= Math.PI * 0.3; a += 0.15) {
-      addPt(cx + Math.sin(a) * r, botY + Math.cos(a) * r);
-    }
+    addArc(cx, botY, r, -0.9 * Math.PI, Math.PI * 0.4, 40);
   } else if (text === '4') {
     // 数字4：左竖 + 中横 + 右竖
     const top = cy - scale, bot = cy + scale;
-    const left = cx - scale * 0.7, right = cx + scale * 0.7;
-    // 左竖（只到中间）
-    addLine(left, top, left, cy + scale * 0.3, 18);
-    // 中横
-    addLine(left, cy, right, cy, 15);
+    const left = cx - scale * 0.75, right = cx + scale * 0.75;
+    // 左竖（只到中间以下一点）
+    addLine(left, top, left, cy + scale * 0.35, 35);
+    addLine(left - scale * 0.05, top, left - scale * 0.05, cy + scale * 0.3, 30);
+    // 中横（加粗）
+    addLine(left, cy, right, cy, 30);
+    addLine(left, cy - scale * 0.06, right, cy - scale * 0.06, 28);
     // 右竖
-    addLine(right, top, right, bot, 20);
-    // 底部短横（装饰）
-    addLine(cx, bot, right + scale * 0.1, bot, 6);
+    addLine(right, top, right, bot, 40);
+    addLine(right + scale * 0.05, top, right + scale * 0.05, bot, 35);
   } else if (text === 'I ♥ U' || text === 'I ❤ U') {
     // I LOVE YOU：I + 心形 + U
     // I
-    const iLeft = cx - scale * 1.3;
-    addLine(iLeft, cy - scale, iLeft, cy + scale, 18);
-    addLine(iLeft - scale * 0.15, cy - scale, iLeft + scale * 0.15, cy - scale, 5);
-    addLine(iLeft - scale * 0.15, cy + scale, iLeft + scale * 0.15, cy + scale, 5);
+    const iLeft = cx - scale * 1.35;
+    addLine(iLeft, cy - scale, iLeft, cy + scale, 35);
+    addLine(iLeft - scale * 0.08, cy - scale, iLeft - scale * 0.08, cy + scale, 30);
+    addLine(iLeft + scale * 0.08, cy - scale, iLeft + scale * 0.08, cy + scale, 30);
+    // I 上下横
+    addLine(iLeft - scale * 0.2, cy - scale, iLeft + scale * 0.2, cy - scale, 12);
+    addLine(iLeft - scale * 0.2, cy + scale, iLeft + scale * 0.2, cy + scale, 12);
 
-    // 心形（用参数方程）
+    // 心形（用参数方程，更密集）
     const hx = cx, hy = cy;
-    const hr = scale * 0.35;
-    for (let t = 0; t <= Math.PI * 2; t += 0.1) {
-      // 心形参数方程
+    const hr = scale * 0.4;
+    for (let t = 0; t <= Math.PI * 2; t += 0.05) {
       const x = 16 * Math.pow(Math.sin(t), 3);
       const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
       addPt(hx + x * hr * 0.08, hy - y * hr * 0.08);
     }
-    // 心形内部填充点
-    for (let i = 0; i < 25; i++) {
+    // 心形内部填充点（更多）
+    for (let i = 0; i < 60; i++) {
       const t = Math.random() * Math.PI * 2;
-      const r = Math.random() * 0.7;
+      const r = Math.random() * 0.75;
       const x = 16 * Math.pow(Math.sin(t), 3);
       const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
       addPt(hx + x * hr * 0.08 * r, hy - y * hr * 0.08 * r);
     }
 
     // U
-    const uCx = cx + scale * 1.1;
-    const uW = scale * 0.7, uH = scale;
+    const uCx = cx + scale * 1.2;
+    const uW = scale * 0.75, uH = scale;
     // 左竖
-    addLine(uCx - uW, cy - uH, uCx - uW, cy + uH * 0.3, 15);
-    // 底部圆弧
-    for (let a = Math.PI; a <= Math.PI * 2; a += 0.2) {
-      addPt(uCx + Math.cos(a) * uW, cy + uH * 0.3 + Math.sin(a) * uH * 0.7);
-    }
+    addLine(uCx - uW, cy - uH, uCx - uW, cy + uH * 0.3, 30);
+    addLine(uCx - uW - scale * 0.06, cy - uH, uCx - uW - scale * 0.06, cy + uH * 0.25, 28);
+    // 底部圆弧（更密集）
+    addArc(uCx, cy + uH * 0.3, uW, Math.PI, Math.PI * 2, 35);
     // 右竖
-    addLine(uCx + uW, cy + uH * 0.3, uCx + uW, cy - uH, 15);
+    addLine(uCx + uW, cy + uH * 0.3, uCx + uW, cy - uH, 30);
+    addLine(uCx + uW + scale * 0.06, cy + uH * 0.3, uCx + uW + scale * 0.06, cy - uH, 28);
   }
 
   // 如果点数不够，补一些随机点
-  while (pts.length < 40) {
+  while (pts.length < 80) {
     addPt(cx + (Math.random() - 0.5) * scale, cy + (Math.random() - 0.5) * scale);
   }
 
