@@ -5622,8 +5622,8 @@ function drawParticle(ctx, p, theme) {
     const isHeart = particleShapeMode === 'heart';
     const inShape = p._inShape === true;
     const morph = p._shapeMorph || 0;
-    // 形态模式下粒子更大、更亮
-    const baseSize = inShape ? (p.shapeSize || p.size * 1.8) : p.size;
+    // 形态模式下粒子小巧精致
+    const baseSize = inShape ? (p.shapeSize || p.size * 0.8) : p.size;
     // 心形用暖色系，数字用主题色+白色混合
     let drawColor = p.color;
     if (isHeart) {
@@ -5640,17 +5640,17 @@ function drawParticle(ctx, p, theme) {
     const pulse = inShape ? (1 + Math.sin(p.phase * 2.5) * 0.3 * morph) : 1;
     const drawSize = baseSize * pulse;
     if (inShape) {
-      // 形状模式：两层渲染（发光 + 核心），去掉 createRadialGradient 提升性能
-      // 1. 外层发光（shadowBlur 实现，比 createRadialGradient 快很多）
+      // 形状模式：两层精简渲染（发光 + 核心）
+      // 1. 外层发光
       ctx.globalAlpha = p.alpha * 0.5 * morph;
       ctx.fillStyle = drawColor;
-      ctx.shadowBlur = drawSize * 4; ctx.shadowColor = drawColor;
-      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = drawSize * 3; ctx.shadowColor = drawColor;
+      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 1.2, 0, Math.PI * 2); ctx.fill();
       // 2. 核心亮点（白色高亮）
       ctx.globalAlpha = p.alpha * morph;
-      ctx.shadowBlur = drawSize * 2;
+      ctx.shadowBlur = drawSize * 1.5;
       ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, drawSize * 0.4, 0, Math.PI * 2); ctx.fill();
     } else {
       // 非形状模式：原有渲染
       ctx.shadowBlur = baseSize * 3; ctx.shadowColor = drawColor;
@@ -5940,9 +5940,11 @@ async function setParticleShape(mode) {
     const pts = await getTextPoints(text, inst.w, inst.h);
     inst._shapePts = pts;
     console.log('[手势调试] 采样点数:', pts.length);
-    // 大量粒子让形状饱满清晰（上限 500，最少 120）
-    const target = Math.max(Math.min(pts.length, 500), 120);
+    // 粒子数量与采样点匹配（不超出），避免过密挤成一团
+    const target = Math.max(Math.min(pts.length, 200), 50);
     const theme = PARTICLE_THEMES[currentParticleTheme];
+    // 多余的粒子截断
+    if (inst.particles.length > target) inst.particles.length = target;
     while (inst.particles.length < target) {
       inst.particles.push(createParticle(theme, inst.w, inst.h, inst.particles.length, target));
     }
@@ -5957,15 +5959,15 @@ function assignShapeTargetsForInst(inst) {
   for (let i = 0; i < inst.particles.length; i++) {
     const p = inst.particles[i];
     const t = pts[i % pts.length];
-    // 极小随机散布，形状锐利
-    p.tx = t.x + (Math.random() - 0.5) * 4;
-    p.ty = t.y + (Math.random() - 0.5) * 4;
+    // 适度散布，让粒子均匀分布在形状轨迹上
+    p.tx = t.x + (Math.random() - 0.5) * 5;
+    p.ty = t.y + (Math.random() - 0.5) * 5;
     // 每个粒子独立的漂浮参数
     p.orbitR = 1 + Math.random() * 2;
     p.orbitPhase = Math.random() * Math.PI * 2;
     p.orbitSpeed = 0.015 + Math.random() * 0.02;
-    // 形态模式下粒子放大
-    p.shapeSize = (p.size || 1.5) * 2;
+    // 形态模式下粒子缩小（而非放大），让形状轮廓清晰
+    p.shapeSize = (p.size || 1.5) * 0.8;
     // 重置过渡因子，实现从散开到聚拢的动画
     p._shapeMorph = 0;
   }
