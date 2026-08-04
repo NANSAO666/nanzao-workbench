@@ -5691,36 +5691,54 @@ function switchParticleTheme(themeName) {
 // ===================== 粒子形态（数字 / I❤U）文字采样（按卡片尺寸生成目标点） =====================
 const _shapeCanvas = document.createElement('canvas');
 // 用数学公式生成形状点（100%可靠，不依赖Canvas文字渲染和字体加载）
-function getTextPoints(text, w, h) {
-  // 优先尝试 Canvas 方式
+async function getTextPoints(text, w, h) {
+  // 优先尝试 Canvas 方式（更可靠的版本）
   try {
-    // 临时创建canvas并加入DOM（某些移动端浏览器离屏canvas取像素会失败）
+    // 等待字体加载（移动端字体可能未就绪）
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch(e) {}
+    }
+    // 用更大的画布绘制，避免移动端小尺寸渲染失败
+    const scale = Math.max(2, Math.min(4, 600 / Math.min(w, h)));
+    const bw = Math.ceil(w * scale), bh = Math.ceil(h * scale);
     const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    canvas.style.cssText = 'position:fixed;left:-9999px;top:-9999px;pointer-events:none;';
+    canvas.width = bw; canvas.height = bh;
+    canvas.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;pointer-events:none;opacity:0.001;z-index:-1;';
     document.body.appendChild(canvas);
-    const c = canvas.getContext('2d');
-    c.clearRect(0, 0, w, h);
-    // 字体放大+加粗+通用字体族，确保移动端也能渲染
-    const fontSize = Math.min(w, h) * (text.length > 2 ? 0.5 : 0.78);
+    // 强制浏览器完成布局
+    const c = canvas.getContext('2d', { willReadFrequently: true });
+    // 用白色背景+黑色文字，避免透明像素问题
+    c.fillStyle = '#000';
+    c.fillRect(0, 0, bw, bh);
     c.fillStyle = '#fff';
-    c.font = '900 ' + fontSize + 'px "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    // 超大字号，确保移动端也能渲染清晰
+    const fontSize = Math.min(bw, bh) * (text.length > 2 ? 0.52 : 0.82);
+    c.font = '900 ' + fontSize + 'px "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif';
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(text, w / 2, h / 2);
-    const img = c.getImageData(0, 0, w, h).data;
+    // 多次绘制确保渲染完成
+    c.fillText(text, bw / 2, bh / 2);
+    c.fillText(text, bw / 2, bh / 2);
+    // 取像素
+    const img = c.getImageData(0, 0, bw, bh).data;
     const pts = [];
-    // 步长减小，采样更密集
-    const step = w < 300 ? 4 : (w < 768 ? 5 : 6);
-    for (let y = 0; y < h; y += step) {
-      for (let x = 0; x < w; x += step) {
-        if (img[(y * w + x) * 4 + 3] > 20) pts.push({ x, y });
+    // 采样步长与缩放匹配
+    const step = Math.max(2, Math.floor(4 * scale));
+    for (let y = 0; y < bh; y += step) {
+      for (let x = 0; x < bw; x += step) {
+        // 判断白色像素（alpha>20 且 亮度高）
+        const idx = (y * bw + x) * 4;
+        const r = img[idx], g = img[idx + 1], b = img[idx + 2], a = img[idx + 3];
+        if (a > 20 && (r + g + b) > 500) {
+          pts.push({ x: x / scale, y: y / scale });
+        }
       }
     }
     document.body.removeChild(canvas);
     if (pts.length > 0) {
-      console.log('[形状] Canvas方式成功，采样点数:', pts.length);
+      console.log('[形状] Canvas方式成功，采样点数:', pts.length, '缩放:', scale);
       return pts;
     }
+    console.log('[形状] Canvas方式返回0点，尝试兜底');
   } catch(e) { console.log('[形状] Canvas方式失败:', e); }
 
   // Canvas 方式失败，用数学公式兜底（100%可靠）
@@ -5848,7 +5866,7 @@ function generateShapeMath(text, w, h) {
   return pts;
 }
 
-function setParticleShape(mode) {
+async function setParticleShape(mode) {
   console.log('[手势调试] setParticleShape 被调用，mode=', mode, '当前 particleShapeMode=', particleShapeMode);
   if (mode === particleShapeMode) { console.log('[手势调试] 模式相同，跳过'); return; }
   particleShapeMode = mode;
@@ -5866,17 +5884,17 @@ function setParticleShape(mode) {
     // 如果卡片尺寸为0（可能还没渲染出来），延迟重试
     if (inst.w <= 1 || inst.h <= 1) {
       console.log('[手势调试] 卡片尺寸为0，延迟重试');
-      setTimeout(() => {
+      setTimeout(async () => {
         resizeCardParticleSystem(inst);
         if (inst.w > 1 && inst.h > 1 && particleShapeMode !== 'free') {
-          const pts = getTextPoints(particleShapeMode === 'heart' ? 'I ♥ U' : particleShapeMode, inst.w, inst.h);
+          const pts = await getTextPoints(particleShapeMode === 'heart' ? 'I ♥ U' : particleShapeMode, inst.w, inst.h);
           inst._shapePts = pts;
           assignShapeTargetsForInst(inst);
         }
       }, 200);
       continue;
     }
-    const pts = getTextPoints(text, inst.w, inst.h);
+    const pts = await getTextPoints(text, inst.w, inst.h);
     inst._shapePts = pts;
     console.log('[手势调试] 采样点数:', pts.length);
     // 大量粒子让形状饱满清晰（上限 500，最少 120）
