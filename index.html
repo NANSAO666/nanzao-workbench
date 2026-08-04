@@ -5907,6 +5907,7 @@ function onHandsResults(results) {
 
   let targetMode = null, hint = '';
   if (stable && fingers === 5) { targetMode = 'heart'; hint = '5 指 → I ❤ U'; }
+  else if (stable && fingers >= 1 && fingers <= 4) { targetMode = String(fingers); hint = fingers + ' 指 → 聚成 ' + fingers; }
   else if (stable && fingers === 0) { targetMode = 'free'; hint = '握拳 → 散开'; }
 
   if (targetMode && targetMode !== _lastFingerMode && canSwitch) {
