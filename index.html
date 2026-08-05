@@ -91,7 +91,7 @@
   #aiGesturePanel.closed { opacity: 0; transform: scale(.9); pointer-events: none; }
   #aiGestureVideo { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display:block; }
   #aiGestureHint {
-    position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 3px 6px;
+    position: absolute; left: 10px; right: 10px; bottom: 80px; padding: 3px 6px;
     font-size: 10px; color: #d1fae5; background: rgba(0,0,0,0.6);
     text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     z-index: 21; transition: opacity 0.2s;
@@ -136,7 +136,7 @@
     display: flex; align-items: center; padding: 0 18px; gap: 12px;
     z-index: 100;
   }
-  .main-body { flex: 1; display: flex; overflow: hidden; }
+  .main-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 
   /* 左侧导航 */
   .sidebar {
@@ -1183,8 +1183,15 @@
     /* 右方面板隐藏 */
     .right-panel { display: none; }
 
-    /* 内容区 */
-    .content-area { padding: 12px; }
+    /* 内容区 - 移动端：flex 布局，chat-messages 内部滚动，底部内容完整显示 */
+    .content-area { padding: 12px !important; height: calc(100dvh - 58px); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
+    .content-area > .page-header { flex-shrink: 0; margin-bottom: 14px; }
+    .content-area > .mobile-ai-layout { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .content-area > div:last-child { flex-shrink: 0; margin-top: 12px; font-size: 12px; }
+    .mobile-session-bar { flex-shrink: 0; margin-bottom: 8px; }
+    .mobile-chat-card { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+    .mobile-chat-card .chat-messages { flex: 1; min-height: 0; overflow-y: auto; }
+    .mobile-chat-card .chat-input-area { flex-shrink: 0; }
     .page-header {
       flex-direction: column;
       align-items: flex-start;
@@ -1206,6 +1213,18 @@
     /* AI对话 */
     .chat-container { height: calc(100vh - 280px); height: calc(100dvh - 280px); }
     .chat-bubble { max-width: 85%; font-size: 13px; }
+
+    /* 移动端AI布局 */
+    .mobile-ai-layout {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .mobile-session-bar { flex-shrink: 0; margin-bottom: 8px; }
+    .mobile-chat-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .mobile-chat-card .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 20px; }
+    .mobile-chat-card .chat-input-area { flex-shrink: 0; padding-bottom: 10px; }
 
     /* 移动端手势按钮适配 */
     #aiGestureControls {
@@ -1910,13 +1929,12 @@ function renderAI() {
     <div id="aiGestureHint">手势识别未开启</div>
   `;
 
-  // 手势控制按钮 — 只在AI页面插入body
+  // 手势控制按钮 — 只在AI页面插入body（展示模式已合并手势控制）
   if (!document.getElementById('aiGestureControls')) {
     document.body.insertAdjacentHTML('beforeend', `
       <div id="aiGestureControls" style="position:fixed;right:20px;top:80px;z-index:1000;display:flex;flex-direction:column;gap:10px;">
         <button id="aiGestureHintToggle" onclick="toggleGestureHint()" title="显示/隐藏手势提示" style="width:36px;height:36px;padding:0;font-size:18px;line-height:36px;border:none;border-radius:50%;background:rgba(34,197,94,0.9);color:white;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);">👁</button>
-        <button id="aiGestureToggle" onclick="toggleGestureCam()" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #22c55e;background:rgba(34,197,94,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.4);font-weight:600;">📹 开启手势</button>
-        <button id="showcaseToggle" onclick="toggleShowcaseMode()" title="闭眼展示模式" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #a855f7;background:rgba(168,85,247,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(168,85,247,0.4);font-weight:600;">✨ 展示模式</button>
+        <button id="showcaseToggle" onclick="toggleShowcaseMode()" title="展示模式（含手势控制）" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #a855f7;background:rgba(168,85,247,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(168,85,247,0.4);font-weight:600;">✨ 展示模式</button>
       </div>
     `);
   }
@@ -6282,9 +6300,13 @@ function enterShowcaseMode() {
   const controls = document.getElementById('aiGestureControls');
   if (controls) controls.style.display = 'none';
 
-  // 启动手势摄像头（如果未开启），用于控制粒子形状
+  // 自动启动手势摄像头（展示模式已合并手势控制）
   if (!gestureCam.on) {
-    toggleGestureCam();
+    initGestureCamForShowcase();
+  } else {
+    // 摄像头已开启，切换到展示模式的手势循环
+    if (gestureCam.raf) cancelAnimationFrame(gestureCam.raf);
+    showcaseGestureLoop();
   }
   // 轮询等待hands就绪后设置路由包装器
   (function waitForHands() {
@@ -6311,7 +6333,7 @@ function enterShowcaseMode() {
   // 关闭按钮
   const closeBtn = document.createElement('button');
   closeBtn.id = 'showcaseCloseBtn';
-  closeBtn.innerHTML = '';
+  closeBtn.innerHTML = '✕';
   closeBtn.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.5);color:white;font-size:24px;cursor:pointer;backdrop-filter:blur(10px);';
   closeBtn.onclick = exitShowcaseMode;
   document.body.appendChild(closeBtn);
@@ -6319,12 +6341,62 @@ function enterShowcaseMode() {
   // 提示文字
   const hint = document.createElement('div');
   hint.id = 'showcaseHint';
-  hint.innerHTML = '👋 挥手互动 | 比1-5指聚成数字 | 5指聚成I❤U | 握拳散开 | 点 ✕ 退出';
-  hint.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:10000;color:rgba(255,255,255,0.7);font-size:14px;text-align:center;pointer-events:none;max-width:90%;line-height:1.6;';
+  hint.innerHTML = '🖐张开手排斥 | ✊握拳散开 | 1-4指聚形 | 5指I❤U | 👐双手开合缩放 | 👌捏合缩小 | ←→滑动切换主题 | 点 ✕ 退出';
+  hint.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:10000;color:rgba(255,255,255,0.7);font-size:13px;text-align:center;pointer-events:none;max-width:95%;line-height:1.6;';
   document.body.appendChild(hint);
 
   animateShowcase();
-  toast('已进入展示模式', 'success');
+  toast('已进入展示模式 · 手势控制已开启', 'success');
+}
+
+// 展示模式专用：静默初始化手势摄像头（无toast/按钮更新）
+async function initGestureCamForShowcase() {
+  setGestureHint('正在初始化手势…');
+  try {
+    gestureCam.video = document.getElementById('aiGestureVideo');
+    if (!gestureCam.video) {
+      // 展示模式下没有video元素，创建一个隐藏的
+      const v = document.createElement('video');
+      v.id = 'aiGestureVideo';
+      v.autoplay = true;
+      v.playsInline = true;
+      v.muted = true;
+      v.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(v);
+      gestureCam.video = v;
+    }
+    let waited = 0;
+    while (typeof Hands === 'undefined' && waited < 8000) { await new Promise(r => setTimeout(r, 200)); waited += 200; }
+    if (typeof Hands === 'undefined') { setGestureHint('手势库加载失败'); return; }
+    setGestureHint('请求摄像头…');
+    const isMobile = window.innerWidth < 768;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: isMobile ? 480 : 640 }, height: { ideal: isMobile ? 360 : 480 } }, audio: false });
+    gestureCam.video.srcObject = stream;
+    await gestureCam.video.play().catch(() => {});
+    await new Promise((resolve) => {
+      const v = gestureCam.video;
+      if (v.readyState >= 2 && v.videoWidth > 0) return resolve();
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      v.addEventListener('loadeddata', finish, { once: true });
+      v.addEventListener('canplay', finish, { once: true });
+      setTimeout(finish, 3000);
+    });
+    if (!gestureCam.bridge) {
+      gestureCam.bridge = document.createElement('canvas');
+      gestureCam.bridgeCtx = gestureCam.bridge.getContext('2d');
+    }
+    setGestureHint('加载手势模型…');
+    gestureCam.hands = new Hands({ locateFile: (f) => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f });
+    gestureCam.hands.setOptions({ selfieMode: true, maxNumHands: 2, modelComplexity: isMobile ? 0 : 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+    gestureCam.on = true;
+    setGestureHint('手势已就绪');
+    showcaseGestureLoop();
+  } catch (err) {
+    console.error('展示模式手势初始化失败', err);
+    setGestureHint('手势初始化失败：' + (err.message || err.name));
+    gestureCam.on = false;
+  }
 }
 
 function exitShowcaseMode() {
@@ -6343,6 +6415,12 @@ function exitShowcaseMode() {
   if (hint) hint.remove();
   showcaseParticles = [];
   showcaseShapePts = [];
+
+  // 切换回普通手势循环
+  if (gestureCam.on) {
+    if (gestureCam.raf) cancelAnimationFrame(gestureCam.raf);
+    gestureCamLoop();
+  }
 
   toast('已退出展示模式', 'success');
 }
@@ -6492,12 +6570,22 @@ function showcaseGestureLoop() {
   }
 }
 
-// 展示模式手势结果处理
+// 展示模式手势结果处理（增强版：双手缩放、捏合、滑动切换主题）
+let _lastHandDistance = 0;
+let _lastPinchScale = 1;
+let _lastSwipeX = 0;
+let _swipeThreshold = 100;
+let _particleScale = 1;
+
 function onShowcaseHandsResults(results) {
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
     if (showcaseShapeMode !== 'free') setShowcaseShape('free');
+    _lastHandDistance = 0;
+    _lastSwipeX = 0;
     return;
   }
+
+  const handCount = results.multiHandLandmarks.length;
   const lm = results.multiHandLandmarks[0];
   const rawFingers = countFingers(lm);
   const wx = lm[0].x * window.innerWidth;
@@ -6509,15 +6597,92 @@ function onShowcaseHandsResults(results) {
   pointer.vx = pointer.x - pointer.prevX; pointer.vy = pointer.y - pointer.prevY;
   pointer.active = true;
 
-  // 手势影响粒子（排斥/吸引）
-  const radius = 150;
-  for (const p of showcaseParticles) {
-    const dist = Math.hypot(p.x - wx, p.y - wy);
-    if (dist < radius) {
-      const influence = (radius - dist) / radius;
-      p.vx += (wx - p.x) * influence * 0.05;
-      p.vy += (wy - p.y) * influence * 0.05;
-      p.affected = true; p.affectedTimer = 14;
+  // 1. 双手检测：开合缩放
+  if (handCount === 2) {
+    const lm2 = results.multiHandLandmarks[1];
+    const wx2 = lm2[0].x * window.innerWidth;
+    const wy2 = lm2[0].y * window.innerHeight;
+    const currentDistance = Math.hypot(wx2 - wx, wy2 - wy);
+
+    if (_lastHandDistance > 0) {
+      const distanceChange = currentDistance - _lastHandDistance;
+      const scaleChange = distanceChange / _lastHandDistance;
+
+      // 双手扩展/收缩：影响粒子大小
+      if (Math.abs(scaleChange) > 0.02) {
+        _particleScale = Math.max(0.3, Math.min(3, _particleScale + scaleChange * 2));
+        // 应用缩放效果到所有粒子
+        for (const p of showcaseParticles) {
+          p.size = p.size * (1 + scaleChange * 0.5);
+          p.size = Math.max(1, Math.min(8, p.size));
+        }
+      }
+    }
+    _lastHandDistance = currentDistance;
+  } else {
+    _lastHandDistance = 0;
+  }
+
+  // 2. 捏合检测：拇指和食指距离
+  const thumbTip = lm[4];
+  const indexTip = lm[8];
+  const pinchDistance = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+  const pinchScale = pinchDistance / 0.15; // 归一化
+
+  if (pinchScale < 0.5 && _lastPinchScale >= 0.5) {
+    // 捏合开始：缩小粒子
+    for (const p of showcaseParticles) {
+      p.size = Math.max(1, p.size * 0.8);
+    }
+    _particleScale *= 0.9;
+  }
+  _lastPinchScale = pinchScale;
+
+  // 3. 滑动检测：手腕横向移动
+  const swipeDelta = wx - _lastSwipeX;
+  if (Math.abs(swipeDelta) > _swipeThreshold && rawFingers >= 3) {
+    // 滑动切换主题
+    const themes = Object.keys(PARTICLE_THEMES);
+    const currentIndex = themes.indexOf(currentParticleTheme);
+    const nextIndex = swipeDelta > 0
+      ? (currentIndex + 1) % themes.length
+      : (currentIndex - 1 + themes.length) % themes.length;
+    currentParticleTheme = themes[nextIndex];
+
+    // 重新创建粒子以应用新主题
+    createShowcaseParticles();
+    toast('主题切换：' + currentParticleTheme, 'success');
+    _lastSwipeX = wx;
+    _swipeThreshold = 200; // 增加阈值防止频繁切换
+    setTimeout(() => { _swipeThreshold = 100; }, 500);
+  } else if (Math.abs(swipeDelta) < 30) {
+    _lastSwipeX = wx; // 重置起始位置
+  }
+
+  // 4. 张开手掌排斥效果（增强）
+  if (rawFingers === 5) {
+    const radius = 200; // 增大排斥范围
+    for (const p of showcaseParticles) {
+      const dist = Math.hypot(p.x - wx, p.y - wy);
+      if (dist < radius) {
+        const influence = (radius - dist) / radius;
+        const force = influence * 0.15; // 增强排斥力
+        p.vx += (p.x - wx) * force / dist;
+        p.vy += (p.y - wy) * force / dist;
+        p.affected = true; p.affectedTimer = 20;
+      }
+    }
+  } else {
+    // 其他手势：吸引效果
+    const radius = 150;
+    for (const p of showcaseParticles) {
+      const dist = Math.hypot(p.x - wx, p.y - wy);
+      if (dist < radius) {
+        const influence = (radius - dist) / radius;
+        p.vx += (wx - p.x) * influence * 0.05;
+        p.vy += (wy - p.y) * influence * 0.05;
+        p.affected = true; p.affectedTimer = 14;
+      }
     }
   }
 
@@ -6533,7 +6698,11 @@ function onShowcaseHandsResults(results) {
   const canSwitch = (now - _lastSwitchTime) > 400;
 
   let targetMode = null, hint = '';
-  if (stable && fingers === 5) { targetMode = 'heart'; hint = '5指 → I ❤ U'; }
+  if (handCount === 2) {
+    hint = '双手缩放 ' + Math.round(_particleScale * 100) + '%';
+  } else if (pinchScale < 0.5) {
+    hint = '捏合缩小';
+  } else if (stable && fingers === 5) { targetMode = 'heart'; hint = '5指 → I ❤ U'; }
   else if (stable && fingers >= 1 && fingers <= 4) { targetMode = String(fingers); hint = fingers + '指 → 聚成' + fingers; }
   else if (stable && fingers === 0) { targetMode = 'free'; hint = '握拳 → 散开'; }
 
