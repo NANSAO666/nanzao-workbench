@@ -1929,15 +1929,15 @@ function renderAI() {
     <div id="aiGestureHint">手势识别未开启</div>
   `;
 
-  // 手势控制按钮 — 只在AI页面插入body（展示模式已合并手势控制）
-  if (!document.getElementById('aiGestureControls')) {
-    document.body.insertAdjacentHTML('beforeend', `
-      <div id="aiGestureControls" style="position:fixed;right:20px;top:80px;z-index:1000;display:flex;flex-direction:column;gap:10px;">
-        <button id="aiGestureHintToggle" onclick="toggleGestureHint()" title="显示/隐藏手势提示" style="width:36px;height:36px;padding:0;font-size:18px;line-height:36px;border:none;border-radius:50%;background:rgba(34,197,94,0.9);color:white;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);">👁</button>
-        <button id="showcaseToggle" onclick="toggleShowcaseMode()" title="展示模式（含手势控制）" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #a855f7;background:rgba(168,85,247,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(168,85,247,0.4);font-weight:600;">✨ 展示模式</button>
-      </div>
-    `);
-  }
+  // 手势控制按钮 — 暂时隐藏，后续可恢复
+  // if (!document.getElementById('aiGestureControls')) {
+  //   document.body.insertAdjacentHTML('beforeend', `
+  //     <div id="aiGestureControls" style="position:fixed;right:20px;top:80px;z-index:1000;display:flex;flex-direction:column;gap:10px;">
+  //       <button id="aiGestureHintToggle" onclick="toggleGestureHint()" title="显示/隐藏手势提示" style="width:36px;height:36px;padding:0;font-size:18px;line-height:36px;border:none;border-radius:50%;background:rgba(34,197,94,0.9);color:white;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);">👁</button>
+  //       <button id="showcaseToggle" onclick="toggleShowcaseMode()" title="展示模式（含手势控制）" style="width:130px;padding:10px 14px;font-size:13px;border-radius:8px;border:2px solid #a855f7;background:rgba(168,85,247,0.6);color:#ffffff;cursor:pointer;box-shadow:0 4px 12px rgba(168,85,247,0.4);font-weight:600;">✨ 展示模式</button>
+  //     </div>
+  //   `);
+  // }
 
   if (isMobile) {
     area.innerHTML = `
