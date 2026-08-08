@@ -1400,21 +1400,35 @@
 
 <script>
 // ===================== Supabase 配置 =====================
-const SUPABASE_URL = 'https://mvsbdzwypuyfpcnwxgce.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_8-o3L_HdvQi8kT82LT_Qaw_MCvu648l';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let supabase = null;
+try {
+  if (window.supabase) {
+    const SUPABASE_URL = 'https://mvsbdzwypuyfpcnwxgce.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_8-o3L_HdvQi8kT82LT_Qaw_MCvu648l';
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch (e) {
+  console.warn('Supabase 初始化失败:', e.message);
+}
 
 // 当前登录用户
 let currentUser = null;
 let currentUserId = null;
 
-// 检查登录状态
+// 检查登录状态（带超时保护）
 async function checkAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    currentUserId = session.user.id;
-    return true;
+  if (!supabase) return false;
+  try {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('连接超时')), 5000));
+    const sessionPromise = supabase.auth.getSession();
+    const { data: { session } } = await Promise.race([sessionPromise, timeout]);
+    if (session) {
+      currentUser = session.user;
+      currentUserId = session.user.id;
+      return true;
+    }
+  } catch (e) {
+    console.warn('Supabase 连接失败:', e.message);
   }
   return false;
 }
@@ -6994,6 +7008,15 @@ function onHandsResults(results) {
 
 // ===================== 初始化 =====================
 async function init() {
+  // 先隐藏启动动画（不管怎样都要消失）
+  setTimeout(() => {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+      splash.classList.add('splash-hide');
+      setTimeout(() => splash.remove(), 600);
+    }
+  }, 1500);
+
   // 检查登录状态
   const isLoggedIn = await checkAuth();
   if (!isLoggedIn) {
@@ -7032,15 +7055,6 @@ async function init() {
 
   // 初始化全局粒子系统（作用于全部卡片）
   initGlobalParticles();
-
-  // 隐藏启动动画
-  setTimeout(() => {
-    const splash = document.getElementById('splashScreen');
-    if (splash) {
-      splash.classList.add('splash-hide');
-      setTimeout(() => splash.remove(), 600);
-    }
-  }, 1500);
 }
 
 init();
