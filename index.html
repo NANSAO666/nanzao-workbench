@@ -245,6 +245,17 @@
   .splash-screen.splash-hide {
     animation: splashFadeOut 0.6s ease forwards;
   }
+  /* 兜底：3秒后自动隐藏 splash（防止 JS 加载失败卡住） */
+  .splash-screen {
+    animation: splashAutoHide 0.6s ease 3s forwards;
+  }
+  @keyframes splashAutoHide {
+    to { opacity: 0; pointer-events: none; visibility: hidden; }
+  }
+  /* JS 正常时会移除 splash，取消兜底动画 */
+  .splash-screen.splash-hide {
+    animation: splashFadeOut 0.6s ease forwards !important;
+  }
   .splash-logo {
     width: 80px; height: 80px;
     border-radius: 20px;
