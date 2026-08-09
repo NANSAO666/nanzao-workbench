@@ -6851,14 +6851,14 @@ function onHandsResults(results) {
 }
 
 // ===================== Supabase 登录系统 =====================
-let supabase = null;
-let currentUser = null;
-let currentUserId = null;
-let authReady = false;
+var sbClient = null;
+var currentUser = null;
+var currentUserId = null;
+var authReady = false;
 
 try {
   if (typeof window.supabase !== 'undefined' && !window.__sbFailed) {
-    supabase = window.supabase.createClient('https://mvsbdzwypuyfpcnwxgce.supabase.co', 'sb_publishable_8-o3L_HdvQi8kT82LT_Qaw_MCvu648l');
+    sbClient = window.supabase.createClient('https://mvsbdzwypuyfpcnwxgce.supabase.co', 'sb_publishable_8-o3L_HdvQi8kT82LT_Qaw_MCvu648l');
   }
 } catch (e) { console.warn('Supabase init failed'); }
 
@@ -6899,11 +6899,11 @@ async function handleAuth() {
   try {
     if (isRegisterMode) {
       var nick = document.getElementById('lpNick').value.trim() || email.split('@')[0];
-      var result = await supabase.auth.signUp({ email: email, password: pass, options: { data: { nickname: nick } } });
+      var result = await sbClient.auth.signUp({ email: email, password: pass, options: { data: { nickname: nick } } });
       if (result.error) throw result.error;
       if (result.data.user) { currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin(); }
     } else {
-      var result = await supabase.auth.signInWithPassword({ email: email, password: pass });
+      var result = await sbClient.auth.signInWithPassword({ email: email, password: pass });
       if (result.error) throw result.error;
       if (result.data.user) { currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin(); }
     }
@@ -6928,7 +6928,7 @@ function addLogoutBtn() {
     btn.id = 'logoutBtn';
     btn.className = 'btn btn-secondary btn-sm';
     btn.innerHTML = '🚪<span class="btn-text">退出</span>';
-    btn.onclick = function() { supabase.auth.signOut().then(function() { location.reload(); }); };
+    btn.onclick = function() { sbClient.auth.signOut().then(function() { location.reload(); }); };
     topBar.insertBefore(btn, topBar.firstChild);
   }
 }
@@ -6942,10 +6942,10 @@ async function init() {
   }, 3000);
 
   // 如果 Supabase 可用，检查登录状态
-  if (supabase) {
+  if (sbClient) {
     try {
       var timeout = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 5000); });
-      var sessionResult = await Promise.race([supabase.auth.getSession(), timeout]);
+      var sessionResult = await Promise.race([sbClient.auth.getSession(), timeout]);
       if (sessionResult.data && sessionResult.data.session) {
         currentUser = sessionResult.data.session.user;
         currentUserId = sessionResult.data.session.user.id;
