@@ -10744,6 +10744,9 @@ function renderComfyUIWorkflow(area) {
         </div>
       </div>
     `;
+
+    // 移动端也需要初始化画布运行态（否则节点/连线不会渲染、事件不绑定）
+    initNodeCanvasRuntime(wf);
   } else {
     // ============ 桌面端布局（保持原有） ============
     area.innerHTML = `

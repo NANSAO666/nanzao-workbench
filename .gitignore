@@ -1,0 +1,16 @@
+node_modules/
+server/node_modules/
+server/check.js
+server/check2.js
+server/check3.js
+server/fix_*.js
+server/locate_*.js
+server/test_*.js
+server/trace_*.js
+check.js
+debug_script.js
+.trae-html-share-packages/
+server/data.db*
+.DS_Store
+*.log
+server/.env
