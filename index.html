@@ -6850,12 +6850,124 @@ function onHandsResults(results) {
   setGestureHint(hint);
 }
 
+// ===================== Supabase 登录系统 =====================
+let supabase = null;
+let currentUser = null;
+let currentUserId = null;
+let authReady = false;
+
+try {
+  if (typeof window.supabase !== 'undefined' && !window.__sbFailed) {
+    supabase = window.supabase.createClient('https://mvsbdzwypuyfpcnwxgce.supabase.co', 'sb_publishable_8-o3L_HdvQi8kT82LT_Qaw_MCvu648l');
+  }
+} catch (e) { console.warn('Supabase init failed'); }
+
+let isRegisterMode = false;
+
+function showLoginPage() {
+  var el = document.createElement('div');
+  el.id = 'loginPage';
+  el.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:#0a0a0a;';
+  el.innerHTML = '<div style="width:360px;max-width:90vw;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:40px 30px;">' +
+    '<div style="text-align:center;margin-bottom:30px;"><div style="font-size:36px;margin-bottom:8px;"></div>' +
+    '<div style="font-size:22px;font-weight:700;color:#f0f0f0;">南崽工作台</div>' +
+    '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:6px;">登录以同步你的数据</div></div>' +
+    '<input type="email" id="lpEmail" placeholder="邮箱" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.05);color:#f0f0f0;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">' +
+    '<input type="password" id="lpPass" placeholder="密码（至少6位）" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.05);color:#f0f0f0;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">' +
+    '<input type="text" id="lpNick" placeholder="昵称（注册时填写）" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.05);color:#f0f0f0;font-size:15px;margin-bottom:16px;outline:none;box-sizing:border-box;display:none;">' +
+    '<button id="lpSubmit" onclick="handleAuth()" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#22c55e,#4ade80);color:white;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:12px;">登录</button>' +
+    '<button onclick="toggleAuthMode()" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:transparent;color:rgba(255,255,255,0.5);font-size:13px;cursor:pointer;">没有账号？去注册</button>' +
+    '<div id="lpError" style="color:#ef4444;font-size:13px;text-align:center;margin-top:10px;display:none;"></div></div>';
+  document.body.appendChild(el);
+}
+
+function toggleAuthMode() {
+  isRegisterMode = !isRegisterMode;
+  document.getElementById('lpNick').style.display = isRegisterMode ? 'block' : 'none';
+  document.getElementById('lpSubmit').textContent = isRegisterMode ? '注册' : '登录';
+  document.getElementById('lpError').style.display = 'none';
+}
+
+async function handleAuth() {
+  var email = document.getElementById('lpEmail').value.trim();
+  var pass = document.getElementById('lpPass').value;
+  var errEl = document.getElementById('lpError');
+  errEl.style.display = 'none';
+  if (!email || !pass) { errEl.textContent = '请填写邮箱和密码'; errEl.style.display = 'block'; return; }
+  var btn = document.getElementById('lpSubmit');
+  btn.textContent = '处理中...'; btn.disabled = true;
+  try {
+    if (isRegisterMode) {
+      var nick = document.getElementById('lpNick').value.trim() || email.split('@')[0];
+      var result = await supabase.auth.signUp({ email: email, password: pass, options: { data: { nickname: nick } } });
+      if (result.error) throw result.error;
+      if (result.data.user) { currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin(); }
+    } else {
+      var result = await supabase.auth.signInWithPassword({ email: email, password: pass });
+      if (result.error) throw result.error;
+      if (result.data.user) { currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin(); }
+    }
+  } catch (err) {
+    errEl.textContent = err.message || '操作失败'; errEl.style.display = 'block';
+    btn.textContent = isRegisterMode ? '注册' : '登录'; btn.disabled = false;
+  }
+}
+
+function afterLogin() {
+  var el = document.getElementById('loginPage'); if (el) el.remove();
+  var name = (currentUser && currentUser.user_metadata && currentUser.user_metadata.nickname) || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : '用户');
+  toast('欢迎，' + name, 'success');
+  addLogoutBtn();
+  doAppInit();
+}
+
+function addLogoutBtn() {
+  var topBar = document.querySelector('.top-bar .flex.items-center.gap-2.ml-auto');
+  if (topBar && !document.getElementById('logoutBtn')) {
+    var btn = document.createElement('button');
+    btn.id = 'logoutBtn';
+    btn.className = 'btn btn-secondary btn-sm';
+    btn.innerHTML = '🚪<span class="btn-text">退出</span>';
+    btn.onclick = function() { supabase.auth.signOut().then(function() { location.reload(); }); };
+    topBar.insertBefore(btn, topBar.firstChild);
+  }
+}
+
 // ===================== 初始化 =====================
-function init() {
+async function init() {
+  // 确保 splash 在 3 秒后消失（兜底，防止 JS 卡住）
+  setTimeout(function() {
+    var splash = document.getElementById('splashScreen');
+    if (splash) { splash.classList.add('splash-hide'); setTimeout(function() { splash.remove(); }, 600); }
+  }, 3000);
+
+  // 如果 Supabase 可用，检查登录状态
+  if (supabase) {
+    try {
+      var timeout = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 5000); });
+      var sessionResult = await Promise.race([supabase.auth.getSession(), timeout]);
+      if (sessionResult.data && sessionResult.data.session) {
+        currentUser = sessionResult.data.session.user;
+        currentUserId = sessionResult.data.session.user.id;
+        authReady = true;
+        addLogoutBtn();
+      } else {
+        showLoginPage();
+        return;
+      }
+    } catch (e) {
+      console.warn('Auth check failed, entering local mode:', e.message);
+    }
+  }
+
+  doAppInit();
+}
+
+function doAppInit() {
   // 应用主题
   document.documentElement.style.setProperty('--accent', appData.settings.accentColor);
   document.body.style.fontSize = (appData.settings.fontSize || 14) + 'px';
-  
+
   // marked配置
   marked.setOptions({ breaks: true, gfm: true });
 
@@ -6874,13 +6986,10 @@ function init() {
   initGlobalParticles();
 
   // 隐藏启动动画
-  setTimeout(() => {
-    const splash = document.getElementById('splashScreen');
-    if (splash) {
-      splash.classList.add('splash-hide');
-      setTimeout(() => splash.remove(), 600);
-    }
-  }, 1500);
+  setTimeout(function() {
+    var splash = document.getElementById('splashScreen');
+    if (splash) { splash.classList.add('splash-hide'); setTimeout(function() { splash.remove(); }, 600); }
+  }, 100);
 }
 
 init();
