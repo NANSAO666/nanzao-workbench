@@ -1375,6 +1375,10 @@
       <div class="nav-item" data-page="workflow" onclick="switchPage('workflow')">
         <span></span><span>AI自动化工作流</span>
       </div>
+      <div class="nav-section">我的</div>
+      <div class="nav-item" data-page="profile" onclick="switchPage('profile')">
+        <span>👤</span><span>个人账号</span>
+      </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
@@ -1554,6 +1558,7 @@ function renderPage() {
     bookmarks: renderBookmarksPage,
     folders: renderFolders,
     workflow: renderWorkflow,
+    profile: renderProfile,
   };
   (renderers[currentPage] || (() => area.innerHTML = '<div class="empty-state">页面开发中</div>'))();
   // SPA 切页后 .card DOM 重建，重新注入每张卡片的独立粒子画布
@@ -6901,11 +6906,27 @@ async function handleAuth() {
       var nick = document.getElementById('lpNick').value.trim() || email.split('@')[0];
       var result = await sbClient.auth.signUp({ email: email, password: pass, options: { data: { nickname: nick } } });
       if (result.error) throw result.error;
-      if (result.data.user) { currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin(); }
+      if (result.data.user) {
+        if (!result.data.user.email_confirmed_at) {
+          errEl.textContent = '注册成功！请去邮箱点击确认链接激活账号后再登录';
+          errEl.style.display = 'block';
+          btn.textContent = '注册'; btn.disabled = false;
+          return;
+        }
+        currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin();
+      }
     } else {
       var result = await sbClient.auth.signInWithPassword({ email: email, password: pass });
       if (result.error) throw result.error;
-      if (result.data.user) { currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin(); }
+      if (result.data.user) {
+        if (!result.data.user.email_confirmed_at) {
+          errEl.textContent = '邮箱未验证，请先去邮箱点击确认链接';
+          errEl.style.display = 'block';
+          btn.textContent = '登录'; btn.disabled = false;
+          return;
+        }
+        currentUser = result.data.user; currentUserId = result.data.user.id; afterLogin();
+      }
     }
   } catch (err) {
     errEl.textContent = err.message || '操作失败'; errEl.style.display = 'block';
@@ -6930,6 +6951,104 @@ function addLogoutBtn() {
     btn.innerHTML = '🚪<span class="btn-text">退出</span>';
     btn.onclick = function() { sbClient.auth.signOut().then(function() { location.reload(); }); };
     topBar.insertBefore(btn, topBar.firstChild);
+  }
+}
+
+// ===================== 个人中心 =====================
+function renderProfile() {
+  const area = $('contentArea');
+  const email = currentUser ? currentUser.email : '';
+  const maskedEmail = email ? email.replace(/(.{2}).*(@.*)/, '$1***$2') : '';
+  const nickname = (currentUser && currentUser.user_metadata && currentUser.user_metadata.nickname) || (email ? email.split('@')[0] : '用户');
+  const isLoggedIn = !!currentUser;
+
+  area.innerHTML = `
+    <div class="page-title">👤 个人账号</div>
+
+    ${!isLoggedIn ? `
+    <div class="empty-state" style="padding:60px 20px;">
+      <div style="font-size:48px;margin-bottom:16px;"></div>
+      <div style="font-size:16px;color:var(--text-secondary);">请先登录</div>
+      <button class="btn btn-primary mt-4" onclick="showLoginPage()">去登录</button>
+    </div>
+    ` : `
+    <!-- 用户信息卡片 -->
+    <div class="card" style="margin-bottom:20px;">
+      <div style="text-align:center;padding:20px 0;">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#4ade80);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:36px;">👤</div>
+        <div style="font-size:20px;font-weight:700;color:#f0f0f0;">${escapeHtml(nickname)}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px;">已登录 · 云端同步中</div>
+      </div>
+    </div>
+
+    <!-- 账号信息 -->
+    <div class="card" style="margin-bottom:20px;">
+      <div style="padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:4px;">邮箱</div>
+        <div style="font-size:15px;color:#f0f0f0;">${maskedEmail}</div>
+      </div>
+      <div style="padding:16px 0;">
+        <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:4px;">会员状态</div>
+        <div style="font-size:15px;color:#f0f0f0;">基础版 <span style="font-size:12px;color:#22c55e;margin-left:8px;">免费</span></div>
+      </div>
+    </div>
+
+    <!-- 功能菜单 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="card" style="cursor:pointer;padding:16px;" onclick="showProfileSection('api')">
+        <div style="font-size:20px;margin-bottom:8px;">🔑</div>
+        <div style="font-size:14px;font-weight:600;color:#f0f0f0;">API 密钥管理</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;">管理你的 API Key</div>
+      </div>
+      <div class="card" style="cursor:pointer;padding:16px;" onclick="showProfileSection('sync')">
+        <div style="font-size:20px;margin-bottom:8px;">☁️</div>
+        <div style="font-size:14px;font-weight:600;color:#f0f0f0;">数据云同步</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;">备份与恢复</div>
+      </div>
+      <div class="card" style="cursor:pointer;padding:16px;" onclick="showProfileSection('settings')">
+        <div style="font-size:20px;margin-bottom:8px;">⚙️</div>
+        <div style="font-size:14px;font-weight:600;color:#f0f0f0;">设置与安全</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;">账号安全设置</div>
+      </div>
+      <div class="card" style="cursor:pointer;padding:16px;" onclick="handleLogout()">
+        <div style="font-size:20px;margin-bottom:8px;">🚪</div>
+        <div style="font-size:14px;font-weight:600;color:#f0f0f0;">退出登录</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;">退出当前账号</div>
+      </div>
+    </div>
+
+    <!-- 升级会员 -->
+    <div class="card" style="text-align:center;padding:20px;background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(74,222,128,0.05));border-color:rgba(34,197,94,0.3);">
+      <div style="font-size:18px;font-weight:700;color:#22c55e;margin-bottom:8px;">升级会员</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);">解锁高级功能、云端备份与批量导出</div>
+      <button class="btn btn-primary mt-3" style="background:linear-gradient(135deg,#22c55e,#4ade80);border:none;" disabled>即将推出</button>
+    </div>
+    `}
+  `;
+}
+
+function showProfileSection(section) {
+  if (section === 'api') {
+    toast('API 密钥管理：请在 AI 对话助手中配置', 'info');
+    switchPage('ai');
+  } else if (section === 'sync') {
+    toast('数据云同步：你的数据已自动同步到云端', 'success');
+  } else if (section === 'settings') {
+    document.querySelector('[onclick*="openSettings"]')?.click() || document.querySelector('.top-bar button:last-child')?.click();
+  }
+}
+
+function handleLogout() {
+  if (sbClient) {
+    sbClient.auth.signOut().then(function() {
+      toast('已退出登录', 'info');
+      currentUser = null;
+      currentUserId = null;
+      authReady = false;
+      showLoginPage();
+    });
+  } else {
+    toast('本地模式，无登录状态', 'info');
   }
 }
 
