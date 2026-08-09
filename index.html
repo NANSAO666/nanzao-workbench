@@ -13414,184 +13414,272 @@ async function syncWfToCloud() {
     return (text || '') + (window.authLockTag(minLv));
   };
 
-  // ---------- 工具：判断节点所需等级 ----------
+  // ---------- 工具：判断节点所需等级（精确匹配实际NODE_DEFS keys） ----------
   function getNodeMinLv(typeKey, def) {
-    if (!def) def = NODE_DEFS[typeKey];
-    if (!def) return 0;
-    // 视频类节点全部 LV>=2
-    if (def.cat === 'video' || /^v_/.test(typeKey)) return 2;
-    // 素材预览/下载 LV>=2
-    if (typeKey === 'img_preview' || def.icon === '🖼️' && (def.name || '').indexOf('预览') !== -1) return 2;
-    // 批量文本导出 LV>=3
-    if (typeKey === 'text_batch_export' || (def.name || '').indexOf('批量') !== -1) return 3;
+    if (!typeKey) return 0;
+    if (!def) def = (typeof NODE_DEFS !== 'undefined') ? NODE_DEFS[typeKey] : null;
+    if (!def) {
+      // 退化为按key前缀判断
+      if (/^v_/.test(typeKey)) return 2;
+      if (typeKey === 'img_preview' || typeKey === 'media_img_preview') return 2;
+      if (/batch|批量/.test(typeKey)) return 3;
+      return 0;
+    }
+    const cat = def.cat || '';
+    const name = def.name || '';
+    // 视频类节点：cat==='video' 或 typeKey 以 v_ 开头
+    if (cat === 'video' || /^v_/.test(typeKey)) return 2;
+    // 素材预览/下载 LV>=2 （img_preview key，或者名称含"预览/下载"的图像类）
+    if (typeKey === 'img_preview' || (cat === 'img' && /预览|下载|保存到本地/.test(name))) return 2;
+    // 批量文本导出 LV>=3 （key 含 export/text_export/批量）
+    if (typeKey === 'text_export' || /批量|batch/i.test(typeKey) || /批量/.test(name)) return 3;
     return 0;
   }
   // 判断模板所需等级
   function getTplMinLv(tpl) {
     if (!tpl) return 0;
-    const tag = tpl.tagCls || '';
-    const id = tpl.id || '';
-    const name = tpl.name || '';
-    // 高级漫剧模板（复杂分支）：LV>=2
-    if ((tag === 'video' && (id.indexOf('mother') !== -1 || id.indexOf('branch') !== -1 || name.indexOf('母图') !== -1 || name.indexOf('多子图') !== -1 || name.indexOf('多视频') !== -1))) {
-      return 2;
-    }
+    const tag = String(tpl.tagCls || '');
+    const id = String(tpl.id || '');
+    const name = String(tpl.name || '');
+    const desc = String(tpl.desc || '');
+    // 高级漫剧模板（复杂分支，母图→多子图→多视频）：LV>=2
+    if (tag === 'video' && (
+      /mother|branch/i.test(id) ||
+      /母图|多子图|多视频|多路分支|子分支|三渲二生产/.test(name + desc)
+    )) return 2;
     // 普通漫剧/视频类模板：LV>=1（高级模板）
-    if (tag === 'video') return 1;
+    if (tag === 'video' || /漫剧|短剧|视频/.test(name + desc)) return 1;
     // 电商"批量"模板算高级模板 LV>=1
-    if (name.indexOf('批量') !== -1) return 1;
+    if (/批量/.test(name + desc)) return 1;
     return 0;
   }
 
-  // ---------- 包装 renderNodePalette：桌面端节点库 DOM 过滤 ----------
-  const _origRNP = window.renderNodePalette;
-  if (_origRNP) {
-    window.renderNodePalette = function() {
-      _origRNP.call(this);
-      const body = $('nodePaletteBody'); if (!body) return;
-      const curLv = window.getAuthLevel();
-      // 遍历每个 node-item，根据类型检查权限
-      const items = body.querySelectorAll('.node-item');
-      items.forEach(el => {
-        const tk = el.getAttribute('data-typekey');
-        const need = getNodeMinLv(tk);
-        if (curLv < need) {
-          // 权限不足，直接不渲染 DOM（从父节点移除）
-          el.remove();
-        }
-      });
-      // 如果某分类下已经没有节点，移除该分类标题
-      const cats = body.querySelectorAll('.node-cat');
-      cats.forEach(c => {
-        let next = c.nextElementSibling;
-        let hasItem = false;
-        while (next && !next.classList.contains('node-cat')) {
-          if (next.classList && next.classList.contains('node-item')) { hasItem = true; break; }
-          next = next.nextElementSibling;
-        }
-        if (!hasItem) c.remove();
-      });
-    };
+  // ---------- 工具：对容器内节点/模板执行DOM级移除 ----------
+  function __filterNodeItems(body, typeKeyExtractor) {
+    if (!body) return;
+    const curLv = window.getAuthLevel();
+    const items = body.querySelectorAll('.node-item');
+    items.forEach(el => {
+      const tk = typeKeyExtractor(el);
+      if (!tk) return;
+      const need = getNodeMinLv(tk);
+      if (curLv < need) el.remove();
+    });
+    // 清理空分类
+    const cats = body.querySelectorAll('.node-cat');
+    cats.forEach(c => {
+      let next = c.nextElementSibling;
+      let hasItem = false;
+      while (next && !next.classList.contains('node-cat')) {
+        if (next.classList && next.classList.contains('node-item')) { hasItem = true; break; }
+        next = next.nextElementSibling;
+      }
+      if (!hasItem) c.remove();
+    });
   }
+  function __filterTemplateItems(body) {
+    if (!body) return;
+    const curLv = window.getAuthLevel();
+    const builtins = (typeof BUILTIN_TEMPLATES !== 'undefined') ? BUILTIN_TEMPLATES : [];
+    const items = body.querySelectorAll('.template-item');
+    items.forEach(el => {
+      const oc = el.getAttribute('onclick') || '';
+      const m1 = oc.match(/loadBuiltinTpl\(['"]([^'"]+)['"]\)/);
+      let need = 0;
+      if (m1) {
+        const tpl = builtins.find(x => x.id === m1[1]);
+        need = getTplMinLv(tpl);
+      }
+      if (curLv < need) el.remove();
+    });
+  }
+
+  // ---------- 【关键修复】通过 eval 在顶层作用域直接重写标识符，覆盖裸函数调用绑定 ----------
+  // 原因：直接调用 renderNodePalette() 查的是词法环境 function 绑定，不是 window.xxx 属性
+  // 所以必须对全局名字本身赋值，才能真正拦截到所有调用点
+  function __rewriteGlobalFunc(name, makeWrapper) {
+    try {
+      const orig = window[name];
+      if (typeof orig !== 'function') return;
+      const wrapped = makeWrapper(orig);
+      window[name] = wrapped;
+      // 在顶层作用域重写同名引用（通过 eval('var x=...') 重新声明顶层 var，覆盖 function 绑定）
+      // 注意：顶层的 function 声明与 var 是共享一个绑定的，赋值能同时影响两者
+      try {
+        // eslint-disable-next-line no-eval
+        eval('window.__nz_' + name + ' = window["' + name + '"];' +
+             '(function(){try{var g=window;var n="' + name + '";if(typeof g[n]==="function"){try{g[n]=g["__nz_'+name+'"];}catch(e){}}}catch(_){}})();');
+      } catch (_) {}
+      // 兜底：直接尝试把名字写到 globalThis（对浏览器即 window 全局词法）
+      try { globalThis[name] = wrapped; } catch (_) {}
+    } catch (e) {
+      console.warn('[auth] rewrite ' + name + ' failed:', e && e.message);
+    }
+  }
+
+  // ---------- 包装 renderNodePalette：桌面端节点库 DOM 过滤 ----------
+  __rewriteGlobalFunc('renderNodePalette', function(orig) {
+    return function wrappedRNP() {
+      const ret = orig.apply(this, arguments);
+      if (typeof setTimeout !== 'undefined') setTimeout(function(){ __filterNodeItems($('nodePaletteBody'), function(el){ return el.getAttribute('data-typekey'); }); }, 0);
+      else __filterNodeItems($('nodePaletteBody'), function(el){ return el.getAttribute('data-typekey'); });
+      return ret;
+    };
+  });
 
   // ---------- 包装 renderDrawerPalette：移动端抽屉节点库 ----------
-  const _origRDP = window.renderDrawerPalette;
-  if (_origRDP) {
-    window.renderDrawerPalette = function() {
-      _origRDP.call(this);
-      const body = $('wfDrawerPaletteBody'); if (!body) return;
-      const curLv = window.getAuthLevel();
-      const items = body.querySelectorAll('.node-item');
-      items.forEach(el => {
-        // 从 onclick 中解析 typeKey：quickCreateNode('xxx')
+  __rewriteGlobalFunc('renderDrawerPalette', function(orig) {
+    return function wrappedRDP() {
+      const ret = orig.apply(this, arguments);
+      setTimeout(function(){ __filterNodeItems($('wfDrawerPaletteBody'), function(el){
         const oc = el.getAttribute('onclick') || '';
         const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
-        const tk = m ? m[1] : null;
-        if (!tk) return;
-        const need = getNodeMinLv(tk);
-        if (curLv < need) el.remove();
-      });
-      const cats = body.querySelectorAll('.node-cat');
-      cats.forEach(c => {
-        let next = c.nextElementSibling;
-        let hasItem = false;
-        while (next && !next.classList.contains('node-cat')) {
-          if (next.classList && next.classList.contains('node-item')) { hasItem = true; break; }
-          next = next.nextElementSibling;
-        }
-        if (!hasItem) c.remove();
-      });
+        return m ? m[1] : null;
+      }); }, 0);
+      return ret;
     };
-  }
+  });
 
   // ---------- 包装 renderTemplatePanel：桌面端模板面板 ----------
-  const _origRTP = window.renderTemplatePanel;
-  if (_origRTP) {
-    window.renderTemplatePanel = function() {
-      _origRTP.call(this);
-      const body = $('templateBody'); if (!body) return;
-      const curLv = window.getAuthLevel();
-      const items = body.querySelectorAll('.template-item');
-      items.forEach(el => {
-        // 从 onclick 中解析 tpl id：loadBuiltinTpl('xxx') 或 loadCustomTpl
-        const oc = el.getAttribute('onclick') || '';
-        const m1 = oc.match(/loadBuiltinTpl\(['"]([^'"]+)['"]\)/);
-        const m2 = oc.match(/loadCustomTpl\(['"]([^'"]+)['"]\)/);
-        let need = 0;
-        if (m1) {
-          const tpl = (BUILTIN_TEMPLATES || []).find(x => x.id === m1[1]);
-          need = getTplMinLv(tpl);
-        }
-        // 自定义模板默认开放（LV0）
-        if (curLv < need) {
-          // 直接移除，不渲染DOM
-          el.remove();
-        } else if (need > 0) {
-          // 有权限，不做处理（或者可加小标签）
-        }
-      });
+  __rewriteGlobalFunc('renderTemplatePanel', function(orig) {
+    return function wrappedRTP() {
+      const ret = orig.apply(this, arguments);
+      setTimeout(function(){ __filterTemplateItems($('templateBody')); }, 0);
+      return ret;
     };
-  }
+  });
 
   // ---------- 包装 renderDrawerTemplates：移动端抽屉模板 ----------
-  const _origRDT = window.renderDrawerTemplates;
-  if (_origRDT) {
-    window.renderDrawerTemplates = function() {
-      _origRDT.call(this);
-      const body = $('wfDrawerTemplateBody'); if (!body) return;
-      const curLv = window.getAuthLevel();
-      const items = body.querySelectorAll('.template-item');
-      items.forEach(el => {
-        const oc = el.getAttribute('onclick') || '';
-        const m1 = oc.match(/loadBuiltinTpl\(['"]([^'"]+)['"]\)/);
-        let need = 0;
-        if (m1) {
-          const tpl = (BUILTIN_TEMPLATES || []).find(x => x.id === m1[1]);
-          need = getTplMinLv(tpl);
-        }
-        if (curLv < need) el.remove();
-      });
+  __rewriteGlobalFunc('renderDrawerTemplates', function(orig) {
+    return function wrappedRDT() {
+      const ret = orig.apply(this, arguments);
+      setTimeout(function(){ __filterTemplateItems($('wfDrawerTemplateBody')); }, 0);
+      return ret;
     };
-  }
+  });
 
   // ---------- 兜底：包装 createNodeByType，防止拖拽/手动绕过 ----------
-  const _origCNBT = window.createNodeByType;
-  if (_origCNBT) {
-    window.createNodeByType = function(typeKey, x, y) {
+  __rewriteGlobalFunc('createNodeByType', function(orig) {
+    return function wrappedCNBT(typeKey, x, y) {
       const need = getNodeMinLv(typeKey);
       if (!window.authAllow(need)) {
-        toast(`此节点需要「${LEVEL_NAMES[need]}」及以上套餐`, 'error');
+        toast('此节点需要「' + LEVEL_NAMES[need] + '」及以上套餐', 'error');
         return null;
       }
-      return _origCNBT.call(this, typeKey, x, y);
+      return orig.apply(this, arguments);
     };
-  }
+  });
 
   // ---------- 兜底：包装 loadBuiltinTpl，防止绕过面板加载 ----------
-  const _origLBT = window.loadBuiltinTpl;
-  if (_origLBT) {
-    window.loadBuiltinTpl = function(id) {
-      const tpl = (BUILTIN_TEMPLATES || []).find(x => x.id === id);
+  __rewriteGlobalFunc('loadBuiltinTpl', function(orig) {
+    return function wrappedLBT(id) {
+      const builtins = (typeof BUILTIN_TEMPLATES !== 'undefined') ? BUILTIN_TEMPLATES : [];
+      const tpl = builtins.find(x => x.id === id);
       const need = getTplMinLv(tpl);
       if (!window.authAllow(need)) {
-        toast(`此模板需要「${LEVEL_NAMES[need]}」及以上套餐`, 'error');
+        toast('此模板需要「' + LEVEL_NAMES[need] + '」及以上套餐', 'error');
         return;
       }
-      return _origLBT.call(this, id);
+      return orig.apply(this, arguments);
     };
-  }
+  });
 
-  // ---------- 批量全套JSON打包导出按钮权限：LV>=3（在UI渲染后对页面上"导出全部/批量导出"按钮做隐藏） ----------
-  // （单个JSON导出所有等级仍开放，只锁"批量/全部打包"）
-  const _origES = window.exportAllSkillPacks;
-  if (_origES) {
-    window.exportAllSkillPacks = function() {
+  // ---------- 批量全套JSON打包导出按钮权限：LV>=3 ----------
+  __rewriteGlobalFunc('exportAllSkillPacks', function(orig) {
+    return function wrappedES() {
       if (!window.checkPerm('BATCH_JSON_FULL')) {
         toast('批量导出全部技能包需要「商业版」及以上套餐', 'error');
         return;
       }
-      return _origES.apply(this, arguments);
+      return orig.apply(this, arguments);
     };
+  });
+
+  // ============================================================
+  // 【终极兜底】MutationObserver：监听4个关键DOM容器，任何新出现的节点/模板都按权限移除
+  // 即使渲染函数包装因任何原因未执行，DOM级兜底依然生效，保证"未达标不渲染DOM"
+  // ============================================================
+  function __installAuthObserver() {
+    if (!window.MutationObserver || window.__nzAuthObserverInstalled) return;
+    window.__nzAuthObserverInstalled = true;
+    const TARGET_IDS = ['nodePaletteBody', 'templateBody', 'wfDrawerPaletteBody', 'wfDrawerTemplateBody'];
+    const observer = new MutationObserver(function(muts) {
+      muts.forEach(function(mut) {
+        const host = mut.target;
+        if (!host || host.nodeType !== 1) return;
+        const id = host.id || '';
+        // 节点列表容器
+        if (id === 'nodePaletteBody') {
+          __filterNodeItems(host, function(el){ return el.getAttribute('data-typekey'); });
+        } else if (id === 'wfDrawerPaletteBody') {
+          __filterNodeItems(host, function(el){
+            const oc = el.getAttribute('onclick') || '';
+            const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
+            return m ? m[1] : null;
+          });
+        // 模板列表容器
+        } else if (id === 'templateBody' || id === 'wfDrawerTemplateBody') {
+          __filterTemplateItems(host);
+        }
+      });
+    });
+    // 观察 document.body 下任意子树，等待 4 个容器被加入后再具体观察
+    const bodyObserver = new MutationObserver(function() {
+      TARGET_IDS.forEach(function(tid) {
+        const el = document.getElementById(tid);
+        if (el && !el.__nzAuthObserved) {
+          el.__nzAuthObserved = true;
+          observer.observe(el, { childList: true, subtree: true });
+          // 首次发现即执行一次过滤
+          if (tid === 'nodePaletteBody') __filterNodeItems(el, e => e.getAttribute('data-typekey'));
+          else if (tid === 'wfDrawerPaletteBody') __filterNodeItems(el, function(e){
+            const oc = e.getAttribute('onclick') || '';
+            const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
+            return m ? m[1] : null;
+          });
+          else if (tid === 'templateBody' || tid === 'wfDrawerTemplateBody') __filterTemplateItems(el);
+        }
+      });
+    });
+    if (document.body) bodyObserver.observe(document.body, { childList: true, subtree: true });
+    // DOM 已就绪则立即检查一次
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      TARGET_IDS.forEach(function(tid){
+        const el = document.getElementById(tid);
+        if (el) {
+          el.__nzAuthObserved = true;
+          observer.observe(el, { childList: true, subtree: true });
+        }
+      });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', __installAuthObserver, { once: true });
+  } else {
+    __installAuthObserver();
+  }
+  // init() 之后再执行一次
+  const __origInit = (typeof init === 'function') ? init : null;
+  if (__origInit) {
+    window.init = function() {
+      const r = __origInit.apply(this, arguments);
+      setTimeout(__installAuthObserver, 0);
+      setTimeout(function(){
+        ['nodePaletteBody','templateBody','wfDrawerPaletteBody','wfDrawerTemplateBody'].forEach(function(tid){
+          const el = document.getElementById(tid);
+          if (!el) return;
+          if (tid === 'nodePaletteBody') __filterNodeItems(el, e => e.getAttribute('data-typekey'));
+          else if (tid === 'wfDrawerPaletteBody') __filterNodeItems(el, function(e){
+            const oc = e.getAttribute('onclick') || '';
+            const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
+            return m ? m[1] : null;
+          });
+          else __filterTemplateItems(el);
+        });
+      }, 200);
+      return r;
+    };
+    try { globalThis.init = window.init; } catch(_) {}
   }
 
   // ---------- 导出到全局 ----------
@@ -13599,6 +13687,8 @@ async function syncWfToCloud() {
   window.NZ_AUTH_LEVELS = AUTH_LEVEL;
   window.__nzGetNodeMinLv = getNodeMinLv;
   window.__nzGetTplMinLv = getTplMinLv;
+  window.__nzFilterNodeItems = __filterNodeItems;
+  window.__nzFilterTemplateItems = __filterTemplateItems;
 })();
 
 
