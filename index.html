@@ -1322,11 +1322,8 @@
       <input type="text" class="input" id="globalSearch" placeholder="全局搜索：提示词、笔记、代码、素材、客户...">
     </div>
     <div class="flex items-center gap-2 ml-auto">
-      <button class="btn btn-secondary btn-sm" onclick="exportData()">📤<span class="btn-text">导出</span></button>
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">📥<span class="btn-text">导入</span></button>
-      <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
-      <button class="btn btn-secondary btn-sm" onclick="clearAllData()">🗑️<span class="btn-text">清空</span></button>
       <button class="btn btn-secondary btn-sm" onclick="openSettings()">⚙️</button>
+      <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
     </div>
   </div>
 
@@ -3855,10 +3852,17 @@ function openSettings() {
             <label class="label">数据管理</label>
             <div class="flex gap-2 flex-wrap">
               <button class="btn btn-secondary btn-sm" onclick="exportData()">📤 导出数据</button>
-              <button class="btn btn-secondary btn-sm" onclick="clearAllData()">🗑️ 清空所有数据</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">📥 导入数据</button>
+              <button class="btn btn-secondary btn-sm" onclick="clearAllData()">🗑️ 清空数据</button>
               <button class="btn btn-secondary btn-sm" onclick="location.reload(true)">🔄 强制刷新</button>
             </div>
           </div>
+          ${currentUser ? `
+          <div class="mb-3">
+            <label class="label">账号操作</label>
+            <button class="btn btn-danger btn-sm w-full" onclick="this.closest('.modal-mask').remove();handleLogout();">🚪 退出登录</button>
+          </div>
+          ` : ''}
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
@@ -5298,28 +5302,25 @@ function initGlobalParticles() {
   startCardAnimation();
 }
 
-// 为每个卡片容器注入独立粒子画布（粒子在卡片局部坐标系绘制，由卡片 overflow:hidden 自然裁剪）
-// 支持 .card 与待办堆叠卡片 .stack-3d-card
+// 仅为带 particle-only 类的卡片容器注入独立粒子画布
 function initCardParticleSystems() {
   cardParticleSystems.forEach(s => { if (s.canvas && s.canvas.parentNode) s.canvas.parentNode.removeChild(s.canvas); });
   cardParticleSystems = [];
-  // 书签页面使用全局单画布，跳过卡片粒子
-  if (currentPage === 'bookmarks') return;
-  const cards = document.querySelectorAll('.card:not(.no-canvas-particle), .stack-3d-card:not(.no-canvas-particle)');
+  // 只有带 particle-only 类的卡片才创建粒子（个人中心首个卡片）
+  const cards = document.querySelectorAll('.particle-only');
   cards.forEach((card) => {
     const canvas = document.createElement('canvas');
     canvas.className = 'card-particle-canvas';
-    card.insertBefore(canvas, card.firstChild); // 粒子画布置于卡片最底层
+    card.insertBefore(canvas, card.firstChild);
     const ctx = canvas.getContext('2d');
     const inst = { el: card, canvas, ctx, particles: [], splashes: [], w: 0, h: 0, _shapePts: null };
     cardParticleSystems.push(inst);
     resizeCardParticleSystem(inst);
     createCardParticles(inst);
   });
-  // 如果当前处于形状模式，重新应用形状（重建卡片后_shapePts会丢失）
   if (particleShapeMode !== 'free') {
     const savedMode = particleShapeMode;
-    particleShapeMode = 'free'; // 临时重置，让 setParticleShape 能触发
+    particleShapeMode = 'free';
     setParticleShape(savedMode);
   }
 }
@@ -5337,21 +5338,22 @@ function resizeCardParticleSystem(inst) {
 function createCardParticles(inst) {
   const hadShape = inst._shapePts && inst._shapePts.length;
   inst.particles = []; inst.splashes = [];
-  // 注意：不清空 _shapePts，避免形状模式下被误重置
   const theme = PARTICLE_THEMES[currentParticleTheme];
   const w = inst.w, h = inst.h;
-  // 御剑主题是结构化剑阵，数量不足会散架，移动端也不减半
-  // 形状模式下至少保证 80 个粒子（移动端也能看清形状）
+  const isMobile = window.innerWidth < 768;
   let count;
   if (theme.behavior === 'sword') {
-    count = theme.count;
+    count = isMobile ? Math.floor(theme.count * 0.4) : theme.count;
   } else if (hadShape || particleShapeMode !== 'free') {
-    count = Math.max(80, w < 300 ? Math.floor(theme.count * 0.5) : theme.count);
+    count = Math.max(40, w < 300 ? Math.floor(theme.count * 0.3) : (isMobile ? Math.floor(theme.count * 0.4) : theme.count));
   } else {
-    count = w < 300 ? Math.floor(theme.count * 0.3) : (window.innerWidth < 768 ? Math.floor(theme.count * 0.5) : theme.count);
+    if (isMobile) {
+      count = Math.max(20, Math.floor(theme.count * 0.25));
+    } else {
+      count = w < 300 ? Math.floor(theme.count * 0.4) : theme.count;
+    }
   }
   for (let i = 0; i < count; i++) inst.particles.push(createParticle(theme, w, h, i, count));
-  // 如果之前有形状，重新分配目标点
   if (hadShape) assignShapeTargetsForInst(inst);
 }
 
@@ -6938,21 +6940,10 @@ function afterLogin() {
   var el = document.getElementById('loginPage'); if (el) el.remove();
   var name = (currentUser && currentUser.user_metadata && currentUser.user_metadata.nickname) || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : '用户');
   toast('欢迎，' + name, 'success');
-  addLogoutBtn();
   doAppInit();
 }
 
-function addLogoutBtn() {
-  var topBar = document.querySelector('.top-bar .flex.items-center.gap-2.ml-auto');
-  if (topBar && !document.getElementById('logoutBtn')) {
-    var btn = document.createElement('button');
-    btn.id = 'logoutBtn';
-    btn.className = 'btn btn-secondary btn-sm';
-    btn.innerHTML = '🚪<span class="btn-text">退出</span>';
-    btn.onclick = function() { sbClient.auth.signOut().then(function() { location.reload(); }); };
-    topBar.insertBefore(btn, topBar.firstChild);
-  }
-}
+function addLogoutBtn() {}
 
 // ===================== 个人中心 =====================
 function renderProfile() {
@@ -6973,7 +6964,7 @@ function renderProfile() {
     </div>
     ` : `
     <!-- 用户信息卡片 -->
-    <div class="card" style="margin-bottom:20px;">
+    <div class="card particle-only" style="margin-bottom:20px;">
       <div style="text-align:center;padding:20px 0;">
         <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#4ade80);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:36px;">👤</div>
         <div style="font-size:20px;font-weight:700;color:#f0f0f0;">${escapeHtml(nickname)}</div>
