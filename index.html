@@ -4507,6 +4507,12 @@ function exportSingleSkillPack(id) {
 
 // 导出全部技能包
 function exportAllSkillPacks() {
+  // 权限拦截：批量导出全部技能包需要商业版(LV3)+
+  const curLv = (typeof window.getAuth === 'function') ? window.getAuth().level : 0;
+  if (curLv < 3) {
+    toast('批量导出全部技能包需要「商业版」及以上套餐', 'error');
+    return;
+  }
   const all = getAllSkillPacks();
   const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -9824,14 +9830,75 @@ function renderProfile() {
       </div>
     </div>
 
-    <!-- 升级会员 -->
-    <div class="card" style="text-align:center;padding:20px;background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(74,222,128,0.05));border-color:rgba(34,197,94,0.3);">
-      <div style="font-size:18px;font-weight:700;color:#22c55e;margin-bottom:8px;">升级会员</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.5);">解锁高级功能、云端备份与批量导出</div>
-      <button class="btn btn-primary mt-3" style="background:linear-gradient(135deg,#22c55e,#4ade80);border:none;" disabled>即将推出</button>
-    </div>
+    <!-- 会员权限面板 -->
+    ${renderAuthPanelHTML()}
     `}
   `;
+}
+
+// 渲染权限面板HTML（在renderProfile内直接调用，保证100%生效）
+function renderAuthPanelHTML() {
+  const getAuthSafe = (typeof window.getAuth === 'function') ? window.getAuth : () => ({ level: 0, custId: null, activatedAt: null });
+  const auth = getAuthSafe();
+  const lv = auth.level;
+  const lvNames = { 0:'演示版', 1:'体验版', 2:'专业版', 3:'商业版', 4:'源码授权版' };
+  const lvDescs = {
+    0:'基础功能体验，适合个人测试',
+    1:'解锁大部分功能，适合轻度创作者',
+    2:'全功能专业创作，素材批量导出',
+    3:'商业用途授权，全部前端功能无限制',
+    4:'含源码授权，支持私有化部署',
+  };
+  const feats = [
+    { k:'基础AI对话', lv:0 },
+    { k:'基础技能包', lv:0 },
+    { k:'基础模板', lv:0 },
+    { k:'高级模板（漫剧/视频）', lv:1 },
+    { k:'全部技能包 / 全部模板', lv:2 },
+    { k:'视频节点 / 素材下载', lv:2 },
+    { k:'批量全套 JSON 导出', lv:3 },
+    { k:'私有化部署入口', lv:4 },
+  ];
+  const badgeCls = 'auth-lv-' + lv;
+  const isDemo = lv === 0;
+  const custBadge = auth.custId ? ' · ' + escapeHtml(auth.custId) : '';
+  const activatedAt = auth.activatedAt ? '<div class="auth-cust-id">激活时间：' + new Date(auth.activatedAt).toLocaleString() + '</div>' : '';
+  const privateDeployTag = lv >= 4 ? '<span style="font-size:11px;padding:3px 8px;border-radius:12px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);margin-left:8px;">✨ 私有化部署可用</span>' : '';
+  const resetBtn = !isDemo ? `<button class="btn btn-secondary" onclick="resetAuthToDemo()">↺ 重置授权</button>` : '';
+
+  return `
+    <div class="card auth-card" style="padding:20px;margin-bottom:20px;">
+      <div class="auth-level-row">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div class="auth-level-name">${lvNames[lv]}</div>
+            <span class="auth-badge ${badgeCls}">LV.${lv}${custBadge}</span>
+            ${privateDeployTag}
+          </div>
+          <div class="auth-level-desc">${lvDescs[lv]}</div>
+          ${activatedAt}
+        </div>
+      </div>
+
+      <div class="auth-feat-list">
+        ${feats.map(f => `
+          <div class="auth-feat-item ${lv >= f.lv ? 'ok' : 'lock'}">
+            <span class="dot"></span>
+            <span>${f.k}</span>
+            ${lv >= f.lv ? '' : `<span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,0.3);">需${lvNames[f.lv]}+</span>`}
+          </div>`).join('')}
+      </div>
+
+      <div class="auth-activate-row">
+        <input id="__nz_auth_key_input" class="auth-key-input" type="text" placeholder="粘贴套餐密钥：例如 bmFnemFp...（Base64编码）" spellcheck="false" autocomplete="off">
+        <button class="btn btn-primary" style="background:linear-gradient(135deg,#22c55e,#4ade80);border:none;" onclick="activateAuthKey('__nz_auth_key_input')">🔓 激活密钥</button>
+        ${resetBtn}
+      </div>
+
+      <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,0.25);text-align:center;">
+        前端软授权 · 仅限本机生效 · 管理员终端：Ctrl+Shift+O / 标题连击5次
+      </div>
+    </div>`;
 }
 
 function showProfileSection(section) {
@@ -11137,6 +11204,13 @@ function clearNodeWfCanvas() {
 function loadBuiltinTpl(id) {
   const tpl = BUILTIN_TEMPLATES.find(t => t.id === id);
   if (!tpl) return;
+  // 权限拦截：低等级禁止加载高权限模板
+  const needLv = __nzGetTplMinLv(tpl);
+  const curLv = (typeof window.getAuth === 'function') ? window.getAuth().level : 0;
+  if (curLv < needLv) {
+    toast('此模板需要「' + ({0:'演示版',1:'体验版',2:'专业版',3:'商业版',4:'源码授权版'}[needLv] || '高级版') + '」及以上套餐', 'error');
+    return;
+  }
   const nw = {
     id: 'nw_' + uid(),
     name: '[模板] ' + tpl.name,
@@ -11267,6 +11341,67 @@ function resetNodeCanvas() {
 }
 
 // ========== 7. 节点库渲染 & 拖入画布 ==========
+// ========== 权限过滤辅助（内嵌到各渲染函数中，保证100%生效） ==========
+function __nzGetNodeMinLv(typeKey) {
+  if (!typeKey) return 0;
+  const def = NODE_DEFS[typeKey];
+  // 视频类节点：cat==='video' 或 key 以 v_ 开头 → LV2
+  if (def && (def.cat === 'video' || /^v_/.test(typeKey))) return 2;
+  if (/^v_/.test(typeKey)) return 2;
+  // 图像预览下载 → LV2
+  if (typeKey === 'img_preview') return 2;
+  if (def && def.cat === 'img' && /预览|下载/.test(def.name || '')) return 2;
+  // 批量文本导出 → LV3
+  if (typeKey === 'text_export') return 3;
+  if (/批量/.test(typeKey)) return 3;
+  return 0;
+}
+function __nzGetTplMinLv(tpl) {
+  if (!tpl) return 0;
+  const tag = String(tpl.tagCls || '');
+  const id = String(tpl.id || '');
+  const name = String(tpl.name || '');
+  const desc = String(tpl.desc || '');
+  // 高级漫剧模板（母图/分支） → LV2
+  if (tag === 'video' && (/mother|branch/i.test(id) || /母图|多子图|多视频|多路分支|子分支/.test(name + desc))) return 2;
+  // 普通漫剧/视频模板 → LV1
+  if (tag === 'video' || /漫剧|短剧|视频/.test(name + desc)) return 1;
+  // 电商批量模板 → LV1
+  if (/批量/.test(name + desc)) return 1;
+  return 0;
+}
+// 过滤容器内的节点项（直接移除DOM）
+function __nzFilterNodeContainer(body, typeKeyExtractor) {
+  if (!body) return;
+  const curLv = (typeof window.getAuth === 'function') ? window.getAuth().level : 0;
+  body.querySelectorAll('.node-item').forEach(function(el) {
+    const tk = typeKeyExtractor(el);
+    if (!tk) return;
+    if (curLv < __nzGetNodeMinLv(tk)) el.remove();
+  });
+  // 清理空分类
+  body.querySelectorAll('.node-cat').forEach(function(c) {
+    let next = c.nextElementSibling, hasItem = false;
+    while (next && !next.classList.contains('node-cat')) {
+      if (next.classList && next.classList.contains('node-item')) { hasItem = true; break; }
+      next = next.nextElementSibling;
+    }
+    if (!hasItem) c.remove();
+  });
+}
+// 过滤容器内的模板项
+function __nzFilterTplContainer(body) {
+  if (!body) return;
+  const curLv = (typeof window.getAuth === 'function') ? window.getAuth().level : 0;
+  body.querySelectorAll('.template-item').forEach(function(el) {
+    const oc = el.getAttribute('onclick') || '';
+    const m1 = oc.match(/loadBuiltinTpl\(['"]([^'"]+)['"]\)/);
+    if (!m1) return;
+    const tpl = (typeof BUILTIN_TEMPLATES !== 'undefined') ? BUILTIN_TEMPLATES.find(function(x){ return x.id === m1[1]; }) : null;
+    if (curLv < __nzGetTplMinLv(tpl)) el.remove();
+  });
+}
+
 function renderNodePalette() {
   if (!_nc) return;
   const body = $('nodePaletteBody'); if (!body) return;
@@ -11288,6 +11423,8 @@ function renderNodePalette() {
     `;
   }).join('');
   body.innerHTML = html || `<div style="padding:12px;color:var(--text-tertiary);font-size:12px;">无匹配节点</div>`;
+  // 权限过滤：DOM级移除低权限不可见的节点
+  __nzFilterNodeContainer(body, function(el) { return el.getAttribute('data-typekey'); });
 }
 
 function nodePaletteDragStart(ev, typeKey) {
@@ -11304,6 +11441,13 @@ function quickCreateNode(typeKey) {
 }
 
 function createNodeByType(typeKey, x, y) {
+  // 权限拦截：低等级禁止创建高权限节点
+  const needLv = __nzGetNodeMinLv(typeKey);
+  const curLv = (typeof window.getAuth === 'function') ? window.getAuth().level : 0;
+  if (curLv < needLv) {
+    toast('此节点需要「' + ({0:'演示版',1:'体验版',2:'专业版',3:'商业版',4:'源码授权版'}[needLv] || '高级版') + '」及以上套餐', 'error');
+    return null;
+  }
   const def = NODE_DEFS[typeKey]; if (!def) return null;
   const wf = _nc.wf;
   const data = {};
@@ -11343,9 +11487,9 @@ function renderTemplatePanel() {
       `).join('')}
   `;
   body.innerHTML = html;
+  // 权限过滤：DOM级移除低权限不可见的内置模板
+  __nzFilterTplContainer(body);
 }
-
-// ========== 移动端工作流交互函数 ==========
 
 // 切换更多菜单显示
 function toggleWfMoreMenu() {
@@ -11429,6 +11573,12 @@ function renderDrawerPalette() {
     `;
   }).join('');
   body.innerHTML = html || `<div style="padding:20px;color:var(--text-tertiary);text-align:center;">无匹配节点</div>`;
+  // 权限过滤：DOM级移除低权限不可见的节点（移动端抽屉）
+  __nzFilterNodeContainer(body, function(el) {
+    const oc = el.getAttribute('onclick') || '';
+    const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
+    return m ? m[1] : null;
+  });
 }
 
 // 抽屉内模板渲染
@@ -11458,6 +11608,8 @@ function renderDrawerTemplates() {
       `).join('')}
   `;
   body.innerHTML = html;
+  // 权限过滤：DOM级移除低权限不可见的内置模板（移动端抽屉）
+  __nzFilterTplContainer(body);
 }
 
 // 打开节点参数面板（右侧抽屉）
