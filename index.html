@@ -202,6 +202,43 @@
     padding: 24px;
     background: transparent;
   }
+  /* 工作流页面 - flex布局避免画布溢出 */
+  .content-area.wf-page {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .content-area.wf-page > .page-header {
+    flex-shrink: 0;
+  }
+  .content-area.wf-page > .wf-mode-tabs {
+    flex-shrink: 0;
+  }
+  .content-area.wf-page > #wfViewContainer {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .content-area.wf-page > #wfViewContainer .wf-top-bar {
+    flex-shrink: 0;
+  }
+  .content-area.wf-page > #wfViewContainer .comfyui-wrap {
+    flex: 1;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .content-area.wf-page > #wfViewContainer .wf-log-panel {
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+  .content-area.wf-page > #wfViewContainer .wf-browser-notice {
+    margin-top: 8px;
+  }
+  .content-area.wf-page > #wfViewContainer .wf-top-bar {
+    margin-bottom: 8px;
+  }
   .page-header {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 22px;
@@ -1297,10 +1334,26 @@
     .wf-mode-tabs { margin-bottom: 10px; }
     .wf-mode-tab { padding: 8px 10px; font-size: 13px; }
 
+    /* 移动端工作流页面 - flex布局 */
+    .content-area.wf-page {
+      overflow: hidden;
+      height: calc(100dvh - 58px);
+    }
+    .content-area.wf-page > #wfViewContainer {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .content-area.wf-page > #wfViewContainer .comfyui-wrap {
+      flex: 1;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+
     /* 移动端画布容器 */
     .comfyui-wrap {
-      height: calc(100dvh - 240px);
-      min-height: 400px;
       border-radius: 12px;
     }
 
@@ -1770,8 +1823,8 @@
   .comfyui-wrap {
     position: relative;
     width: 100%;
-    height: calc(100vh - 280px);
-    min-height: 520px;
+    height: 520px;
+    min-height: 400px;
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,0.08);
     background:
@@ -2529,6 +2582,22 @@
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(34,197,94,0.3);
   }
+  .profile-info-detail {
+    flex: 1;
+    min-width: 0;
+  }
+  .profile-info-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f0f0f0;
+    line-height: 1.3;
+  }
+  .profile-info-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
 
   .profile-menu-grid {
     display: grid;
@@ -2656,7 +2725,6 @@
 
     /* 画布容器 */
     .comfyui-wrap {
-      height: calc(100dvh - 420px) !important;
       min-height: 320px !important;
       border-radius: 12px;
       position: relative;
@@ -3049,7 +3117,6 @@
     .wf-mobile-bottom-bar { padding: 8px; gap: 4px; }
     .wf-bb-item { font-size: 10px; padding: 6px 2px; min-height: 52px; }
     .wf-bb-icon { font-size: 16px; }
-    .comfyui-wrap { height: calc(100dvh - 400px) !important; }
     .wf-log-panel { max-height: 100px; }
   }
 
@@ -7042,6 +7109,7 @@ function renderWorkflow() {
   if (!appData.wfCurrentView) appData.wfCurrentView = 'general';
 
   const view = appData.wfCurrentView; // 'general' | 'comfyui' | 'apikey' | 'history'
+  area.classList.add('wf-page');
   area.innerHTML = `
     <div class="page-header" style="margin-bottom:12px;">
       <div>
