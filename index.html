@@ -2205,6 +2205,9 @@
     font-size: 12px;
     z-index: 10;
   }
+  .custom-model-select.open {
+    z-index: 99999; /* 打开时置于最上层，避免被抽屉/遮罩遮挡 */
+  }
   .custom-model-select-trigger {
     display: flex;
     align-items: center;
@@ -2218,6 +2221,7 @@
     transition: all 0.15s ease;
     user-select: none;
     min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
   }
   .custom-model-select-trigger:hover {
     border-color: rgba(34,197,94,0.4);
@@ -2298,7 +2302,8 @@
     transform: translateY(-4px);
     pointer-events: none;
     transition: all 0.15s ease;
-    z-index: 100;
+    z-index: 100000; /* 与 trigger.open 配合，浮在所有抽屉上层 */
+    -webkit-overflow-scrolling: touch;
   }
   .custom-model-select.open .custom-model-select-dropdown {
     opacity: 1;
@@ -2315,8 +2320,15 @@
     border-bottom: 1px solid rgba(255,255,255,0.04);
   }
   .model-select-option:last-child { border-bottom: none; }
-  .model-select-option:hover {
+  .model-select-option:hover,
+  .model-select-option.active {
     background: rgba(34,197,94,0.08);
+  }
+  /* Mobile: tap highlight for model select option */
+  @media (hover: none) and (pointer: coarse) {
+    .model-select-option:active {
+      background: rgba(34,197,94,0.16);
+    }
   }
   .model-select-option .model-select-name {
     font-size: 13px;
@@ -2396,15 +2408,79 @@
     outline: none;
     color: var(--text-primary);
     font-size: 12px;
-    padding: 0;
+    padding: 6px 8px;
+    min-height: 38px; /* 避免移动端误触无法展开 */
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
     font-family: inherit;
+    border-radius: 6px;
   }
+  .n-field-vendor-select .n-field-select:focus { background: rgba(255,255,255,0.04); }
   .n-field-vendor-select .n-field-select option {
     background: #1a1a1a;
     color: #f0f0f0;
+  }
+  /* 原生select统一优化：桌面端高度，移动端更大 */
+  .n-field-input, .n-field-select, .n-field-textarea {
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  select.n-field-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px !important;
+    background-size: 12px;
+    min-height: 36px;
+  }
+  @media (max-width: 768px) {
+    select.n-field-select { min-height: 44px; font-size: 16px; padding-right: 36px !important; }
+    .n-field-input { min-height: 44px !important; font-size: 16px !important; }
+    .n-field-label { font-size: 13px !important; }
+    /* 移动端 vendor select 与 native select 全部 44px 高，便于手指点击 */
+    .n-field-vendor-select .n-field-select { font-size: 15px; min-height: 44px; padding: 8px 10px; }
+    .n-select-with-icon .n-select-icon { width: 26px; height: 26px; }
+    .n-select-with-icon .n-select-icon svg { width: 24px; height: 24px; }
+  }
+  /* 上传按钮/预览 */
+  .n-field-file-upload {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .n-field-file-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 8px 12px; min-height: 40px;
+    background: rgba(34,197,94,0.12);
+    border: 1px dashed rgba(34,197,94,0.45);
+    color: #86efac;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s ease;
+  }
+  .n-field-file-btn:hover { background: rgba(34,197,94,0.2); border-color: rgba(34,197,94,0.7); }
+  .n-field-file-preview {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.3);
+  }
+  .n-field-file-preview img, .n-field-file-preview video {
+    display: block; width: 100%; max-height: 160px; object-fit: cover;
+  }
+  .n-field-file-preview .remove {
+    position: absolute; top: 4px; right: 4px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(239,68,68,0.85); color: white;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px; line-height: 1;
+    border: none;
+  }
+  @media (max-width: 768px) {
+    .n-field-file-btn { min-height: 48px; font-size: 14px; }
   }
 
   /* ---- 个人账号UI优化 ---- */
@@ -9658,7 +9734,7 @@ const NODE_DEFS = {
   // ===== 📝文本类节点 =====
   text_input: {
     cat: 'text', name: '文案/剧本输入', icon: '📝',
-    inputs: [], outputs: [{ key: 'text', label: '文本' }],
+    inputs: [], outputs: [{ key: 'text', label: '文本' }, { key: 'text2', label: '文本2' }, { key: 'text3', label: '文本3' }, { key: 'text4', label: '文本4' }],
     fields: [
       { key: 'text', label: '输入内容', type: 'textarea', default: '在这里输入剧本、商品卖点、营销文案……' },
     ],
@@ -9666,7 +9742,7 @@ const NODE_DEFS = {
   llm_generate: {
     cat: 'text', name: '大模型文案生成', icon: '🤖',
     inputs: [{ key: 'prompt', label: '提示词/输入' }],
-    outputs: [{ key: 'text', label: '输出文本' }],
+    outputs: [{ key: 'text', label: '输出文本' }, { key: 'text2', label: '文本2' }, { key: 'text3', label: '文本3' }, { key: 'text4', label: '文本4' }],
     fields: [
       { key: 'systemPrompt', label: '系统提示词（角色设定）', type: 'textarea', default: '你是一名专业的内容策划专家。' },
       { key: 'prompt', label: '用户Prompt模板', type: 'textarea', default: '请基于以下信息生成文案：\n{prompt}' },
@@ -9690,32 +9766,75 @@ const NODE_DEFS = {
   img_prompt: {
     cat: 'img', name: '文生图提示词', icon: '✨',
     inputs: [{ key: 'seed', label: '灵感输入' }],
-    outputs: [{ key: 'positive', label: '正向词' }, { key: 'negative', label: '反向词' }],
+    outputs: [{ key: 'positive', label: '正向词' }, { key: 'negative', label: '反向词' }, { key: 'pos2', label: '正向词2' }, { key: 'neg2', label: '反向词2' }],
     fields: [
       { key: 'positive', label: '正向提示词 (Positive)', type: 'textarea', default: 'masterpiece, best quality, 8k, jewelry product, e-commerce photo, white background, studio lighting, sharp focus' },
       { key: 'negative', label: '反向提示词 (Negative)', type: 'textarea', default: 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality' },
       { key: 'style', label: '风格预设', type: 'select', options: ['无','电商主图','商品场景图','国风三渲二','赛博朋克','日漫','写实摄影','概念艺术'], default: '电商主图' },
     ],
   },
+  // ===== 📤 媒体上传（图片/视频母节点，可直接本地选文件，也可后续分支到多个子节点） =====
+  media_img_upload: {
+    cat: 'img', name: '图片上传 · 母图', icon: '📥',
+    inputs: [],
+    outputs: [
+      { key: 'image', label: '图片输出' },
+      { key: 'image2', label: '图片→分支2' },
+      { key: 'image3', label: '图片→分支3' },
+      { key: 'image4', label: '图片→分支4' },
+      { key: 'image5', label: '图片→分支5' },
+      { key: 'image6', label: '图片→分支6' },
+    ],
+    fields: [
+      { key: 'uploaded', label: '上传本地图片（未连线时代码层也可直接使用本图）', type: 'fileupload', accept: 'image/*', portKey: 'image' },
+    ],
+  },
+  media_vid_upload: {
+    cat: 'video', name: '视频上传 · 母视频', icon: '🎞️',
+    inputs: [],
+    outputs: [
+      { key: 'video', label: '视频输出' },
+      { key: 'video2', label: '视频→分支2' },
+      { key: 'video3', label: '视频→分支3' },
+      { key: 'video4', label: '视频→分支4' },
+    ],
+    fields: [
+      { key: 'uploaded', label: '上传本地视频（MP4/WebM等）', type: 'fileupload', accept: 'video/*', portKey: 'video' },
+    ],
+  },
   img_text2img: {
-    cat: 'img', name: '文生图节点', icon: '🎨',
-    inputs: [{ key: 'positive', label: '正向词' }, { key: 'negative', label: '反向词' }],
-    outputs: [{ key: 'image', label: '生成图片' }],
+    cat: 'img', name: '文生图 · 可分支母图', icon: '🎨',
+    inputs: [{ key: 'positive', label: '正向词' }, { key: 'negative', label: '反向词' }, { key: 'refImg', label: '参考图(可选)' }],
+    outputs: [
+      { key: 'image', label: '生成图片(输出)' },
+      { key: 'image2', label: '子分支2' },
+      { key: 'image3', label: '子分支3' },
+      { key: 'image4', label: '子分支4' },
+      { key: 'image5', label: '子分支5' },
+      { key: 'image6', label: '子分支6' },
+    ],
     fields: [
       { key: 'ratio', label: '画布比例', type: 'select', options: ['1:1','3:4','4:3','9:16','16:9'], default: '1:1' },
       { key: 'steps', label: '迭代步数', type: 'number', default: 30 },
       { key: 'cfg', label: 'CFG Scale', type: 'number', default: 7 },
       { key: 'seed', label: '随机种子(-1随机)', type: 'number', default: -1 },
       { key: 'model', label: '基础模型', type: 'select', options: ['SDXL 1.0','SD 1.5','Flux.1 Dev','Midjourney兼容','自定义'], default: 'SDXL 1.0' },
+      { key: 'fallbackRef', label: '没有连线时，直接上传本地参考图', type: 'fileupload', accept: 'image/*', portKey: 'refImg' },
     ],
   },
   img_img2img: {
-    cat: 'img', name: '图生图节点', icon: '🖼️',
+    cat: 'img', name: '图生图 · 可分支母图', icon: '🖼️',
     inputs: [{ key: 'image', label: '输入图片' }, { key: 'positive', label: '正向词' }, { key: 'negative', label: '反向词' }],
-    outputs: [{ key: 'image', label: '输出图片' }],
+    outputs: [
+      { key: 'image', label: '输出图片(主)' },
+      { key: 'image2', label: '子分支2' },
+      { key: 'image3', label: '子分支3' },
+      { key: 'image4', label: '子分支4' },
+    ],
     fields: [
       { key: 'denoise', label: '重绘幅度', type: 'number', default: 0.6 },
       { key: 'prompt', label: '改场景描述', type: 'textarea', default: '将背景替换为：北欧极简家居场景，原木+柔光，窗外绿植日光' },
+      { key: 'fallbackImage', label: '没有连线时，直接上传本地输入图', type: 'fileupload', accept: 'image/*', portKey: 'image' },
     ],
   },
   img_controlnet: {
@@ -9725,14 +9844,16 @@ const NODE_DEFS = {
     fields: [
       { key: 'type', label: '预处理器', type: 'select', options: ['Canny(边缘)','Depth(深度)','IP-Adapter(形态锁定)','Tile(重绘高清)','Lineart(线稿)'], default: 'IP-Adapter(形态锁定)' },
       { key: 'weight', label: '控制权重', type: 'number', default: 0.85 },
+      { key: 'fallbackImage', label: '没有连线时，直接上传参考图', type: 'fileupload', accept: 'image/*', portKey: 'image' },
     ],
   },
   img_preprocess: {
     cat: 'img', name: '图片预处理 (抠图/裁剪)', icon: '✂️',
     inputs: [{ key: 'image', label: '输入图片' }],
-    outputs: [{ key: 'image', label: '处理后图片' }],
+    outputs: [{ key: 'image', label: '处理后图片' }, { key: 'image2', label: '分支2' }, { key: 'image3', label: '分支3' }],
     fields: [
       { key: 'action', label: '处理动作', type: 'select', options: ['AI自动抠图','生成白底图','尺寸裁剪(1:1)','放大2倍','压缩质量80%'], default: 'AI自动抠图' },
+      { key: 'fallbackImage', label: '没有连线时，直接上传图片', type: 'fileupload', accept: 'image/*', portKey: 'image' },
     ],
   },
   img_preview: {
@@ -9743,34 +9864,76 @@ const NODE_DEFS = {
       { key: 'filename', label: '文件名前缀', type: 'input', default: 'workflow_image' },
     ],
   },
+  util_branch_img: {
+    cat: 'util', name: '图片一分四 (分支器)', icon: '🔱',
+    inputs: [{ key: 'image', label: '输入图片' }],
+    outputs: [
+      { key: 'out1', label: '分支1' }, { key: 'out2', label: '分支2' }, { key: 'out3', label: '分支3' }, { key: 'out4', label: '分支4' },
+      { key: 'out5', label: '分支5' }, { key: 'out6', label: '分支6' }, { key: 'out7', label: '分支7' }, { key: 'out8', label: '分支8' },
+    ],
+    fields: [
+      { key: 'fallbackImage', label: '没有连线时，直接上传图片作为输入', type: 'fileupload', accept: 'image/*', portKey: 'image' },
+    ],
+  },
+  util_branch_vid: {
+    cat: 'util', name: '视频一分四 (分支器)', icon: '🔀',
+    inputs: [{ key: 'video', label: '输入视频' }],
+    outputs: [
+      { key: 'out1', label: '分支1' }, { key: 'out2', label: '分支2' }, { key: 'out3', label: '分支3' }, { key: 'out4', label: '分支4' },
+      { key: 'out5', label: '分支5' }, { key: 'out6', label: '分支6' },
+    ],
+    fields: [
+      { key: 'fallbackVideo', label: '没有连线时，直接上传视频作为输入', type: 'fileupload', accept: 'video/*', portKey: 'video' },
+    ],
+  },
+  util_branch_text: {
+    cat: 'util', name: '文本一分四 (分支器)', icon: '🔤',
+    inputs: [{ key: 'text', label: '输入文本' }],
+    outputs: [
+      { key: 'out1', label: '分支1' }, { key: 'out2', label: '分支2' }, { key: 'out3', label: '分支3' }, { key: 'out4', label: '分支4' },
+    ],
+    fields: [],
+  },
 
   // ===== 🎬视频多媒体节点 =====
   v_txt2vid: {
     cat: 'video', name: '文生视频', icon: '📹',
-    inputs: [{ key: 'prompt', label: '视频提示词' }],
-    outputs: [{ key: 'video', label: '输出视频' }],
+    inputs: [{ key: 'prompt', label: '视频提示词' }, { key: 'refImage', label: '参考图(可选)' }],
+    outputs: [
+      { key: 'video', label: '输出视频(主)' },
+      { key: 'video2', label: '子分支2' },
+      { key: 'video3', label: '子分支3' },
+      { key: 'video4', label: '子分支4' },
+    ],
     fields: [
       { key: 'prompt', label: '镜头描述', type: 'textarea', default: '美妆精华液瓶放在北欧大理石台面上缓慢旋转，阳光从左上方洒下，液滴缓缓滑落，镜头缓慢推进，电商宣传短片' },
       { key: 'duration', label: '时长(秒)', type: 'number', default: 5 },
       { key: 'motion', label: '运动幅度', type: 'select', options: ['低','中','高'], default: '中' },
       { key: 'camera', label: '运镜描述', type: 'input', default: '缓慢环绕 + 向前推进' },
       { key: 'fps', label: 'FPS', type: 'number', default: 24 },
+      { key: 'fallbackRef', label: '没连线时，上传参考图辅助视频生成', type: 'fileupload', accept: 'image/*', portKey: 'refImage' },
     ],
   },
   v_img2vid: {
     cat: 'video', name: '图生视频 (图片转动态)', icon: '🎞️',
     inputs: [{ key: 'image', label: '静态图/分镜图' }],
-    outputs: [{ key: 'video', label: '输出视频' }],
+    outputs: [
+      { key: 'video', label: '输出视频(主)' },
+      { key: 'video2', label: '子分支2' },
+      { key: 'video3', label: '子分支3' },
+      { key: 'video4', label: '子分支4' },
+    ],
     fields: [
       { key: 'duration', label: '时长(秒)', type: 'number', default: 4 },
       { key: 'motion', label: '运动幅度', type: 'select', options: ['低','中','高'], default: '中' },
       { key: 'camera', label: '运镜描述', type: 'input', default: '轻微呼吸感 + 镜头横移' },
+      { key: 'fallbackImage', label: '没连线时，上传本地图', type: 'fileupload', accept: 'image/*', portKey: 'image' },
     ],
   },
   v_tts: {
     cat: 'video', name: 'AI配音 (TTS)', icon: '🔊',
     inputs: [{ key: 'text', label: '配音文本' }],
-    outputs: [{ key: 'audio', label: '音频' }],
+    outputs: [{ key: 'audio', label: '音频' }, { key: 'audio2', label: '音频2' }],
     fields: [
       { key: 'voice', label: '发音人', type: 'select', options: ['温柔女声','磁性男声','活力少女','沉稳解说','儿童音','方言(粤语)'], default: '磁性男声' },
       { key: 'speed', label: '语速', type: 'number', default: 1 },
@@ -9780,7 +9943,7 @@ const NODE_DEFS = {
   v_bgm: {
     cat: 'video', name: 'BGM背景音乐', icon: '🎵',
     inputs: [],
-    outputs: [{ key: 'audio', label: 'BGM音频' }],
+    outputs: [{ key: 'audio', label: 'BGM音频' }, { key: 'audio2', label: 'BGM音频2' }],
     fields: [
       { key: 'style', label: '风格', type: 'select', options: ['轻商务钢琴','国风笛箫','电子潮流','温柔治愈','悬疑氛围','热血激昂'], default: '轻商务钢琴' },
       { key: 'duration', label: '时长(秒)', type: 'number', default: 30 },
@@ -9790,7 +9953,7 @@ const NODE_DEFS = {
   v_compose: {
     cat: 'video', name: '视频拼接合成', icon: '🎬',
     inputs: [{ key: 'vid1', label: '视频片段1' }, { key: 'vid2', label: '视频片段2' }, { key: 'audio', label: '配音/旁白' }, { key: 'bgm', label: '背景音乐' }],
-    outputs: [{ key: 'video', label: '成片' }],
+    outputs: [{ key: 'video', label: '成片' }, { key: 'video2', label: '成片·副本' }],
     fields: [
       { key: 'resolution', label: '输出分辨率', type: 'select', options: ['1080x1920(竖屏9:16)','1920x1080(横屏16:9)','1080x1080(方屏)'], default: '1080x1920(竖屏9:16)' },
       { key: 'transition', label: '片段转场', type: 'select', options: ['无','淡入淡出','黑场过渡','滑动切换'], default: '淡入淡出' },
@@ -9825,7 +9988,7 @@ const NODE_CATS = [
   { key: 'text', label: '📝 文本类节点' },
   { key: 'img', label: '🖼 图像生成节点' },
   { key: 'video', label: '🎬 视频多媒体节点' },
-  { key: 'util', label: '🔧 工具节点' },
+  { key: 'util', label: '🔧 工具/分支节点' },
 ];
 
 // ========== 2. 内置模板（AI漫剧/电商/多场景通用） ==========
@@ -9903,6 +10066,101 @@ const BUILTIN_TEMPLATES = [
       { from: 'n4', fromPort: 'positive', to: 'n5', toPort: 'positive' },
       { from: 'n4', fromPort: 'negative', to: 'n5', toPort: 'negative' },
       { from: 'n5', fromPort: 'image', to: 'n6', toPort: 'image' },
+    ],
+  },
+  {
+    id: 'tpl_manju_mother_branch',
+    builtin: true,
+    type: 'node',
+    tagCls: 'video',
+    name: 'AI漫剧母图→多子图→多视频分支模板',
+    desc: '1个母图节点→4路子图生成分支(角度/场景)→每路子图生成视频→再分4路子剧情；可手动上传母图，也可直接用文生图生成母图',
+    nodes: [
+      // 输入/提示词
+      { id: 'i_txt', typeKey: 'text_input', x: 0, y: 40, data: { text: '主角角色母图（国风少年郎）\n子分支：①江湖酒馆外 ②竹林剑舞 ③月下骑马 ④雨中拜师\n每个子分支生成4秒短视频' } },
+      { id: 'i_llm', typeKey: 'llm_generate', x: 320, y: 40, data: { systemPrompt: '你是漫剧分镜师。', prompt: '拆成角色母描述+4种场景的正向词：{prompt}', vendor: 'deepseek', temperature: 0.7, maxTokens: 2048, count: 1 } },
+      { id: 'i_prompt', typeKey: 'img_prompt', x: 640, y: 40, data: { style: '国风三渲二' } },
+
+      // 母图上传 OR 母图生成（二选一即可，用户也可直接点上传按钮）
+      { id: 'm_upload', typeKey: 'media_img_upload', x: 0, y: 260, data: {} },
+      { id: 'm_t2i', typeKey: 'img_text2img', x: 320, y: 260, data: { ratio: '3:4', style_notes: '' } },
+
+      // 母图分支器（4路扩散）
+      { id: 'b_img', typeKey: 'util_branch_img', x: 640, y: 260, data: {} },
+
+      // 4路子图节点（每个不同风格/denoise）— 用户点母图image2/3/4/5 也可以直接接，分支器是显示用显式
+      { id: 'c1_img', typeKey: 'img_img2img', x: 960, y: 40,  data: { denoise: 0.35, prompt: '子分镜①：江湖酒馆外 白日 炊烟' } },
+      { id: 'c2_img', typeKey: 'img_img2img', x: 960, y: 240, data: { denoise: 0.45, prompt: '子分镜②：竹林深处 剑舞 碎金光斑' } },
+      { id: 'c3_img', typeKey: 'img_img2img', x: 960, y: 440, data: { denoise: 0.40, prompt: '子分镜③：月下骑马 剪影 披风飘扬' } },
+      { id: 'c4_img', typeKey: 'img_img2img', x: 960, y: 640, data: { denoise: 0.50, prompt: '子分镜④：雨中小巷 拜师撑伞 泪水' } },
+
+      // 每个子图 → 子视频
+      { id: 'c1_vid', typeKey: 'v_img2vid', x: 1280, y: 40,  data: { duration: 4, motion: '中', camera: '缓慢横移推进' } },
+      { id: 'c2_vid', typeKey: 'v_img2vid', x: 1280, y: 240, data: { duration: 4, motion: '高', camera: '环绕拍摄 + 剑反光特写' } },
+      { id: 'c3_vid', typeKey: 'v_img2vid', x: 1280, y: 440, data: { duration: 5, motion: '中', camera: '航拍拉出，马蹄扬尘' } },
+      { id: 'c4_vid', typeKey: 'v_img2vid', x: 1280, y: 640, data: { duration: 4, motion: '低', camera: '固定长镜头，雨丝飘下' } },
+
+      // 子视频再次4路扩散 → 剧情二阶段（子子分支，再分4路：预览下载/再合成）
+      { id: 'c1_br', typeKey: 'util_branch_vid', x: 1600, y: 40,  data: {} },
+      { id: 'c2_br', typeKey: 'util_branch_vid', x: 1600, y: 240, data: {} },
+      { id: 'c3_br', typeKey: 'util_branch_vid', x: 1600, y: 440, data: {} },
+      { id: 'c4_br', typeKey: 'util_branch_vid', x: 1600, y: 640, data: {} },
+
+      // TTS配音（共用旁白）
+      { id: 'tts', typeKey: 'v_tts', x: 320, y: 500, data: { voice: '磁性男声', speed: 1, pitch: 1 } },
+      { id: 'bgm', typeKey: 'v_bgm', x: 320, y: 680, data: { style: '国风笛箫', duration: 20, volume: 0.4 } },
+
+      // 合成（取前2路片段演示）
+      { id: 'compose', typeKey: 'v_compose', x: 1920, y: 200, data: { resolution: '1080x1920(竖屏9:16)', transition: '淡入淡出', subtitles: '自动生成' } },
+      { id: 'export', typeKey: 'v_export', x: 2240, y: 200, data: { exportMode: '导出完整ComfyUI兼容JSON工作流', filename: 'manju_mother_branch_output' } },
+    ],
+    connections: [
+      // 文本流
+      { from: 'i_txt',  fromPort: 'text', to: 'i_llm',    toPort: 'prompt' },
+      { from: 'i_llm',  fromPort: 'text', to: 'i_prompt', toPort: 'seed' },
+      { from: 'i_prompt', fromPort: 'positive', to: 'm_t2i', toPort: 'positive' },
+      { from: 'i_prompt', fromPort: 'negative', to: 'm_t2i', toPort: 'negative' },
+
+      // 母图：上传母图 或 文生图母图 → 分支器 image（分支器没连线时，它本身也允许直接上传兜底）
+      { from: 'm_upload', fromPort: 'image', to: 'b_img', toPort: 'image' },
+      { from: 'm_t2i',    fromPort: 'image', to: 'b_img', toPort: 'image' },
+
+      // 分支器 → 4路子图（img_img2img）
+      { from: 'b_img', fromPort: 'out1', to: 'c1_img', toPort: 'image' },
+      { from: 'b_img', fromPort: 'out2', to: 'c2_img', toPort: 'image' },
+      { from: 'b_img', fromPort: 'out3', to: 'c3_img', toPort: 'image' },
+      { from: 'b_img', fromPort: 'out4', to: 'c4_img', toPort: 'image' },
+      // 把正向词、反向词同步给到四个子图
+      { from: 'i_prompt', fromPort: 'positive', to: 'c1_img', toPort: 'positive' },
+      { from: 'i_prompt', fromPort: 'negative', to: 'c1_img', toPort: 'negative' },
+      { from: 'i_prompt', fromPort: 'pos2',     to: 'c2_img', toPort: 'positive' },
+      { from: 'i_prompt', fromPort: 'neg2',     to: 'c2_img', toPort: 'negative' },
+      { from: 'i_prompt', fromPort: 'positive', to: 'c3_img', toPort: 'positive' },
+      { from: 'i_prompt', fromPort: 'negative', to: 'c3_img', toPort: 'negative' },
+      { from: 'i_prompt', fromPort: 'pos2',     to: 'c4_img', toPort: 'positive' },
+      { from: 'i_prompt', fromPort: 'neg2',     to: 'c4_img', toPort: 'negative' },
+
+      // 子图 → 子视频
+      { from: 'c1_img', fromPort: 'image',  to: 'c1_vid', toPort: 'image' },
+      { from: 'c2_img', fromPort: 'image',  to: 'c2_vid', toPort: 'image' },
+      { from: 'c3_img', fromPort: 'image',  to: 'c3_vid', toPort: 'image' },
+      { from: 'c4_img', fromPort: 'image',  to: 'c4_vid', toPort: 'image' },
+
+      // 子视频 → 子分支扩散（out1~out6 一接多）
+      { from: 'c1_vid', fromPort: 'video', to: 'c1_br', toPort: 'video' },
+      { from: 'c2_vid', fromPort: 'video', to: 'c2_br', toPort: 'video' },
+      { from: 'c3_vid', fromPort: 'video', to: 'c3_br', toPort: 'video' },
+      { from: 'c4_vid', fromPort: 'video', to: 'c4_br', toPort: 'video' },
+
+      // 配音 + BGM（共用旁白，从 i_txt/文本扩散）
+      { from: 'i_txt', fromPort: 'text2', to: 'tts', toPort: 'text' },
+
+      // 合成：取 c1_br.out1 为 vid1, c2_br.out1 为 vid2, tts→audio, bgm→bgm
+      { from: 'c1_br', fromPort: 'out1', to: 'compose', toPort: 'vid1' },
+      { from: 'c2_br', fromPort: 'out1', to: 'compose', toPort: 'vid2' },
+      { from: 'tts',   fromPort: 'audio', to: 'compose', toPort: 'audio' },
+      { from: 'bgm',   fromPort: 'audio', to: 'compose', toPort: 'bgm' },
+      { from: 'compose', fromPort: 'video', to: 'export', toPort: 'video' },
     ],
   },
 ];
@@ -10049,12 +10307,68 @@ function toggleModelSelect(trigger) {
   if (!wasOpen) wrapper.classList.add('open');
 }
 
-// 全局点击关闭模型下拉
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.custom-model-select')) {
-    document.querySelectorAll('.custom-model-select.open').forEach(el => el.classList.remove('open'));
+// 全局点击关闭模型下拉（同时兼容 touchstart，移动端更灵敏）
+(function() {
+  function closeAllModelSelects(except) {
+    document.querySelectorAll('.custom-model-select.open').forEach(el => {
+      if (except && (el === except || el.contains(except))) return;
+      el.classList.remove('open');
+    });
   }
-});
+  function closeAllDropdowns(except) {
+    closeAllModelSelects(except);
+    // 关闭移动端"更多"菜单
+    const wfMenu = document.getElementById('wfMoreMenu');
+    if (wfMenu && wfMenu.style.display !== 'none') {
+      if (!except || (wfMenu !== except && !wfMenu.contains(except))) {
+        // 检查except是否是触发按钮（class含wf-mtb-btn且是"⋯"）
+        const isTriggerBtn = except && except.closest && except.closest('.wf-mtb-btn') && except.closest('.wf-mtb-btn').textContent.trim() === '⋯';
+        if (!isTriggerBtn) wfMenu.style.display = 'none';
+      }
+    }
+  }
+  function handler(e) {
+    if (!e.target || !e.target.closest) return;
+    // 不关闭模型下拉的情况：点击在custom-model-select内部
+    let exceptForModel = null;
+    const ms = e.target.closest('.custom-model-select');
+    if (ms) exceptForModel = ms;
+    // 不在模型下拉内部 => 关闭所有模型下拉；不在更多菜单/触发按钮内部 => 关掉更多菜单
+    if (!ms) closeAllModelSelects(null);
+    closeAllDropdowns(e.target);
+  }
+  document.addEventListener('click', handler, true);
+  document.addEventListener('touchstart', handler, { passive: true, capture: true });
+  // 抽屉/遮罩打开时也关闭所有下拉，避免层级堆叠
+  const _origClose = typeof closeBottomDrawer === 'function' ? closeBottomDrawer : null;
+  if (_origClose) {
+    closeBottomDrawer = function() {
+      closeAllDropdowns(null);
+      return _origClose.apply(this, arguments);
+    };
+  }
+  const _origOpenBd = typeof openBottomDrawer === 'function' ? openBottomDrawer : null;
+  if (_origOpenBd) {
+    openBottomDrawer = function() {
+      closeAllDropdowns(null);
+      return _origOpenBd.apply(this, arguments);
+    };
+  }
+  const _origOpenNpd = typeof openNodeParamDrawer === 'function' ? openNodeParamDrawer : null;
+  if (_origOpenNpd) {
+    openNodeParamDrawer = function() {
+      closeAllDropdowns(null);
+      return _origOpenNpd.apply(this, arguments);
+    };
+  }
+  const _origCloseNpd = typeof closeNodeParamDrawer === 'function' ? closeNodeParamDrawer : null;
+  if (_origCloseNpd) {
+    closeNodeParamDrawer = function() {
+      closeAllDropdowns(null);
+      return _origCloseNpd.apply(this, arguments);
+    };
+  }
+})();
 
 // 默认模型选择变化回调（可被覆盖）
 function onDefaultModelSelectChange(vendor, optionEl) {
@@ -10900,6 +11214,31 @@ function openNodeParamDrawer(nid) {
         <div class="n-field-label">${f.label}</div>
         <textarea class="n-field-textarea" data-nid="${nid}" data-fk="${f.key}" onchange="onNodeFieldChange(this)">${escapeHtml(String(val))}</textarea>
       </div>`;
+    } else if (f.type === 'fileupload') {
+      const isVideo = (f.accept || '').startsWith('video');
+      const hasFile = typeof val === 'string' && val.length > 32 && /^data:(image|video)\//.test(val);
+      const uidVal = 'npd_file_' + nid + '_' + f.key;
+      const preview = !hasFile ? '' : (isVideo
+        ? `<div class="n-field-file-preview">
+             <button class="remove" onclick="event.stopPropagation();onNodeFileRemove('${nid}','${f.key}');openNodeParamDrawer('${nid}');">✕</button>
+             <video src="${val}" muted loop playsinline controls style="max-height:200px;width:100%;display:block;"></video>
+           </div>`
+        : `<div class="n-field-file-preview">
+             <button class="remove" onclick="event.stopPropagation();onNodeFileRemove('${nid}','${f.key}');openNodeParamDrawer('${nid}');">✕</button>
+             <img src="${val}" alt="preview" style="max-height:200px;" />
+           </div>`);
+      return `<div class="n-field">
+        <div class="n-field-label">${f.label}${f.portKey ? ` <span style="opacity:0.55;">(端口：${f.portKey} · 无连线时生效)</span>`:''}</div>
+        <div class="n-field-file-upload">
+          <label class="n-field-file-btn" for="${uidVal}">
+            <span>${isVideo ? '🎬' : '📤'}</span>
+            <span>${hasFile ? '📎 重新选择（已上传）' : (isVideo ? '📁 选择本地视频文件' : '📁 选择本地图片文件')}</span>
+          </label>
+          <input id="${uidVal}" type="file" accept="${f.accept||'image/*,video/*'}" style="display:none;"
+                 onchange="onNodeFileUpload(this, '${nid}', '${f.key}'); setTimeout(()=>openNodeParamDrawer('${nid}'), 150);" />
+          ${preview}
+        </div>
+      </div>`;
     } else if (f.type === 'select') {
       let optsHTML;
       if (f.key === 'vendor' && typeof API_VENDORS !== 'undefined') {
@@ -10909,6 +11248,16 @@ function openNodeParamDrawer(nid) {
           const modelLabel = c.model || v.model || '';
           return `<option value="${v.key}" ${v.key===val?'selected':''}>${configured} ${v.name}${modelLabel?' · '+modelLabel:''}</option>`;
         }).join('');
+        // drawer中vendor选择也显示品牌前缀图标，并传入withIcon=true确保外部节点卡片也刷新
+        return `<div class="n-field n-field-vendor-select">
+          <div class="n-field-label">${f.label}</div>
+          <div class="n-select-with-icon">
+            <div class="n-select-icon" id="npd_select_icon_${nid}">${getVendorIconSVG(val)}</div>
+            <select class="n-field-select" data-nid="${nid}" data-fk="${f.key}" onchange="onNodeFieldChange(this, true, '${nid}')">
+              ${optsHTML}
+            </select>
+          </div>
+        </div>`;
       } else {
         optsHTML = (f.options||[]).map(o => `<option ${o===val?'selected':''}>${escapeHtml(String(o))}</option>`).join('');
       }
@@ -11063,6 +11412,32 @@ function renderNodeHTML(n) {
         <div class="n-field-label">${f.label}</div>
         <textarea class="n-field-textarea" data-nid="${n.id}" data-fk="${f.key}" onchange="onNodeFieldChange(this)">${escapeHtml(String(val))}</textarea>
       </div>`;
+    } else if (f.type === 'fileupload') {
+      // 本地文件上传字段：图片/视频，直接存 dataURL
+      const isVideo = (f.accept || '').startsWith('video');
+      const hasFile = typeof val === 'string' && val.length > 32 && /^data:(image|video)\//.test(val);
+      const uidVal = 'n_file_' + n.id + '_' + f.key;
+      const preview = !hasFile ? '' : (isVideo
+        ? `<div class="n-field-file-preview">
+             <button class="remove" onclick="event.stopPropagation();onNodeFileRemove('${n.id}','${f.key}')">✕</button>
+             <video src="${val}" muted loop playsinline controls style="max-height:140px;width:100%;display:block;"></video>
+           </div>`
+        : `<div class="n-field-file-preview">
+             <button class="remove" onclick="event.stopPropagation();onNodeFileRemove('${n.id}','${f.key}')">✕</button>
+             <img src="${val}" alt="preview" />
+           </div>`);
+      return `<div class="n-field">
+        <div class="n-field-label">${f.label}</div>
+        <div class="n-field-file-upload">
+          <label class="n-field-file-btn" for="${uidVal}">
+            <span>${isVideo ? '🎬' : '📤'}</span>
+            <span>${hasFile ? '📎 重新选择（已上传）' : (isVideo ? '📁 选择本地视频文件' : '📁 选择本地图片文件')}</span>
+          </label>
+          <input id="${uidVal}" type="file" accept="${f.accept||'image/*,video/*'}" style="display:none;"
+                 onchange="onNodeFileUpload(this, '${n.id}', '${f.key}')" />
+          ${preview}
+        </div>
+      </div>`;
     } else if (f.type === 'select') {
       // vendor选择器显示品牌SVG图标（通过data-icon属性，配合CSS实现前缀图标效果）
       let optsHTML;
@@ -11115,7 +11490,7 @@ function renderNodeHTML(n) {
   `;
 }
 
-function onNodeFieldChange(el, withIcon) {
+function onNodeFieldChange(el, withIcon, drawerNid) {
   const nid = el.getAttribute('data-nid');
   const fk = el.getAttribute('data-fk');
   const wf = _nc.wf;
@@ -11126,10 +11501,74 @@ function onNodeFieldChange(el, withIcon) {
   node.data[fk] = v;
   // vendor变化时同步更新前缀图标
   if (withIcon && fk === 'vendor') {
+    // 节点卡片内的vendor图标
     const iconEl = document.getElementById('n_select_icon_' + nid);
     if (iconEl) iconEl.innerHTML = getVendorIconSVG(v);
+    // 节点参数drawer内的vendor图标（如果存在）
+    const npdIconEl = document.getElementById('npd_select_icon_' + nid);
+    if (npdIconEl) npdIconEl.innerHTML = getVendorIconSVG(v);
   }
   saveData();
+}
+
+// 节点文件上传：将文件读为 dataURL 保存到 node.data[fKey]
+function onNodeFileUpload(inputEl, nid, fKey) {
+  const f = inputEl.files && inputEl.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const wf = _nc ? _nc.wf : null;
+    if (!wf) return;
+    const node = wf.nodes.find(n => n.id === nid); if (!node) return;
+    if (!node.data) node.data = {};
+    node.data[fKey] = String(e.target.result || '');
+    saveData();
+    renderAllNodes();
+    // 如果节点参数抽屉打开，同步刷新抽屉里的上传预览
+    const drawer = document.getElementById && document.getElementById('wfNpdBody');
+    if (drawer && drawer.parentElement) {
+      const body = drawer.parentElement.querySelector('[data-current-nid="'+nid+'"]') || null;
+      // noop 简单重渲染节点即可，抽屉靠下次用户打开刷新
+    }
+    toast('文件已上传（已保存在工作流中）', 'success');
+  };
+  reader.onerror = function() {
+    toast('文件读取失败', 'error');
+  };
+  reader.readAsDataURL(f);
+}
+function onNodeFileRemove(nid, fKey) {
+  const wf = _nc ? _nc.wf : null;
+  if (!wf) return;
+  const node = wf.nodes.find(n => n.id === nid); if (!node) return;
+  if (!node.data) node.data = {};
+  delete node.data[fKey];
+  saveData();
+  renderAllNodes();
+  toast('已移除上传文件', 'info');
+}
+// 获取节点某输入端口的 fallback 上传值（没 wire 连接时使用）
+function getPortFallbackValue(node, portKey) {
+  if (!node) return '';
+  const def = NODE_DEFS[node.typeKey];
+  if (!def) return '';
+  // 先看字段里有没有 portKey === f.portKey 的 fileupload 字段
+  const d = node.data || {};
+  const fld = (def.fields || []).find(f => f && f.type === 'fileupload' && f.portKey === portKey);
+  if (fld && typeof d[fld.key] === 'string' && /^data:(image|video)\//.test(d[fld.key])) {
+    return d[fld.key];
+  }
+  // 兼容：特殊字段名 fallbackImage/refImage 等 fallback 值
+  const direct = d['fallbackImage'] || d['fallbackRef'] || d['fallbackVideo'] || d['uploaded'];
+  if (typeof direct === 'string' && /^data:(image|video)\//.test(direct)) {
+    // 确认端口类型匹配
+    const isImgPort = /image|img|ref/.test(portKey);
+    const isVidPort = /video|vid/.test(portKey);
+    if ((isImgPort && /^data:image/.test(direct)) || (isVidPort && /^data:video/.test(direct))) {
+      return direct;
+    }
+  }
+  return '';
 }
 
 function deleteNodeById(nid, ev) {
@@ -11836,6 +12275,40 @@ function interpolate(template, node, outputs, wf) {
   return str;
 }
 
+// ========== 工具：从连接或fallback取值 ==========
+function resolveInput(node, portKey, outputs, wf) {
+  const conn = (wf.connections || []).find(c => c.to === node.id && c.toPort === portKey);
+  if (conn) {
+    const v = (outputs[conn.from] || {})[conn.fromPort];
+    if (v != null && v !== '') return v;
+  }
+  const fb = getPortFallbackValue(node, portKey);
+  if (fb) return fb;
+  return '';
+}
+// ========== 工具：把主值 copy 到所有同类型输出端口（分支扩散 fan-out） ==========
+function fanOut(def, primaryKey, value) {
+  const result = {};
+  const outs = def.outputs || [];
+  // 判断主类型
+  const isImg = /^image|^img/.test(primaryKey);
+  const isVid = /^video|^vid/.test(primaryKey);
+  const isTxt = /^text|positive|negative|^pos|^neg|prompt|next/.test(primaryKey);
+  const isAud = /^audio/.test(primaryKey);
+  outs.forEach(p => {
+    const k = p.key;
+    // 相同类型的输出端口，全部填同一个值，允许用户一接多
+    if (k === primaryKey) { result[k] = value; return; }
+    if (isImg && /^image|img\d|^out\d/.test(k)) { result[k] = value; return; }
+    if (isVid && /^video|vid\d|^out\d/.test(k)) { result[k] = value; return; }
+    if (isTxt && /^text\d|^pos|^neg|^out\d|prompt\d|next/.test(k)) { result[k] = value; return; }
+    if (isAud && /^audio\d|^out\d/.test(k)) { result[k] = value; return; }
+  });
+  // 没在上面匹配到的主输出直接返回
+  if (result[primaryKey] === undefined) result[primaryKey] = value;
+  return result;
+}
+
 async function execNode(node, outputs) {
   const wf = _nc.wf;
   const def = NODE_DEFS[node.typeKey];
@@ -11845,8 +12318,10 @@ async function execNode(node, outputs) {
 
   // ---- 📝 文本类 ----
   switch (node.typeKey) {
-    case 'text_input':
-      return { text: interpolate(d.text || '', node, outputs, wf) };
+    case 'text_input': {
+      const txt = interpolate(d.text || '', node, outputs, wf);
+      return fanOut(def, 'text', txt);
+    }
 
     case 'llm_generate': {
       ensureApiKeyDefaults();
@@ -11855,54 +12330,84 @@ async function execNode(node, outputs) {
       const prompt = interpolate(d.prompt || '', node, outputs, wf);
       const systemPrompt = interpolate(d.systemPrompt || '', node, outputs, wf);
       appendNodeLog('info', `调用厂商 ${vendor} · prompt=${prompt.slice(0,40)}...`);
+      let txt = '';
       if (!cfg.key) {
         appendNodeLog('warn', '未配置该厂商密钥，进入「模拟执行」模式，输出示例内容。');
         await sleep(500);
-        const demo = `【模拟输出 · ${vendor}未配置】\n这是关于"${prompt.slice(0,20)}"的第1条文案：专业生动、引人入胜。\n这是第2条文案：突出卖点，直击痛点。\n这是第3条文案：场景化表达，引发共鸣。`;
-        node._lastOutputPreview = demo.slice(0, 200);
-        return { text: demo };
-      }
-      try {
-        const url = (cfg.baseUrl || 'https://api.deepseek.com/v1').replace(/\/$/, '') + '/chat/completions';
-        const body = JSON.stringify({
-          model: cfg.model || 'deepseek-chat',
-          messages: [
-            { role: 'system', content: systemPrompt || '你是助手。' },
-            { role: 'user', content: prompt },
-          ],
-          temperature: Number(d.temperature) || cfg.temperature || 0.7,
-          max_tokens: Number(d.maxTokens) || cfg.maxTokens || 2048,
-        });
-        const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key };
-        const r = await fetch(url, { method: 'POST', headers, body });
-        const j = await r.json();
-        if (j && j.choices && j.choices[0]) {
-          const txt = j.choices[0].message && j.choices[0].message.content;
-          node._lastOutputPreview = String(txt || '').slice(0, 200);
-          return { text: txt || '' };
+        txt = `【模拟输出 · ${vendor}未配置】\n这是关于"${prompt.slice(0,20)}"的第1条文案：专业生动、引人入胜。\n这是第2条文案：突出卖点，直击痛点。\n这是第3条文案：场景化表达，引发共鸣。`;
+      } else {
+        try {
+          const url = (cfg.baseUrl || 'https://api.deepseek.com/v1').replace(/\/$/, '') + '/chat/completions';
+          const body = JSON.stringify({
+            model: cfg.model || 'deepseek-chat',
+            messages: [
+              { role: 'system', content: systemPrompt || '你是助手。' },
+              { role: 'user', content: prompt },
+            ],
+            temperature: Number(d.temperature) || cfg.temperature || 0.7,
+            max_tokens: Number(d.maxTokens) || cfg.maxTokens || 2048,
+          });
+          const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key };
+          const r = await fetch(url, { method: 'POST', headers, body });
+          const j = await r.json();
+          if (j && j.choices && j.choices[0]) txt = j.choices[0].message && j.choices[0].message.content;
+          else throw new Error((j && j.error && j.error.message) || '接口返回异常');
+        } catch (e) {
+          appendNodeLog('error', '调用失败：' + e.message);
+          throw e;
         }
-        throw new Error((j && j.error && j.error.message) || '接口返回异常');
-      } catch (e) {
-        appendNodeLog('error', '调用失败：' + e.message);
-        throw e;
       }
+      node._lastOutputPreview = String(txt || '').slice(0, 200);
+      return fanOut(def, 'text', txt || '');
     }
 
     case 'text_export': {
-      let content = '';
-      // 取输入
-      const conn = wf.connections.find(c => c.to === node.id);
-      if (conn) {
-        const prev = (outputs[conn.from] || {})[conn.fromPort] || '';
-        content = String(prev);
-      }
+      const text = resolveInput(node, 'text', outputs, wf);
       const filename = (d.filename || 'workflow_output') + '.' + (d.format || 'txt');
-      const data = d.format === 'json' ? JSON.stringify({ content }, null, 2) : content;
+      const data = d.format === 'json' ? JSON.stringify({ content: text }, null, 2) : String(text || '');
       const blob = new Blob([data], { type: d.format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(blob);
       node._lastOutputPreview = `已导出文件：${filename}`;
       return {};
+    }
+
+    // ---- 📤 上传节点 ----
+    case 'media_img_upload': {
+      const img = resolveInput(node, 'image', outputs, wf) || d.uploaded || '';
+      if (!img) appendNodeLog('warn', '未上传本地图片；请点击节点上传按钮，或从连线接入。');
+      else appendNodeLog('success', `📥 母图已就绪（${typeof img === 'string' && img.startsWith('data:image') ? Math.ceil(img.length/1400) + 'KB' : '图片'}），可连接到 ${(def.outputs||[]).length - 1} 个子分支。`);
+      node._lastOutputPreview = `母图节点：可分支到 ${(def.outputs||[]).length} 个子节点。`;
+      return fanOut(def, 'image', img);
+    }
+    case 'media_vid_upload': {
+      const vid = resolveInput(node, 'video', outputs, wf) || d.uploaded || '';
+      if (!vid) appendNodeLog('warn', '未上传本地视频；请点击节点上传按钮，或从连线接入。');
+      else appendNodeLog('success', `📥 母视频已就绪，可连接到 ${(def.outputs||[]).length - 1} 个子分支。`);
+      node._lastOutputPreview = `母视频节点：可分支到 ${(def.outputs||[]).length} 个子节点。`;
+      return fanOut(def, 'video', vid);
+    }
+
+    // ---- 🔱 分支器 ----
+    case 'util_branch_img': {
+      const img = resolveInput(node, 'image', outputs, wf);
+      if (!img) appendNodeLog('warn', '无输入图片可分流，请连线或直接上传。');
+      const r = {};
+      (def.outputs || []).forEach(p => { r[p.key] = img; });
+      return r;
+    }
+    case 'util_branch_vid': {
+      const vid = resolveInput(node, 'video', outputs, wf);
+      if (!vid) appendNodeLog('warn', '无输入视频可分流，请连线或直接上传。');
+      const r = {};
+      (def.outputs || []).forEach(p => { r[p.key] = vid; });
+      return r;
+    }
+    case 'util_branch_text': {
+      const text = resolveInput(node, 'text', outputs, wf);
+      const r = {};
+      (def.outputs || []).forEach(p => { r[p.key] = text; });
+      return r;
     }
 
     // ---- 🖼 图像类 ----
@@ -11921,14 +12426,13 @@ async function execNode(node, outputs) {
       };
       if (styleBoosts[style]) pos += styleBoosts[style];
       appendNodeLog('info', `风格预设：${style} · 正向词 ${pos.length} 字 · 反向词 ${neg.length} 字`);
-      return { positive: pos, negative: neg };
+      return { positive: pos, negative: neg, pos2: pos, neg2: neg };
     }
 
     case 'img_text2img':
     case 'img_img2img': {
       appendNodeLog('warn', '⚠️ 文/图生图需要 SD/ComfyUI/Midjourney 后端生成，当前在「模拟执行」：生成占位预览图。');
       await sleep(600);
-      // 用 canvas 生成占位图
       const canvas = document.createElement('canvas');
       const ratio = d.ratio || '1:1';
       const sizeMap = { '1:1': [512,512], '3:4': [384,512], '4:3': [512,384], '9:16': [288,512], '16:9': [512,288] };
@@ -11938,38 +12442,42 @@ async function execNode(node, outputs) {
       const g = ctx.createLinearGradient(0,0,W,H);
       g.addColorStop(0, '#0f2027'); g.addColorStop(0.5, '#203a43'); g.addColorStop(1, '#2c5364');
       ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+      // 如果有输入参考图（fallback 或 wire），叠加半透明作为基于原图生成的视觉提示
+      if (node.typeKey === 'img_img2img') {
+        const ref = resolveInput(node, 'image', outputs, wf);
+        if (typeof ref === 'string' && ref.startsWith('data:image')) {
+          try { await new Promise(r2 => { const im = new Image(); im.onload = () => { ctx.globalAlpha = 0.4; ctx.drawImage(im, 0, 0, W, H); ctx.globalAlpha = 1; r2(); }; im.onerror = r2; im.src = ref; }); } catch(e) {}
+        }
+      }
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.font = `bold ${Math.floor(W/18)}px sans-serif`; ctx.textAlign = 'center';
-      ctx.fillText('生成图占位', W/2, H/2 - 10);
+      ctx.fillText(node.typeKey==='img_img2img' ? '图生图 占位' : '文生图 占位', W/2, H/2 - 10);
       ctx.font = `${Math.floor(W/30)}px sans-serif`; ctx.fillStyle = 'rgba(255,255,255,0.6)';
       ctx.fillText(`${ratio} · ${W}x${H}`, W/2, H/2 + 20);
       ctx.fillText(new Date().toLocaleString(), W/2, H/2 + 48);
       const dataUrl = canvas.toDataURL('image/png');
-      node._lastOutputPreview = `[生成图像 ${W}x${H} · 占位预览]`;
-      return { image: dataUrl };
+      node._lastOutputPreview = `[生成图像 ${W}x${H} · 可分支到 ${(def.outputs||[]).length} 个子节点]`;
+      return fanOut(def, 'image', dataUrl);
     }
 
     case 'img_controlnet': {
-      const conn = wf.connections.find(c => c.to === node.id);
-      const refImg = conn ? (outputs[conn.from] || {})[conn.fromPort] : '';
-      appendNodeLog('info', `ControlNet 类型=${d.type||'Canny'}，权重=${d.weight||0.8}`);
+      const refImg = resolveInput(node, 'image', outputs, wf);
+      appendNodeLog('info', `ControlNet 类型=${d.type||'Canny'}，权重=${d.weight||0.85}`);
       return {
-        cn_out: `[ControlNet ${d.type||'IPAdapter'} 锁定形态] 权重=${d.weight||0.8}`,
+        cn_out: `[ControlNet ${d.type||'IPAdapter'} 锁定形态] 权重=${d.weight||0.85}`,
         positive: refImg ? '<使用参考图正向特征>' : '',
       };
     }
 
     case 'img_preprocess': {
-      const conn = wf.connections.find(c => c.to === node.id);
-      const img = conn ? (outputs[conn.from] || {})[conn.fromPort] : '';
+      const img = resolveInput(node, 'image', outputs, wf);
       appendNodeLog('info', `预处理动作：${d.action||'AI自动抠图'}`);
       node._lastOutputPreview = `已完成预处理：${d.action||'AI自动抠图'}（实际抠图需后端算法）`;
-      return { image: img || '[预处理后图像]' };
+      return fanOut(def, 'image', img || '[预处理后图像]');
     }
 
     case 'img_preview': {
-      const conn = wf.connections.find(c => c.to === node.id);
-      const img = conn ? (outputs[conn.from] || {})[conn.fromPort] : '';
+      const img = resolveInput(node, 'image', outputs, wf);
       if (typeof img === 'string' && img.startsWith('data:image')) {
         const a = document.createElement('a');
         a.href = img; a.download = (d.filename || 'image') + '.png'; a.click();
@@ -11985,9 +12493,17 @@ async function execNode(node, outputs) {
     case 'v_img2vid': {
       appendNodeLog('warn', '⚠️ 视频生成需要 Runway/Pika/Sora 等后端；当前以「模拟执行」输出描述文件。');
       await sleep(800);
-      const txt = `【模拟视频输出 · ${d.duration||4}秒】\n提示词：${interpolate(d.prompt||'', node, outputs, wf).slice(0,100)}\n运镜：${d.camera||'柔和'} · 运动幅度：${d.motion||'中'}`;
+      let refLog = '';
+      if (node.typeKey === 'v_img2vid') {
+        const img = resolveInput(node, 'image', outputs, wf);
+        refLog = typeof img === 'string' && img.startsWith('data:image') ? `（输入图：${Math.ceil(img.length/1400)}KB）` : '（输入图：未上传/未连接）';
+      } else {
+        const r = resolveInput(node, 'refImage', outputs, wf);
+        if (r) refLog = `（参考图：${Math.ceil(r.length/1400)}KB）`;
+      }
+      const txt = `【模拟视频输出 · ${d.duration||4}秒】${refLog}\n提示词：${interpolate(d.prompt||'', node, outputs, wf).slice(0,100)}\n运镜：${d.camera||'柔和'} · 运动幅度：${d.motion||'中'}`;
       node._lastOutputPreview = txt;
-      return { video: txt };
+      return fanOut(def, 'video', txt);
     }
 
     case 'v_tts': {
@@ -11995,19 +12511,22 @@ async function execNode(node, outputs) {
       appendNodeLog('info', `TTS · 发音人=${d.voice||'磁性男声'} · 语速=${d.speed||1} · 文本长度=${text.length}`);
       appendNodeLog('warn', 'TTS需调用对应厂商（阿里/腾讯/微软）API，当前为模拟执行，输出描述文本。');
       await sleep(300);
-      return { audio: `[TTS 音频] 发音人=${d.voice||'磁性男声'}：${text.slice(0,80)}${text.length>80?'…':''}` };
+      const aud = `[TTS 音频] 发音人=${d.voice||'磁性男声'}：${text.slice(0,80)}${text.length>80?'…':''}`;
+      return fanOut(def, 'audio', aud);
     }
 
     case 'v_bgm': {
       appendNodeLog('info', `BGM · 风格=${d.style||'轻商务'} · 时长=${d.duration||30}s · 音量=${d.volume||0.5}`);
-      return { audio: `[BGM ${d.style||'轻商务'}] ${d.duration||30}s 音量${d.volume||0.5}` };
+      const aud = `[BGM ${d.style||'轻商务'}] ${d.duration||30}s 音量${d.volume||0.5}`;
+      return fanOut(def, 'audio', aud);
     }
 
     case 'v_compose': {
       appendNodeLog('warn', '⚠️ 完整视频拼接成片（多片段+配音+BGM+字幕）建议导出 ComfyUI JSON 在本地 ComfyUI/FFmpeg 执行。当前输出「合成描述」。');
       await sleep(500);
       node._lastOutputPreview = `合成参数：${d.resolution||''} / 转场=${d.transition||'淡入淡出'} / 字幕=${d.subtitles||'自动'}`;
-      return { video: `[成片描述] ${d.resolution||''} · 转场=${d.transition||'淡入淡出'} · 字幕=${d.subtitles||'自动'} · 已合成 ${(new Date()).toLocaleTimeString()}` };
+      const vid = `[成片描述] ${d.resolution||''} · 转场=${d.transition||'淡入淡出'} · 字幕=${d.subtitles||'自动'} · 已合成 ${(new Date()).toLocaleTimeString()}`;
+      return fanOut(def, 'video', vid);
     }
 
     case 'v_export': {
@@ -12026,8 +12545,7 @@ async function execNode(node, outputs) {
         connections: wf.connections,
       };
       if (mode === '在浏览器中预览下载' || mode.includes('预览')) {
-        const conn = wf.connections.find(c => c.to === node.id);
-        const v = conn ? (outputs[conn.from] || {})[conn.fromPort] : '';
+        const v = resolveInput(node, 'video', outputs, wf);
         if (typeof v === 'string') {
           const blob = new Blob([v], { type: 'text/plain' });
           const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename + '.txt'; a.click();
