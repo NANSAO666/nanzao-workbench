@@ -3056,51 +3056,150 @@
   /* ==================== 权限系统样式 ==================== */
   .auth-badge {
     display:inline-flex;align-items:center;gap:6px;
-    padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;
+    padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;
     border:1px solid transparent;
   }
-  .auth-lv-0 { background:rgba(156,163,175,0.12);color:#9ca3af;border-color:rgba(156,163,175,0.25); }
-  .auth-lv-1 { background:rgba(34,197,94,0.12);color:#22c55e;border-color:rgba(34,197,94,0.3); }
-  .auth-lv-2 { background:rgba(59,130,246,0.12);color:#3b82f6;border-color:rgba(59,130,246,0.3); }
-  .auth-lv-3 { background:rgba(168,85,247,0.12);color:#a855f7;border-color:rgba(168,85,247,0.3); }
-  .auth-lv-4 { background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(239,68,68,0.12));color:#fbbf24;border-color:rgba(251,191,36,0.4); }
+  .auth-lv-0 { background:linear-gradient(135deg,rgba(156,163,175,0.15),rgba(107,114,128,0.1));color:#d1d5db;border-color:rgba(156,163,175,0.3); }
+  .auth-lv-1 { background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(16,185,129,0.1));color:#4ade80;border-color:rgba(34,197,94,0.35); }
+  .auth-lv-2 { background:linear-gradient(135deg,rgba(59,130,246,0.18),rgba(99,102,241,0.1));color:#60a5fa;border-color:rgba(59,130,246,0.35); }
+  .auth-lv-3 { background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(236,72,153,0.1));color:#c084fc;border-color:rgba(168,85,247,0.35); }
+  .auth-lv-4 { background:linear-gradient(135deg,rgba(251,191,36,0.22),rgba(239,68,68,0.15));color:#fcd34d;border-color:rgba(251,191,36,0.5);box-shadow:0 0 20px rgba(251,191,36,0.15); }
 
   .auth-card {
-    position:relative;overflow:hidden;
-    background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(168,85,247,0.04));
-    border:1px solid rgba(34,197,94,0.2);
+    position:relative;overflow:visible;
+    background:linear-gradient(145deg,rgba(20,22,28,0.95),rgba(24,26,34,0.9));
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:18px;
+    box-shadow:0 8px 40px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.06);
   }
   .auth-card::before {
-    content:'';position:absolute;top:-50%;right:-30%;width:300px;height:300px;
-    background:radial-gradient(circle,rgba(34,197,94,0.12),transparent 60%);
+    content:'';position:absolute;top:-1px;left:20px;right:20px;height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    opacity:0.6;
+  }
+  .auth-card::after {
+    content:'';position:absolute;top:0;right:0;width:200px;height:200px;
+    background:radial-gradient(circle at top right,rgba(34,197,94,0.06),transparent 70%);
     pointer-events:none;
   }
-  .auth-level-row { display:flex;align-items:center;gap:14px;flex-wrap:wrap; }
-  .auth-level-name { font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
-  .auth-level-desc { font-size:13px;color:var(--text-secondary);margin-top:4px; }
-  .auth-cust-id { font-size:12px;color:var(--text-tertiary);font-family:ui-monospace,monospace; }
 
-  .auth-activate-row { display:flex;gap:10px;margin-top:16px;flex-wrap:wrap; }
+  .auth-hero {
+    position:relative;
+    padding:24px 22px 20px;
+    background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(168,85,247,0.08),rgba(59,130,246,0.05));
+    border-radius:14px 14px 0 0;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    margin:-1px -1px 0 -1px;
+  }
+  .auth-hero::after {
+    content:'';position:absolute;bottom:-1px;left:10%;right:10%;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(34,197,94,0.4),transparent);
+  }
+  .auth-level-row { display:flex;align-items:flex-start;gap:0;flex-wrap:wrap; }
+  .auth-level-info { flex:1;min-width:200px; }
+  .auth-level-name { font-size:24px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent-2),#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .auth-lv-4 .auth-level-name { background:linear-gradient(135deg,#fbbf24,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .auth-lv-3 .auth-level-name { background:linear-gradient(135deg,#c084fc,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .auth-lv-2 .auth-level-name { background:linear-gradient(135deg,#60a5fa,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .auth-lv-1 .auth-level-name { background:linear-gradient(135deg,#4ade80,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .auth-level-desc { font-size:13px;color:var(--text-secondary);margin-top:6px;line-height:1.5; }
+  .auth-cust-id { font-size:12px;color:var(--text-tertiary);font-family:ui-monospace,monospace;margin-top:4px; }
+
+  .auth-feat-section {
+    padding:18px 22px;
+  }
+  .auth-feat-title {
+    font-size:13px;font-weight:600;color:var(--text-secondary);
+    margin-bottom:12px;display:flex;align-items:center;gap:8px;
+  }
+  .auth-feat-title::before {
+    content:'';width:3px;height:14px;border-radius:2px;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+  }
+  .auth-feat-list { margin-top:0;display:grid;grid-template-columns:repeat(2,1fr);gap:10px; }
+  .auth-feat-item {
+    padding:10px 14px;border-radius:12px;
+    font-size:12.5px;display:flex;align-items:center;gap:10px;
+    background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);
+    transition:all 0.2s ease;
+  }
+  .auth-feat-item.ok {
+    color:#86efac;
+    background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.02));
+    border-color:rgba(34,197,94,0.2);
+  }
+  .auth-feat-item.lock {
+    color:rgba(255,255,255,0.35);
+    background:rgba(255,255,255,0.015);
+    border-color:rgba(255,255,255,0.04);
+  }
+  .auth-feat-item .feat-dot {
+    width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  }
+  .auth-feat-item.ok .feat-dot { background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6); }
+  .auth-feat-item.lock .feat-dot { background:rgba(255,255,255,0.2); }
+  .auth-feat-item .feat-label { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .auth-feat-item .feat-require {
+    font-size:10.5px;padding:2px 7px;border-radius:8px;
+    background:rgba(255,255,255,0.05);
+    color:rgba(255,255,255,0.35);
+    white-space:nowrap;
+  }
+
+  .auth-activate-section {
+    padding:18px 22px 22px;
+    border-top:1px solid rgba(255,255,255,0.06);
+    background:rgba(0,0,0,0.2);
+    border-radius:0 0 17px 17px;
+    margin:0 -1px -1px -1px;
+  }
+  .auth-activate-title {
+    font-size:13px;font-weight:600;color:var(--text-secondary);
+    margin-bottom:12px;display:flex;align-items:center;gap:8px;
+  }
+  .auth-activate-title::before {
+    content:'';width:3px;height:14px;border-radius:2px;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+  }
+  .auth-activate-row { display:flex;gap:10px;flex-wrap:wrap;align-items:center; }
   .auth-key-input {
     flex:1;min-width:200px;
-    padding:11px 14px;border-radius:10px;
-    background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);
+    padding:12px 16px;border-radius:12px;
+    background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.08);
     color:var(--text-primary);font-size:13px;font-family:ui-monospace,monospace;
-    outline:none;transition:all .2s;
+    outline:none;transition:all 0.25s ease;
   }
-  .auth-key-input:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(34,197,94,0.15); }
+  .auth-key-input::placeholder { color:rgba(255,255,255,0.25); }
+  .auth-key-input:focus {
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(34,197,94,0.12),0 4px 20px rgba(34,197,94,0.08);
+    background:rgba(0,0,0,0.6);
+  }
+  .auth-activate-btn {
+    padding:12px 20px;border-radius:12px;border:none;cursor:pointer;
+    font-weight:600;font-size:13px;color:#fff;
+    background:linear-gradient(135deg,#22c55e,#16a34a);
+    box-shadow:0 4px 16px rgba(34,197,94,0.3);
+    transition:all 0.2s ease;
+    white-space:nowrap;
+  }
+  .auth-activate-btn:hover { transform:translateY(-1px);box-shadow:0 6px 20px rgba(34,197,94,0.4); }
+  .auth-activate-btn:active { transform:translateY(0); }
+  .auth-reset-btn {
+    padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.03);color:var(--text-secondary);
+    font-size:12px;cursor:pointer;transition:all 0.2s;
+    white-space:nowrap;
+  }
+  .auth-reset-btn:hover {
+    background:rgba(239,68,68,0.1);
+    border-color:rgba(239,68,68,0.3);
+    color:#fca5a5;
+  }
 
-  .auth-feat-list { margin-top:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px; }
-  .auth-feat-item {
-    padding:8px 12px;border-radius:8px;
-    font-size:12px;display:flex;align-items:center;gap:8px;
-    background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
+  .auth-footer {
+    margin-top:14px;font-size:11px;color:rgba(255,255,255,0.2);text-align:center;
   }
-  .auth-feat-item.ok { color:#86efac;border-color:rgba(34,197,94,0.15); }
-  .auth-feat-item.lock { color:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.04); }
-  .auth-feat-item .dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
-  .auth-feat-item.ok .dot { background:#22c55e; }
-  .auth-feat-item.lock .dot { background:rgba(255,255,255,0.2); }
 
   /* 已删除无效的 .lock-mask 与 .lock-tag 整块（仅被已删除死代码引用） */
 
@@ -3239,6 +3338,13 @@
 
   @media (max-width: 768px) {
     .auth-feat-list { grid-template-columns:1fr; }
+    .auth-hero { padding:20px 18px 16px; }
+    .auth-level-row { gap:0; }
+    .auth-level-name { font-size:20px; }
+    .auth-feat-section { padding:16px 18px; }
+    .auth-activate-section { padding:16px 18px 18px; }
+    .auth-activate-row { flex-direction:column; align-items:stretch; }
+    .auth-activate-btn, .auth-reset-btn { width:100%; }
     .admin-terminal { height:88vh; }
   }
 </style>
@@ -9875,41 +9981,49 @@ function renderAuthPanelHTML() {
   const badgeCls = 'auth-lv-' + lv;
   const isDemo = lv === 0;
   const custBadge = auth.custId ? ' · ' + escapeHtml(auth.custId) : '';
-  const activatedAt = auth.activatedAt ? '<div class="auth-cust-id">激活时间：' + new Date(auth.activatedAt).toLocaleString() + '</div>' : '';
-  const privateDeployTag = lv >= 4 ? '<span style="font-size:11px;padding:3px 8px;border-radius:12px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);margin-left:8px;">✨ 私有化部署可用</span>' : '';
-  const resetBtn = !isDemo ? `<button class="btn btn-secondary" onclick="resetAuthToDemo()">↺ 重置授权</button>` : '';
+  const activatedAt = auth.activatedAt ? '<div class="auth-cust-id">📅 激活时间：' + new Date(auth.activatedAt).toLocaleString() + '</div>' : '';
+  const privateDeployTag = lv >= 4 ? '<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(239,68,68,0.15));color:#fcd34d;border:1px solid rgba(251,191,36,0.35);">✨ 私有化部署可用</span>' : '';
+  const resetBtn = !isDemo ? `<button class="auth-reset-btn" onclick="resetAuthToDemo()">↺ 重置授权</button>` : '';
 
   return `
-    <div class="card auth-card" style="padding:20px;margin-bottom:20px;">
-      <div class="auth-level-row">
-        <div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <div class="auth-level-name">${lvNames[lv]}</div>
-            <span class="auth-badge ${badgeCls}">LV.${lv}${custBadge}</span>
-            ${privateDeployTag}
+    <div class="auth-card ${badgeCls}" style="margin-bottom:20px;">
+      <!-- Hero 区域：等级展示 -->
+      <div class="auth-hero">
+        <div class="auth-level-row">
+          <div class="auth-level-info">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <div class="auth-level-name">${lvNames[lv]}</div>
+              <span class="auth-badge ${badgeCls}">LV.${lv}${custBadge}</span>
+              ${privateDeployTag}
+            </div>
+            <div class="auth-level-desc">${lvDescs[lv]}</div>
+            ${activatedAt}
           </div>
-          <div class="auth-level-desc">${lvDescs[lv]}</div>
-          ${activatedAt}
         </div>
       </div>
 
-      <div class="auth-feat-list">
-        ${feats.map(f => `
-          <div class="auth-feat-item ${lv >= f.lv ? 'ok' : 'lock'}">
-            <span class="dot"></span>
-            <span>${f.k}</span>
-            ${lv >= f.lv ? '' : `<span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,0.3);">需${lvNames[f.lv]}+</span>`}
-          </div>`).join('')}
+      <!-- 功能列表 -->
+      <div class="auth-feat-section">
+        <div class="auth-feat-title">功能权限</div>
+        <div class="auth-feat-list">
+          ${feats.map(f => `
+            <div class="auth-feat-item ${lv >= f.lv ? 'ok' : 'lock'}">
+              <span class="feat-dot"></span>
+              <span class="feat-label">${f.k}</span>
+              ${lv >= f.lv ? '' : `<span class="feat-require">需${lvNames[f.lv]}+</span>`}
+            </div>`).join('')}
+        </div>
       </div>
 
-      <div class="auth-activate-row">
-        <input id="__nz_auth_key_input" class="auth-key-input" type="text" placeholder="粘贴套餐密钥：例如 bmFnemFp...（Base64编码）" spellcheck="false" autocomplete="off">
-        <button class="btn btn-primary" style="background:linear-gradient(135deg,#22c55e,#4ade80);border:none;" onclick="activateAuthKey('__nz_auth_key_input')">🔓 激活密钥</button>
-        ${resetBtn}
-      </div>
-
-      <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,0.25);text-align:center;">
-        前端软授权 · 仅限本机生效 · 管理员终端：Ctrl+Shift+O / 标题连击5次
+      <!-- 激活密钥区域 -->
+      <div class="auth-activate-section">
+        <div class="auth-activate-title">激活套餐密钥</div>
+        <div class="auth-activate-row">
+          <input id="__nz_auth_key_input" class="auth-key-input" type="text" placeholder="粘贴密钥以激活高级套餐..." spellcheck="false" autocomplete="off">
+          <button class="auth-activate-btn" onclick="activateAuthKey('__nz_auth_key_input')">🔓 激活</button>
+          ${resetBtn}
+        </div>
+        <div class="auth-footer">🔒 本地软授权 · 数据仅存本机</div>
       </div>
     </div>`;
 }
