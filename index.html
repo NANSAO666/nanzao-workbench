@@ -3053,6 +3053,202 @@
     .comfyui-wrap { height: calc(100dvh - 400px) !important; }
     .wf-log-panel { max-height: 100px; }
   }
+
+  /* ==================== 权限系统样式 ==================== */
+  .auth-badge {
+    display:inline-flex;align-items:center;gap:6px;
+    padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;
+    border:1px solid transparent;
+  }
+  .auth-lv-0 { background:rgba(156,163,175,0.12);color:#9ca3af;border-color:rgba(156,163,175,0.25); }
+  .auth-lv-1 { background:rgba(34,197,94,0.12);color:#22c55e;border-color:rgba(34,197,94,0.3); }
+  .auth-lv-2 { background:rgba(59,130,246,0.12);color:#3b82f6;border-color:rgba(59,130,246,0.3); }
+  .auth-lv-3 { background:rgba(168,85,247,0.12);color:#a855f7;border-color:rgba(168,85,247,0.3); }
+  .auth-lv-4 { background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(239,68,68,0.12));color:#fbbf24;border-color:rgba(251,191,36,0.4); }
+
+  .auth-card {
+    position:relative;overflow:hidden;
+    background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(168,85,247,0.04));
+    border:1px solid rgba(34,197,94,0.2);
+  }
+  .auth-card::before {
+    content:'';position:absolute;top:-50%;right:-30%;width:300px;height:300px;
+    background:radial-gradient(circle,rgba(34,197,94,0.12),transparent 60%);
+    pointer-events:none;
+  }
+  .auth-level-row { display:flex;align-items:center;gap:14px;flex-wrap:wrap; }
+  .auth-level-name { font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .auth-level-desc { font-size:13px;color:var(--text-secondary);margin-top:4px; }
+  .auth-cust-id { font-size:12px;color:var(--text-tertiary);font-family:ui-monospace,monospace; }
+
+  .auth-activate-row { display:flex;gap:10px;margin-top:16px;flex-wrap:wrap; }
+  .auth-key-input {
+    flex:1;min-width:200px;
+    padding:11px 14px;border-radius:10px;
+    background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);
+    color:var(--text-primary);font-size:13px;font-family:ui-monospace,monospace;
+    outline:none;transition:all .2s;
+  }
+  .auth-key-input:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(34,197,94,0.15); }
+
+  .auth-feat-list { margin-top:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px; }
+  .auth-feat-item {
+    padding:8px 12px;border-radius:8px;
+    font-size:12px;display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
+  }
+  .auth-feat-item.ok { color:#86efac;border-color:rgba(34,197,94,0.15); }
+  .auth-feat-item.lock { color:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.04); }
+  .auth-feat-item .dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+  .auth-feat-item.ok .dot { background:#22c55e; }
+  .auth-feat-item.lock .dot { background:rgba(255,255,255,0.2); }
+
+  .lock-mask { filter:grayscale(0.6) brightness(0.7);pointer-events:none!important;opacity:0.55; }
+  .lock-tag {
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 8px;border-radius:4px;
+    background:rgba(239,68,68,0.12);color:#f87171;font-size:11px;font-weight:500;
+    border:1px solid rgba(239,68,68,0.25);
+    margin-left:6px;
+  }
+
+  /* ==================== 管理员终端控制台 ==================== */
+  .admin-terminal-overlay {
+    position:fixed;inset:0;z-index:999999;
+    background:rgba(0,0,0,0.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .admin-terminal-overlay.open { display:flex; }
+
+  .admin-terminal {
+    width:100%;max-width:860px;height:80vh;max-height:620px;
+    background:linear-gradient(180deg,#060806,#030a04);
+    border:1px solid rgba(34,197,94,0.35);
+    border-radius:14px;
+    box-shadow:0 20px 80px rgba(0,0,0,0.8),0 0 60px rgba(34,197,94,0.1),inset 0 0 80px rgba(34,197,94,0.03);
+    display:flex;flex-direction:column;overflow:hidden;
+    font-family:'SF Mono','Menlo','Consolas','Courier New',ui-monospace,monospace;
+  }
+  .admin-terminal-header {
+    padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+    background:linear-gradient(180deg,rgba(34,197,94,0.08),transparent);
+    border-bottom:1px solid rgba(34,197,94,0.2);
+  }
+  .admin-terminal-title {
+    display:flex;align-items:center;gap:8px;
+    font-size:13px;font-weight:600;color:#4ade80;
+    letter-spacing:0.5px;
+  }
+  .admin-terminal-title::before {
+    content:'';width:8px;height:8px;border-radius:50%;
+    background:#22c55e;box-shadow:0 0 8px #22c55e;
+    animation:termPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes termPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .admin-terminal-close {
+    width:30px;height:30px;border-radius:8px;
+    background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);
+    color:#f87171;font-size:14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .15s;
+  }
+  .admin-terminal-close:hover { background:rgba(239,68,68,0.25); }
+
+  .admin-terminal-body {
+    flex:1;overflow-y:auto;padding:16px 18px;
+    font-size:13.5px;line-height:1.75;
+    color:rgba(220,255,225,0.88);
+  }
+  .term-line { white-space:pre-wrap;word-break:break-all; }
+  .term-prompt { color:#22c55e;font-weight:700; }
+  .term-prompt-user { color:#4ade80; }
+  .term-input-cmd { color:#a7f3d0; }
+  .term-out { color:rgba(220,255,225,0.75); }
+  .term-err { color:#f87171; }
+  .term-warn { color:#fbbf24; }
+  .term-success { color:#22c55e;font-weight:600; }
+  .term-info { color:#60a5fa; }
+  .term-mono { background:rgba(34,197,94,0.08);padding:2px 8px;border-radius:4px;color:#86efac;font-size:12.5px; }
+
+  .term-key-row { display:flex;align-items:center;gap:10px;margin:4px 0;flex-wrap:wrap; }
+  .term-key-box {
+    background:rgba(0,0,0,0.5);border:1px solid rgba(34,197,94,0.3);
+    padding:8px 12px;border-radius:6px;
+    color:#86efac;font-family:inherit;font-size:12.5px;
+    flex:1;min-width:200px;word-break:break-all;
+  }
+  .term-copy-btn {
+    padding:7px 14px;border-radius:6px;cursor:pointer;
+    background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.35);
+    color:#4ade80;font-size:12px;font-weight:600;font-family:inherit;
+    transition:all .15s;flex-shrink:0;
+  }
+  .term-copy-btn:hover { background:rgba(34,197,94,0.28); }
+  .term-copy-btn.copied { background:rgba(34,197,94,0.35); }
+
+  .admin-terminal-input-row {
+    padding:12px 16px;border-top:1px solid rgba(34,197,94,0.18);
+    background:rgba(34,197,94,0.03);
+    display:flex;align-items:center;gap:10px;
+  }
+  .admin-terminal-input {
+    flex:1;
+    background:transparent;border:none;outline:none;
+    color:#a7f3d0;font-family:inherit;font-size:13.5px;
+    caret-color:#22c55e;
+  }
+  .admin-terminal-submit {
+    padding:7px 18px;border-radius:6px;cursor:pointer;
+    background:linear-gradient(135deg,rgba(34,197,94,0.3),rgba(34,197,94,0.15));
+    border:1px solid rgba(34,197,94,0.4);
+    color:#4ade80;font-size:12.5px;font-weight:600;font-family:inherit;
+    transition:all .15s;
+  }
+  .admin-terminal-submit:hover { background:linear-gradient(135deg,rgba(34,197,94,0.45),rgba(34,197,94,0.25)); }
+
+  /* ==================== 管理员密码弹窗 ==================== */
+  .admin-pwd-overlay {
+    position:fixed;inset:0;z-index:999998;
+    background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .admin-pwd-overlay.open { display:flex; }
+  .admin-pwd-box {
+    width:100%;max-width:360px;
+    background:linear-gradient(180deg,#060a07,#030705);
+    border:1px solid rgba(34,197,94,0.3);
+    border-radius:14px;padding:24px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.8),0 0 40px rgba(34,197,94,0.08);
+  }
+  .admin-pwd-title {
+    font-size:16px;font-weight:700;color:#4ade80;margin-bottom:6px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .admin-pwd-sub { font-size:12.5px;color:var(--text-secondary);margin-bottom:18px; }
+  .admin-pwd-input {
+    width:100%;padding:12px 14px;border-radius:10px;
+    background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.08);
+    color:var(--text-primary);font-size:14px;outline:none;
+    font-family:ui-monospace,monospace;letter-spacing:2px;
+    transition:all .2s;margin-bottom:14px;
+  }
+  .admin-pwd-input:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(34,197,94,0.15); }
+  .admin-pwd-actions { display:flex;gap:10px; }
+  .admin-pwd-cancel {
+    flex:1;padding:10px;border-radius:10px;cursor:pointer;
+    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+    color:var(--text-secondary);font-size:13px;font-weight:500;
+  }
+  .admin-pwd-confirm {
+    flex:1;padding:10px;border-radius:10px;cursor:pointer;
+    background:linear-gradient(135deg,#22c55e,#4ade80);border:none;
+    color:#000;font-size:13px;font-weight:700;
+  }
+
+  @media (max-width: 768px) {
+    .auth-feat-list { grid-template-columns:1fr; }
+    .admin-terminal { height:88vh; }
+  }
 </style>
 </head>
 <body>
@@ -12694,6 +12890,715 @@ async function syncWfToCloud() {
       window._wfSyncT = setTimeout(syncWfToCloud, 1200);
     }
   };
+})();
+
+/* ============================================================
+ * 【南崽工作台 · 前端软授权系统】
+ * 重要说明：
+ * 1. 本系统为前端软授权，运行于浏览器本地，无法做到绝对防破解；
+ * 2. 本工具只交付成品使用权，禁止倒卖源码、禁止二次分发销售；
+ * 3. 管理员密码可在下方 NZ_ADMIN_PWD 常量处自行修改；
+ * 4. 密钥盐值：nanzaiworkbench；生成/校验逻辑全部在前端本地完成，不联网。
+ * ============================================================ */
+(function() {
+  // ---------- 可配置常量 ----------
+  const NZ_ADMIN_PWD = 'nzadmin888';          // 管理员控制台密码，可自行修改
+  const NZ_AUTH_SALT = 'nanzaiworkbench';     // 密钥盐值，请勿修改
+  const NZ_AUTH_STORE = 'nz_auth';            // localStorage 键名
+  const NZ_AUTH_TITLE_HITS = 5;               // 标题连击次数（移动端）
+  const NZ_AUTH_HIT_WINDOW = 1500;            // 连击时间窗口 ms
+
+  // ---------- 权限等级定义 ----------
+  // 0=演示版 1=体验版 2=专业版 3=商业版 4=源码授权版
+  window.AUTH_LEVEL = {
+    DEMO: 0,
+    TRIAL: 1,
+    PRO: 2,
+    BUSINESS: 3,
+    SOURCE: 4,
+  };
+  const LEVEL_NAMES = {
+    0: '演示版',
+    1: '体验版',
+    2: '专业版',
+    3: '商业版',
+    4: '源码授权版',
+  };
+  const LEVEL_SHORT_DESC = {
+    0: '基础功能体验，适合个人测试',
+    1: '解锁大部分功能，适合轻度创作者',
+    2: '全功能专业创作，素材批量导出',
+    3: '商业用途授权，全部前端功能无限制',
+    4: '含源码授权，支持私有化部署',
+  };
+
+  // ---------- 权限项清单 ----------
+  // 每项说明：最小需要的等级，低于该等级即锁定
+  const PERM = {
+    BASIC_CHAT:       0,   // 基础AI对话
+    BASIC_SKILLS:     0,   // 基础技能包
+    BASIC_TEMPLATES:  0,   // 基础模板
+    ADV_TEMPLATES:    1,   // 高级模板（漫剧等）
+    VIDEO_NODES:      2,   // 视频节点
+    MATERIAL_DOWNLOAD:2,   // 素材下载
+    ADV_MANJU_TEMPLATES: 2, // 高级漫剧模板
+    BATCH_JSON_SINGLE:3,   // 单个JSON导出（其实所有等级都有）
+    BATCH_JSON_FULL:  3,   // 批量全套JSON打包导出
+    PRIVATE_DEPLOY:   4,   // 私有化部署入口
+    ALL_SKILLS:       2,   // 全部技能包
+    ALL_TEMPLATES:    2,   // 全部模板
+  };
+
+  // ---------- 对外核心工具函数 ----------
+  window.getAuth = function() {
+    try {
+      const raw = localStorage.getItem(NZ_AUTH_STORE);
+      if (!raw) return { level: 0, custId: null, activatedAt: null };
+      const obj = JSON.parse(raw);
+      const lv = parseInt(obj.level, 10);
+      if (isNaN(lv) || lv < 0 || lv > 4) return { level: 0, custId: null, activatedAt: null };
+      return {
+        level: lv,
+        custId: obj.custId || null,
+        activatedAt: obj.activatedAt || null,
+      };
+    } catch (e) {
+      return { level: 0, custId: null, activatedAt: null };
+    }
+  };
+
+  window.setAuth = function(obj) {
+    localStorage.setItem(NZ_AUTH_STORE, JSON.stringify(obj));
+  };
+
+  window.clearAuth = function() {
+    localStorage.removeItem(NZ_AUTH_STORE);
+  };
+
+  // 检查是否满足某权限项所需等级
+  window.checkPerm = function(permKey) {
+    const needLv = PERM[permKey];
+    if (needLv === undefined) return true; // 未定义默认开放
+    const auth = window.getAuth();
+    return auth.level >= needLv;
+  };
+
+  // 便捷判断：当前等级
+  window.getAuthLevel = function() { return window.getAuth().level; };
+  window.getAuthLevelName = function(lv) {
+    lv = (lv === undefined || lv === null) ? window.getAuthLevel() : lv;
+    return LEVEL_NAMES[lv] || '演示版';
+  };
+
+  // ---------- 密钥生成 / 校验 ----------
+  // 约定密钥格式（明文JSON结构）：{ cid:客户ID, lv:等级, salt:盐值, ts:时间戳 }
+  // 再将 JSON -> btoa(base64) 生成密钥字符串
+  window.generateAuthKey = function(custId, level) {
+    const lv = parseInt(level, 10);
+    if (!custId) { toast('客户ID不能为空', 'error'); return null; }
+    if (isNaN(lv) || lv < 1 || lv > 4) { toast('等级必须在 1~4 之间', 'error'); return null; }
+    const payload = {
+      cid: String(custId),
+      lv: lv,
+      salt: NZ_AUTH_SALT,
+      ts: Date.now(),
+    };
+    try {
+      return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    } catch (e) {
+      return btoa(JSON.stringify(payload));
+    }
+  };
+
+  window.validateAndActivateAuthKey = function(keyStr) {
+    if (!keyStr || typeof keyStr !== 'string') return { ok: false, msg: '密钥为空' };
+    try {
+      let raw;
+      try {
+        raw = decodeURIComponent(escape(atob(keyStr.trim())));
+      } catch (e1) {
+        raw = atob(keyStr.trim());
+      }
+      const obj = JSON.parse(raw);
+      if (!obj || obj.salt !== NZ_AUTH_SALT) return { ok: false, msg: '无效套餐密钥' };
+      const lv = parseInt(obj.lv, 10);
+      if (!obj.cid || isNaN(lv) || lv < 1 || lv > 4) return { ok: false, msg: '无效套餐密钥' };
+      const authObj = {
+        level: lv,
+        custId: String(obj.cid),
+        activatedAt: Date.now(),
+      };
+      window.setAuth(authObj);
+      return { ok: true, auth: authObj };
+    } catch (e) {
+      return { ok: false, msg: '无效套餐密钥' };
+    }
+  };
+
+  // ---------- 激活 / 重置 UI 回调 ----------
+  window.activateAuthKey = function(inputId) {
+    const input = document.getElementById(inputId);
+    const key = input ? input.value.trim() : '';
+    const r = window.validateAndActivateAuthKey(key);
+    if (r.ok) {
+      toast('激活成功！当前套餐：' + LEVEL_NAMES[r.auth.level], 'success');
+      // 刷新个人账号页（如果正在看）
+      if (typeof renderProfile === 'function') {
+        const area = $('contentArea');
+        if (area && area.querySelector && area.querySelector('.auth-card')) renderProfile();
+      }
+    } else {
+      toast(r.msg, 'error');
+    }
+  };
+
+  window.resetAuthToDemo = function() {
+    if (!confirm('确定要重置授权吗？将回到演示版模式。')) return;
+    window.clearAuth();
+    toast('已重置授权，当前为演示版', 'info');
+    if (typeof renderProfile === 'function') {
+      const area = $('contentArea');
+      if (area && area.querySelector && area.querySelector('.auth-card')) renderProfile();
+    }
+  };
+
+  // ---------- 权限 UI 渲染辅助（模板页、画布页调用） ----------
+  // 返回：如果当前等级 < minLv 返回 HTML lock-tag，否则空串
+  window.authLockTag = function(minLv) {
+    const cur = window.getAuthLevel();
+    if (cur >= minLv) return '';
+    return `<span class="lock-tag">🔒 ${LEVEL_NAMES[minLv]}+</span>`;
+  };
+  // 元素类名：低等级则追加 lock-mask 样式类
+  window.authLockClass = function(minLv) {
+    return window.getAuthLevel() >= minLv ? '' : 'lock-mask';
+  };
+  // DOM级过滤：未达标直接不渲染，返回 true=允许渲染
+  window.authAllow = function(minLv) {
+    return window.getAuthLevel() >= minLv;
+  };
+
+  // ============================================================
+  // 管理员终端控制台 DOM + 命令系统
+  // ============================================================
+  function ensureTerminalDom() {
+    if (document.getElementById('__nz_admin_terminal')) return;
+    const tpl = `
+    <div class="admin-terminal-overlay" id="__nz_admin_terminal" onclick="__nzTermOverlayClick(event)">
+      <div class="admin-terminal" onclick="event.stopPropagation()">
+        <div class="admin-terminal-header">
+          <div class="admin-terminal-title">NANZAI ADMIN CONSOLE · v1.0</div>
+          <button class="admin-terminal-close" onclick="__nzCloseTerminal()" title="关闭">✕</button>
+        </div>
+        <div class="admin-terminal-body" id="__nz_term_body"></div>
+        <div class="admin-terminal-input-row">
+          <span style="color:#22c55e;font-weight:700;">➜</span>
+          <input id="__nz_term_input" class="admin-terminal-input" type="text" placeholder="输入命令，回车执行...  help 查看所有命令" spellcheck="false" autocomplete="off">
+          <button class="admin-terminal-submit" onclick="__nzRunTermCmd()">执行</button>
+        </div>
+      </div>
+    </div>
+    <div class="admin-pwd-overlay" id="__nz_admin_pwd" onclick="event.target.id==='__nz_admin_pwd'&&(__nzClosePwd())">
+      <div class="admin-pwd-box">
+        <div class="admin-pwd-title">🔐 管理员验证</div>
+        <div class="admin-pwd-sub">请输入管理员密码以打开控制台</div>
+        <input id="__nz_admin_pwd_input" class="admin-pwd-input" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')__nzVerifyPwd()">
+        <div class="admin-pwd-actions">
+          <button class="admin-pwd-cancel" onclick="__nzClosePwd()">取消</button>
+          <button class="admin-pwd-confirm" onclick="__nzVerifyPwd()">验证</button>
+        </div>
+      </div>
+    </div>`;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = tpl;
+    document.body.appendChild(wrap);
+    // 输入框回车执行
+    const inp = document.getElementById('__nz_term_input');
+    if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') __nzRunTermCmd(); });
+    __nzTermHistory = [];
+    __nzTermHistoryIdx = -1;
+    if (inp) inp.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowUp' && __nzTermHistory.length) {
+        e.preventDefault();
+        __nzTermHistoryIdx = Math.max(0, __nzTermHistoryIdx < 0 ? __nzTermHistory.length - 1 : __nzTermHistoryIdx - 1);
+        inp.value = __nzTermHistory[__nzTermHistoryIdx] || '';
+      } else if (e.key === 'ArrowDown' && __nzTermHistory.length) {
+        e.preventDefault();
+        __nzTermHistoryIdx++;
+        if (__nzTermHistoryIdx >= __nzTermHistory.length) { __nzTermHistoryIdx = -1; inp.value = ''; }
+        else inp.value = __nzTermHistory[__nzTermHistoryIdx] || '';
+      }
+    });
+  }
+
+  window.__nzTermOverlayClick = function(e) {
+    if (e.target.id === '__nz_admin_terminal') __nzCloseTerminal();
+  };
+  window.__nzCloseTerminal = function() {
+    const o = document.getElementById('__nz_admin_terminal');
+    if (o) o.classList.remove('open');
+  };
+  window.__nzOpenTerminal = function() {
+    ensureTerminalDom();
+    const o = document.getElementById('__nz_admin_terminal');
+    if (!o) return;
+    o.classList.add('open');
+    // 首次打开：显示欢迎横幅
+    const body = document.getElementById('__nz_term_body');
+    if (body && body.innerHTML.trim() === '') {
+      __nzTermPrintBanner();
+    }
+    setTimeout(function() {
+      const inp = document.getElementById('__nz_term_input');
+      if (inp) inp.focus();
+    }, 100);
+  };
+  window.__nzClosePwd = function() {
+    const o = document.getElementById('__nz_admin_pwd');
+    if (o) o.classList.remove('open');
+    const i = document.getElementById('__nz_admin_pwd_input');
+    if (i) i.value = '';
+  };
+  window.__nzOpenPwd = function() {
+    ensureTerminalDom();
+    const o = document.getElementById('__nz_admin_pwd');
+    if (!o) return;
+    o.classList.add('open');
+    setTimeout(function() {
+      const i = document.getElementById('__nz_admin_pwd_input');
+      if (i) i.focus();
+    }, 80);
+  };
+  window.__nzVerifyPwd = function() {
+    const i = document.getElementById('__nz_admin_pwd_input');
+    const v = i ? i.value : '';
+    if (v === NZ_ADMIN_PWD) {
+      __nzClosePwd();
+      __nzOpenTerminal();
+    } else {
+      toast('密码错误', 'error');
+      if (i) { i.value = ''; i.focus(); i.style.borderColor = '#ef4444'; setTimeout(()=>{i.style.borderColor='';},500); }
+    }
+  };
+
+  // 终端打印函数
+  function termPrint(html, cls) {
+    const body = document.getElementById('__nz_term_body');
+    if (!body) return;
+    const line = document.createElement('div');
+    line.className = 'term-line' + (cls ? ' ' + cls : '');
+    line.innerHTML = html;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }
+  function termPrintRaw(text, cls) { termPrint(escapeHtml(text).replace(/ /g,'&nbsp;'), cls); }
+
+  function __nzTermPrintBanner() {
+    termPrint('<span style="color:#22c55e;font-weight:800;font-size:15px;">╔══════════════════════════════════════════════════╗</span>');
+    termPrint('<span style="color:#22c55e;font-weight:800;font-size:15px;">║&nbsp;&nbsp;NANZAI WORKBENCH · ADMIN CONSOLE v1.0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;║</span>');
+    termPrint('<span style="color:#22c55e;font-weight:800;font-size:15px;">╚══════════════════════════════════════════════════╝</span>');
+    termPrint('');
+    termPrint('<span class="term-warn">⚠ 注意：本控制台仅前端本地运算，密钥不会上传到任何服务器。</span>');
+    termPrint('<span class="term-info">💡 输入 <span class="term-mono">help</span> 查看全部命令列表。</span>');
+    termPrint('');
+  }
+
+  window.__nzRunTermCmd = function() {
+    const inp = document.getElementById('__nz_term_input');
+    if (!inp) return;
+    const cmd = inp.value.trim();
+    inp.value = '';
+    if (!cmd) return;
+    __nzTermHistory.push(cmd);
+    __nzTermHistoryIdx = -1;
+    // 回显命令行
+    termPrint('<span class="term-prompt">➜</span> <span class="term-prompt-user">nanzai@admin</span>:<span class="term-info">~</span> <span class="term-input-cmd">$&nbsp;' + escapeHtml(cmd) + '</span>');
+
+    const parts = cmd.split(/\s+/).filter(Boolean);
+    const head = (parts[0] || '').toLowerCase();
+    switch (head) {
+      case 'help':    cmdHelp(); break;
+      case 'genkey':  cmdGenKey(parts.slice(1)); break;
+      case 'clearauth': cmdClearAuth(); break;
+      case 'showauth':  cmdShowAuth(); break;
+      case 'clear':   cmdClear(); break;
+      case 'exit':
+      case 'quit':    __nzCloseTerminal(); break;
+      default:
+        termPrint(`<span class="term-err">✗ 未知命令：${escapeHtml(head)}</span>，输入 <span class="term-mono">help</span> 查看命令列表`, 'term-err');
+    }
+  };
+
+  function cmdHelp() {
+    termPrint('');
+    termPrint('<span class="term-info">═══════ 命令列表 ═══════</span>');
+    termPrint('  <span class="term-mono">genkey &lt;客户ID&gt; &lt;等级&gt;</span>  &nbsp;生成套餐激活密钥，等级 1~4');
+    termPrint('  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;示例：<span class="term-mono">genkey cust_006 2</span>');
+    termPrint('  <span class="term-mono">clearauth</span>              &nbsp;清空本机当前授权（回到演示版）');
+    termPrint('  <span class="term-mono">showauth</span>               &nbsp;查看本机当前授权信息');
+    termPrint('  <span class="term-mono">clear</span>                  &nbsp;清空终端屏幕输出');
+    termPrint('  <span class="term-mono">help</span>                   &nbsp;显示本帮助');
+    termPrint('  <span class="term-mono">exit / quit</span>            &nbsp;关闭控制台');
+    termPrint('<span class="term-info">═══════════════════════════</span>');
+    termPrint('');
+  }
+
+  function cmdGenKey(args) {
+    if (!args || args.length < 2) {
+      termPrint('<span class="term-err">✗ 参数不足。</span> 用法：<span class="term-mono">genkey &lt;客户ID&gt; &lt;等级1~4&gt;</span>', 'term-err');
+      return;
+    }
+    const cid = args[0];
+    const lv = parseInt(args[1], 10);
+    if (isNaN(lv) || lv < 1 || lv > 4) {
+      termPrint('<span class="term-err">✗ 等级必须是 1~4 之间的整数</span>', 'term-err');
+      return;
+    }
+    const key = window.generateAuthKey(cid, lv);
+    if (!key) return; // 已toast
+    termPrint('<span class="term-success">✓ 密钥生成成功</span>');
+    termPrint(`客户ID：<span class="term-mono">${escapeHtml(cid)}</span> ｜ 套餐：<span class="term-mono">${LEVEL_NAMES[lv]}</span> ｜ 等级：<span class="term-mono">${lv}</span>`);
+    termPrint('<span style="color:rgba(255,255,255,0.4);font-size:12px;">密钥：</span>');
+    const keyRow = document.createElement('div');
+    keyRow.className = 'term-line term-key-row';
+    keyRow.innerHTML = `
+      <div class="term-key-box" id="__nz_key_box">${escapeHtml(key)}</div>
+      <button class="term-copy-btn" onclick="__nzCopyKey(this)">📋 复制</button>`;
+    document.getElementById('__nz_term_body').appendChild(keyRow);
+    document.getElementById('__nz_term_body').scrollTop = document.getElementById('__nz_term_body').scrollHeight;
+  }
+
+  window.__nzCopyKey = function(btn) {
+    const box = btn.previousElementSibling;
+    const txt = box ? box.textContent : '';
+    if (!txt) return;
+    try {
+      navigator.clipboard.writeText(txt).then(function() {
+        btn.textContent = '✓ 已复制';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = '📋 复制'; btn.classList.remove('copied'); }, 1500);
+      }).catch(function() {
+        const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        btn.textContent = '✓ 已复制';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = '📋 复制'; btn.classList.remove('copied'); }, 1500);
+      });
+    } catch (e) {
+      toast('复制失败，请手动选择复制', 'error');
+    }
+  };
+
+  function cmdClearAuth() {
+    window.clearAuth();
+    termPrint('<span class="term-success">✓ 本机授权已清空，已回到演示版模式。</span>');
+  }
+
+  function cmdShowAuth() {
+    const a = window.getAuth();
+    termPrint('');
+    termPrint('<span class="term-info">═══════ 当前授权信息 ═══════</span>');
+    termPrint(`套餐等级：<span class="term-mono">${a.level}</span>  →  <span style="color:#4ade80;font-weight:700;">${LEVEL_NAMES[a.level]}</span>`);
+    termPrint(`套餐描述：${LEVEL_SHORT_DESC[a.level]}`);
+    termPrint(`客户ID：${a.custId ? `<span class="term-mono">${escapeHtml(a.custId)}</span>` : '<span style="color:rgba(255,255,255,0.35);">—</span>'}`);
+    termPrint(`激活时间：${a.activatedAt ? new Date(a.activatedAt).toLocaleString() : '<span style="color:rgba(255,255,255,0.35);">未激活</span>'}`);
+    termPrint(`存储位置：<span class="term-mono">localStorage['${NZ_AUTH_STORE}']</span>`);
+    termPrint('<span class="term-info">═════════════════════════════</span>');
+    termPrint('');
+  }
+
+  function cmdClear() {
+    const body = document.getElementById('__nz_term_body');
+    if (body) body.innerHTML = '';
+  }
+
+  // ============================================================
+  // 唤起方式：1) 桌面快捷键 Ctrl+Shift+O  2) 移动端标题连击 5 次 + 密码
+  // ============================================================
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'O' || e.key === 'o')) {
+      e.preventDefault();
+      // 桌面端直接打开控制台（默认信任本机操作）
+      __nzOpenTerminal();
+    }
+  }, false);
+
+  // 移动端标题连击检测（只检测个人账号页的 page-title 元素）
+  let __titleHitTimes = [];
+  document.addEventListener('click', function(e) {
+    const t = e.target;
+    if (!t) return;
+    // 必须是个人账号页的标题：文本包含「个人账号」，类名 page-title
+    const isProfileTitle = (t.classList && t.classList.contains('page-title') && (t.textContent || '').indexOf('个人账号') !== -1)
+      || (t.closest && t.closest('.page-title') && (t.closest('.page-title').textContent || '').indexOf('个人账号') !== -1);
+    if (!isProfileTitle) return;
+    const now = Date.now();
+    __titleHitTimes = __titleHitTimes.filter(x => now - x <= NZ_AUTH_HIT_WINDOW);
+    __titleHitTimes.push(now);
+    if (__titleHitTimes.length >= NZ_AUTH_TITLE_HITS) {
+      __titleHitTimes = [];
+      // 连击成功 → 密码验证
+      __nzOpenPwd();
+    }
+  }, true);
+
+  // ============================================================
+  // 对 renderProfile 的增强：在「升级会员」卡片位置，替换为完整权限面板
+  // ============================================================
+  const origRenderProfile = window.renderProfile;
+  window.renderProfile = function() {
+    origRenderProfile.call(this);
+    const area = $('contentArea');
+    if (!area) return;
+    // 找到原有「升级会员」卡片并替换为权限面板
+    const oldCard = area.querySelector('div[style*="升级会员"], .card[style*="rgba(34,197,94,0.1)"]');
+    if (oldCard && oldCard.querySelector && oldCard.querySelector('div[style*="升级会员"]')) {
+      const auth = window.getAuth();
+      const lv = auth.level;
+      const feats = [
+        { k:'基础AI对话', lv:0 },
+        { k:'基础技能包', lv:0 },
+        { k:'基础模板', lv:0 },
+        { k:'高级模板', lv:1 },
+        { k:'全部技能包 / 全部模板', lv:2 },
+        { k:'素材下载 / 视频节点', lv:2 },
+        { k:'批量全套 JSON 导出', lv:3 },
+        { k:'私有化部署入口', lv:4 },
+      ];
+      const badgeCls = 'auth-lv-' + lv;
+      const isDemo = lv === 0;
+      const html = `
+        <div class="card auth-card" style="padding:20px;margin-bottom:20px;">
+          <div class="auth-level-row">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <div class="auth-level-name">${escapeHtml(LEVEL_NAMES[lv])}</div>
+                <span class="auth-badge ${badgeCls}">LV.${lv}${auth.custId ? ' · '+escapeHtml(auth.custId) : ''}</span>
+                ${lv >= 4 ? '<span style="font-size:11px;padding:3px 8px;border-radius:12px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">✨ 私有化部署可用</span>' : ''}
+              </div>
+              <div class="auth-level-desc">${LEVEL_SHORT_DESC[lv]}</div>
+              ${auth.activatedAt ? `<div class="auth-cust-id">激活时间：${new Date(auth.activatedAt).toLocaleString()}</div>` : ''}
+            </div>
+          </div>
+
+          <div class="auth-feat-list">
+            ${feats.map(f => `
+              <div class="auth-feat-item ${lv >= f.lv ? 'ok' : 'lock'}">
+                <span class="dot"></span>
+                <span>${f.k}</span>
+                ${lv >= f.lv ? '' : `<span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,0.3);">需${LEVEL_NAMES[f.lv]}+</span>`}
+              </div>`).join('')}
+          </div>
+
+          <div class="auth-activate-row">
+            <input id="__nz_auth_key_input" class="auth-key-input" type="text" placeholder="粘贴套餐密钥：例如 bmFnemFp...（Base64编码）" spellcheck="false" autocomplete="off">
+            <button class="btn btn-primary" style="background:linear-gradient(135deg,#22c55e,#4ade80);border:none;" onclick="activateAuthKey('__nz_auth_key_input')">🔓 激活密钥</button>
+            ${!isDemo ? `<button class="btn btn-secondary" onclick="resetAuthToDemo()">↺ 重置授权</button>` : ''}
+          </div>
+        </div>`;
+      oldCard.outerHTML = html;
+    }
+  };
+
+  // ============================================================
+  // 模板 / 画布 权限过滤钩子：无侵入式包装相关渲染函数
+  // 规则：
+  //  高级模板(普通漫剧/非基础)：LV>=1
+  //  视频节点(v_*、cat==='video')：LV>=2
+  //  高级漫剧模板(母图→多子图等复杂漫剧)：LV>=2
+  //  批量全套JSON打包导出：LV>=3
+  //  素材下载 / 预览下载节点：LV>=2
+  //  私有化部署入口：LV>=4
+  // ============================================================
+  window.applyAuthFilterToText = function(text, minLv, lockHint) {
+    if (window.authAllow(minLv)) return text;
+    return (text || '') + (window.authLockTag(minLv));
+  };
+
+  // ---------- 工具：判断节点所需等级 ----------
+  function getNodeMinLv(typeKey, def) {
+    if (!def) def = NODE_DEFS[typeKey];
+    if (!def) return 0;
+    // 视频类节点全部 LV>=2
+    if (def.cat === 'video' || /^v_/.test(typeKey)) return 2;
+    // 素材预览/下载 LV>=2
+    if (typeKey === 'img_preview' || def.icon === '🖼️' && (def.name || '').indexOf('预览') !== -1) return 2;
+    // 批量文本导出 LV>=3
+    if (typeKey === 'text_batch_export' || (def.name || '').indexOf('批量') !== -1) return 3;
+    return 0;
+  }
+  // 判断模板所需等级
+  function getTplMinLv(tpl) {
+    if (!tpl) return 0;
+    const tag = tpl.tagCls || '';
+    const id = tpl.id || '';
+    const name = tpl.name || '';
+    // 高级漫剧模板（复杂分支）：LV>=2
+    if ((tag === 'video' && (id.indexOf('mother') !== -1 || id.indexOf('branch') !== -1 || name.indexOf('母图') !== -1 || name.indexOf('多子图') !== -1 || name.indexOf('多视频') !== -1))) {
+      return 2;
+    }
+    // 普通漫剧/视频类模板：LV>=1（高级模板）
+    if (tag === 'video') return 1;
+    // 电商"批量"模板算高级模板 LV>=1
+    if (name.indexOf('批量') !== -1) return 1;
+    return 0;
+  }
+
+  // ---------- 包装 renderNodePalette：桌面端节点库 DOM 过滤 ----------
+  const _origRNP = window.renderNodePalette;
+  if (_origRNP) {
+    window.renderNodePalette = function() {
+      _origRNP.call(this);
+      const body = $('nodePaletteBody'); if (!body) return;
+      const curLv = window.getAuthLevel();
+      // 遍历每个 node-item，根据类型检查权限
+      const items = body.querySelectorAll('.node-item');
+      items.forEach(el => {
+        const tk = el.getAttribute('data-typekey');
+        const need = getNodeMinLv(tk);
+        if (curLv < need) {
+          // 权限不足，直接不渲染 DOM（从父节点移除）
+          el.remove();
+        }
+      });
+      // 如果某分类下已经没有节点，移除该分类标题
+      const cats = body.querySelectorAll('.node-cat');
+      cats.forEach(c => {
+        let next = c.nextElementSibling;
+        let hasItem = false;
+        while (next && !next.classList.contains('node-cat')) {
+          if (next.classList && next.classList.contains('node-item')) { hasItem = true; break; }
+          next = next.nextElementSibling;
+        }
+        if (!hasItem) c.remove();
+      });
+    };
+  }
+
+  // ---------- 包装 renderDrawerPalette：移动端抽屉节点库 ----------
+  const _origRDP = window.renderDrawerPalette;
+  if (_origRDP) {
+    window.renderDrawerPalette = function() {
+      _origRDP.call(this);
+      const body = $('wfDrawerPaletteBody'); if (!body) return;
+      const curLv = window.getAuthLevel();
+      const items = body.querySelectorAll('.node-item');
+      items.forEach(el => {
+        // 从 onclick 中解析 typeKey：quickCreateNode('xxx')
+        const oc = el.getAttribute('onclick') || '';
+        const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
+        const tk = m ? m[1] : null;
+        if (!tk) return;
+        const need = getNodeMinLv(tk);
+        if (curLv < need) el.remove();
+      });
+      const cats = body.querySelectorAll('.node-cat');
+      cats.forEach(c => {
+        let next = c.nextElementSibling;
+        let hasItem = false;
+        while (next && !next.classList.contains('node-cat')) {
+          if (next.classList && next.classList.contains('node-item')) { hasItem = true; break; }
+          next = next.nextElementSibling;
+        }
+        if (!hasItem) c.remove();
+      });
+    };
+  }
+
+  // ---------- 包装 renderTemplatePanel：桌面端模板面板 ----------
+  const _origRTP = window.renderTemplatePanel;
+  if (_origRTP) {
+    window.renderTemplatePanel = function() {
+      _origRTP.call(this);
+      const body = $('templateBody'); if (!body) return;
+      const curLv = window.getAuthLevel();
+      const items = body.querySelectorAll('.template-item');
+      items.forEach(el => {
+        // 从 onclick 中解析 tpl id：loadBuiltinTpl('xxx') 或 loadCustomTpl
+        const oc = el.getAttribute('onclick') || '';
+        const m1 = oc.match(/loadBuiltinTpl\(['"]([^'"]+)['"]\)/);
+        const m2 = oc.match(/loadCustomTpl\(['"]([^'"]+)['"]\)/);
+        let need = 0;
+        if (m1) {
+          const tpl = (BUILTIN_TEMPLATES || []).find(x => x.id === m1[1]);
+          need = getTplMinLv(tpl);
+        }
+        // 自定义模板默认开放（LV0）
+        if (curLv < need) {
+          // 直接移除，不渲染DOM
+          el.remove();
+        } else if (need > 0) {
+          // 有权限，不做处理（或者可加小标签）
+        }
+      });
+    };
+  }
+
+  // ---------- 包装 renderDrawerTemplates：移动端抽屉模板 ----------
+  const _origRDT = window.renderDrawerTemplates;
+  if (_origRDT) {
+    window.renderDrawerTemplates = function() {
+      _origRDT.call(this);
+      const body = $('wfDrawerTemplateBody'); if (!body) return;
+      const curLv = window.getAuthLevel();
+      const items = body.querySelectorAll('.template-item');
+      items.forEach(el => {
+        const oc = el.getAttribute('onclick') || '';
+        const m1 = oc.match(/loadBuiltinTpl\(['"]([^'"]+)['"]\)/);
+        let need = 0;
+        if (m1) {
+          const tpl = (BUILTIN_TEMPLATES || []).find(x => x.id === m1[1]);
+          need = getTplMinLv(tpl);
+        }
+        if (curLv < need) el.remove();
+      });
+    };
+  }
+
+  // ---------- 兜底：包装 createNodeByType，防止拖拽/手动绕过 ----------
+  const _origCNBT = window.createNodeByType;
+  if (_origCNBT) {
+    window.createNodeByType = function(typeKey, x, y) {
+      const need = getNodeMinLv(typeKey);
+      if (!window.authAllow(need)) {
+        toast(`此节点需要「${LEVEL_NAMES[need]}」及以上套餐`, 'error');
+        return null;
+      }
+      return _origCNBT.call(this, typeKey, x, y);
+    };
+  }
+
+  // ---------- 兜底：包装 loadBuiltinTpl，防止绕过面板加载 ----------
+  const _origLBT = window.loadBuiltinTpl;
+  if (_origLBT) {
+    window.loadBuiltinTpl = function(id) {
+      const tpl = (BUILTIN_TEMPLATES || []).find(x => x.id === id);
+      const need = getTplMinLv(tpl);
+      if (!window.authAllow(need)) {
+        toast(`此模板需要「${LEVEL_NAMES[need]}」及以上套餐`, 'error');
+        return;
+      }
+      return _origLBT.call(this, id);
+    };
+  }
+
+  // ---------- 批量全套JSON打包导出按钮权限：LV>=3（在UI渲染后对页面上"导出全部/批量导出"按钮做隐藏） ----------
+  // （单个JSON导出所有等级仍开放，只锁"批量/全部打包"）
+  const _origES = window.exportAllSkillPacks;
+  if (_origES) {
+    window.exportAllSkillPacks = function() {
+      if (!window.checkPerm('BATCH_JSON_FULL')) {
+        toast('批量导出全部技能包需要「商业版」及以上套餐', 'error');
+        return;
+      }
+      return _origES.apply(this, arguments);
+    };
+  }
+
+  // ---------- 导出到全局 ----------
+  window.NZ_AUTH_PERM = PERM;
+  window.NZ_AUTH_LEVELS = AUTH_LEVEL;
+  window.__nzGetNodeMinLv = getNodeMinLv;
+  window.__nzGetTplMinLv = getTplMinLv;
 })();
 
 
