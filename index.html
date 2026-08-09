@@ -1188,10 +1188,11 @@
     /* 右方面板隐藏 */
     .right-panel { display: none; }
 
-    /* 内容区 - 移动端：flex 布局，chat-messages 内部滚动，底部内容完整显示 */
-    .content-area { padding: 12px !important; height: calc(100dvh - 58px); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
+    /* 内容区 - 移动端：允许页面整体滚动，AI对话等页面内部有独立滚动容器 */
+    .content-area { padding: 12px !important; height: calc(100dvh - 58px); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
     .content-area > .page-header { flex-shrink: 0; margin-bottom: 14px; }
     .content-area > .mobile-ai-layout { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .content-area > #aiChatView { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
     .content-area > div:last-child { flex-shrink: 0; margin-top: 12px; font-size: 12px; }
     .mobile-session-bar { flex-shrink: 0; margin-bottom: 8px; }
     .mobile-chat-card { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
@@ -2648,7 +2649,7 @@
       border-radius: 12px;
       position: relative;
       overflow: hidden;
-      touch-action: none;
+      touch-action: manipulation;
     }
 
     /* ===== 移动端顶部工具栏 ===== */
@@ -11333,6 +11334,7 @@ function openWorkflowApiKeys() {
 let _mobileLongPressTimer = null;
 let _mobileLongPressTriggered = false;
 let _mobileTouchStart = null;
+let _mobileMoved = false;
 
 function loadCustomTpl(id) {
   const t = (appData.workflowTemplates || []).find(x => x.id === id);
@@ -11912,9 +11914,11 @@ function onTouchStart(e) {
     const targetEl = document.elementFromPoint(t.clientX, t.clientY);
     _mobileTouchStart = { x: t.clientX, y: t.clientY, time: Date.now(), target: targetEl };
     _mobileLongPressTriggered = false;
+    _mobileMoved = false;
 
-    // 端口连接（输出端口按下）
+    // 端口连接（输出端口按下）→ 阻止滚动，进入连线模式
     if (targetEl && targetEl.classList.contains('n-port') && targetEl.getAttribute('data-io') === 'out') {
+      e.preventDefault();
       const nid = targetEl.getAttribute('data-nid');
       const pk = targetEl.getAttribute('data-portkey');
       _nc.tempWire = { fromNodeId: nid, fromPort: pk, x: t.clientX, y: t.clientY };
@@ -11922,9 +11926,10 @@ function onTouchStart(e) {
       return;
     }
 
-    // 节点头部 → 直接进入拖拽（桌面端同样行为）
+    // 节点头部 → 直接进入拖拽 → 阻止滚动
     const dragHead = targetEl && targetEl.closest && targetEl.closest('[data-drag]');
     if (dragHead) {
+      e.preventDefault();
       const nid = dragHead.getAttribute('data-drag');
       const node = _nc.wf.nodes.find(n => n.id === nid);
       if (node) {
@@ -11935,7 +11940,7 @@ function onTouchStart(e) {
       }
     }
 
-    // 长按检测（节点区域）
+    // 长按检测（节点区域）→ 不阻止滚动，等长按触发后再阻止
     const isNodeArea = targetEl && (targetEl.closest('.n-flow-node') || targetEl.classList.contains('n-flow-node'));
     if (isNodeArea) {
       _mobileLongPressTimer = setTimeout(() => {
@@ -11954,8 +11959,10 @@ function onTouchStart(e) {
           }
         }
       }, 350);
+      // 不调用 e.preventDefault()，允许浏览器滚动页面
     } else {
-      // 非节点区域 → 画布平移
+      // 非节点区域（画布空白）→ 画布平移 → 阻止滚动
+      e.preventDefault();
       const fake = { clientX: t.clientX, clientY: t.clientY, target: targetEl, shiftKey: false,
         closest: (sel) => { return targetEl ? targetEl.closest(sel) : null; } };
       onCanvasPointerDown(fake);
@@ -11965,6 +11972,7 @@ function onTouchStart(e) {
 
 function onTouchMove(e) {
   if (!_nc) return;
+  // 双指缩放 → 阻止默认行为（浏览器缩放）
   if (_nc.pinch && e.touches.length === 2) {
     e.preventDefault();
     // 取消长按
@@ -11983,17 +11991,23 @@ function onTouchMove(e) {
   }
   if (e.touches.length === 1) {
     const t = e.touches[0];
-    // 检测移动幅度，超过阈值则取消长按
+    // 检测移动幅度，超过阈值则取消长按（用户在滑动而非长按）
     if (_mobileTouchStart && _mobileLongPressTimer) {
       const dx = Math.abs(t.clientX - _mobileTouchStart.x);
       const dy = Math.abs(t.clientY - _mobileTouchStart.y);
       if (dx > 8 || dy > 8) {
         clearTimeout(_mobileLongPressTimer);
         _mobileLongPressTimer = null;
+        _mobileMoved = true; // 标记用户已滑动，touchEnd时不触发点击
       }
     }
-    const fake = { clientX: t.clientX, clientY: t.clientY };
-    onCanvasPointerMove(fake);
+    // 仅在画布交互激活时（平移/拖拽/连线）阻止默认滚动
+    if (_nc.pan && _nc.pan.active || _nc.dragNode || _nc.tempWire) {
+      e.preventDefault();
+      const fake = { clientX: t.clientX, clientY: t.clientY };
+      onCanvasPointerMove(fake);
+    }
+    // 否则不调用 preventDefault，允许浏览器正常滚动页面
   }
 }
 
@@ -12045,8 +12059,8 @@ function onTouchEnd(e) {
     }
   }
 
-  // 短按 → 模拟点击
-  if (_mobileTouchStart) {
+  // 短按 → 模拟点击（但如果用户滑动了则跳过，说明是在滚动页面）
+  if (_mobileTouchStart && !_mobileMoved) {
     const t = _mobileTouchStart;
     const targetEl = t.target;
     const isNodeArea = targetEl && (targetEl.closest('.n-flow-node') || targetEl.classList.contains('n-flow-node'));
