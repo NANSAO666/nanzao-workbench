@@ -1290,6 +1290,405 @@
     .stat-number { font-size: 24px; }
     .stack-3d-container { min-height: auto; }
     .stack-3d-card { margin-bottom: 10px; }
+
+    /* ===== AI自动化工作流 - 移动端专属 ===== */
+    .wf-mode-tabs { margin-bottom: 10px; }
+    .wf-mode-tab { padding: 8px 10px; font-size: 13px; }
+
+    /* 移动端画布容器 */
+    .comfyui-wrap {
+      height: calc(100dvh - 240px);
+      min-height: 400px;
+      border-radius: 12px;
+    }
+
+    /* 隐藏桌面端悬浮面板 */
+    .node-palette { display: none !important; }
+    .template-panel { display: none !important; }
+    .comfyui-minimap { display: none !important; }
+
+    /* 移动端工具栏 */
+    .wf-mobile-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .wf-mobile-toolbar .wf-mtb-back {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .wf-mobile-toolbar .wf-mtb-title {
+      flex: 1;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+    .wf-mobile-toolbar .wf-mtb-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .wf-mobile-toolbar .wf-mtb-btn {
+      width: 40px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      cursor: pointer;
+      position: relative;
+    }
+    .wf-mobile-toolbar .wf-mtb-btn.primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-color: rgba(34,197,94,0.5);
+      color: white;
+    }
+    .wf-mobile-toolbar .wf-mtb-btn.danger {
+      background: rgba(239,68,68,0.15);
+      border-color: rgba(239,68,68,0.3);
+      color: #fca5a5;
+    }
+
+    /* 移动端更多菜单 */
+    .wf-mobile-more-menu {
+      position: absolute;
+      top: 44px;
+      right: 12px;
+      background: rgba(20,20,20,0.98);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      z-index: 200;
+      min-width: 160px;
+      overflow: hidden;
+    }
+    .wf-mobile-more-menu .wf-mmi {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .wf-mobile-more-menu .wf-mmi:hover { background: rgba(255,255,255,0.05); }
+    .wf-mobile-more-menu .wf-mmi.danger { color: #fca5a5; }
+    .wf-mobile-more-menu .wf-mmi + .wf-mmi { border-top: 1px solid rgba(255,255,255,0.05); }
+
+    /* 移动端底部抽屉 */
+    .wf-bottom-drawer-mask {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 150;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .wf-bottom-drawer-mask.show { opacity: 1; pointer-events: auto; }
+    .wf-bottom-drawer {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      max-height: 65vh;
+      background: rgba(15,15,15,0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      z-index: 160;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .wf-bottom-drawer.show { transform: translateY(0); }
+    .wf-drawer-handle {
+      width: 36px; height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      margin: 10px auto 4px;
+      flex-shrink: 0;
+    }
+    .wf-drawer-header {
+      padding: 8px 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .wf-drawer-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wf-drawer-close {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .wf-drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 16px 24px;
+    }
+
+    /* 抽屉内节点库样式 */
+    .wf-drawer-body .node-item {
+      padding: 12px 14px;
+      min-height: 44px;
+      font-size: 15px;
+      margin-bottom: 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+    }
+    .wf-drawer-body .node-item-icon {
+      width: 28px; height: 28px;
+      font-size: 14px;
+    }
+    .wf-drawer-body .node-cat {
+      font-size: 12px;
+      padding: 12px 8px 6px;
+    }
+    .wf-drawer-body .node-palette-search input {
+      font-size: 16px;
+      padding: 10px 14px;
+      height: 44px;
+    }
+
+    /* 抽屉内模板样式 */
+    .wf-drawer-body .template-item {
+      padding: 14px;
+      min-height: 44px;
+    }
+    .wf-drawer-body .template-item-title {
+      font-size: 15px;
+    }
+
+    /* 抽屉底部操作栏 */
+    .wf-drawer-footer {
+      padding: 10px 16px;
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+    .wf-drawer-footer .btn {
+      flex: 1;
+      min-height: 44px;
+      font-size: 14px;
+    }
+
+    /* 移动端底部操作栏（常驻画布下方） */
+    .wf-mobile-bottom-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 0 8px;
+      flex-shrink: 0;
+    }
+    .wf-mobile-bottom-bar .wf-bb-item {
+      flex: 1;
+      min-height: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      color: var(--text-primary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      padding: 6px 4px;
+    }
+    .wf-mobile-bottom-bar .wf-bb-item:active {
+      background: rgba(34,197,94,0.15);
+      border-color: rgba(34,197,94,0.35);
+    }
+    .wf-mobile-bottom-bar .wf-bb-item.primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-color: rgba(34,197,94,0.5);
+      color: white;
+      font-weight: 700;
+    }
+    .wf-mobile-bottom-bar .wf-bb-item .wf-bb-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    /* 节点参数右侧抽屉 */
+    .wf-node-param-drawer {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: min(88vw, 360px);
+      max-width: 88vw;
+      background: rgba(15,15,15,0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-left: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px 0 0 20px;
+      z-index: 170;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .wf-node-param-drawer.show { transform: translateX(0); }
+    .wf-node-param-drawer .wf-npd-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .wf-node-param-drawer .wf-npd-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wf-node-param-drawer .wf-npd-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 16px;
+    }
+    .wf-node-param-drawer .wf-npd-body .n-field-input,
+    .wf-node-param-drawer .wf-npd-body .n-field-textarea,
+    .wf-node-param-drawer .wf-npd-body .n-field-select {
+      font-size: 16px;
+      min-height: 44px;
+      padding: 10px 12px;
+    }
+    .wf-node-param-drawer .wf-npd-footer {
+      padding: 10px 16px;
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+
+    /* 移动端节点卡片优化 */
+    .comfyui-nodes-layer .n-flow-node {
+      min-width: 180px;
+      max-width: 240px;
+    }
+    .comfyui-nodes-layer .n-flow-node-header {
+      min-height: 44px;
+      font-size: 13px;
+      padding: 10px 12px;
+    }
+    .comfyui-nodes-layer .n-port {
+      width: 16px; height: 16px;
+    }
+
+    /* 缩放控制移动端 */
+    .comfyui-zoom-controls {
+      bottom: 10px; left: 10px;
+    }
+    .comfyui-zoom-btn {
+      width: 40px; height: 40px;
+      font-size: 18px;
+    }
+
+    /* 移动端日志面板优化 */
+    .wf-log-panel {
+      margin-top: 8px;
+      max-height: 150px;
+      font-size: 12px;
+    }
+    .wf-log-panel-header {
+      padding: 8px 12px;
+      font-size: 12px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .wf-log-panel-header .btn {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    .wf-log-area {
+      max-height: 100px;
+      font-size: 12px;
+    }
+
+    /* 移动端删除/清空按钮样式 */
+    .wf-danger-confirm-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .wf-danger-confirm-modal .wf-dcc-box {
+      background: rgba(20,20,20,0.98);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 24px 20px 18px;
+      max-width: 320px;
+      width: 100%;
+      text-align: center;
+    }
+    .wf-danger-confirm-modal .wf-dcc-icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+    .wf-danger-confirm-modal .wf-dcc-msg {
+      font-size: 15px;
+      color: var(--text-primary);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .wf-danger-confirm-modal .wf-dcc-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .wf-danger-confirm-modal .wf-dcc-actions .btn {
+      flex: 1;
+      min-height: 44px;
+    }
   }
 
   @media (max-width: 420px) {
@@ -2157,20 +2556,411 @@
   }
 
   /* 移动端适配 */
+  /* ========== ComfyUI 节点画布移动端适配 (<768px) ========== */
   @media (max-width: 768px) {
-    .comfyui-wrap { height: calc(100vh - 320px); min-height: 420px; }
-    .node-palette { width: 200px; }
-    .template-panel { width: 220px; }
-    .n-flow-node { min-width: 180px; }
+    .wf-top-bar { display: none !important; }
+    .node-palette { display: none !important; }
+    .template-panel { display: none !important; }
+    .comfyui-minimap { display: none !important; }
+    .wf-browser-notice { display: none !important; }
+
+    /* 画布容器 */
+    .comfyui-wrap {
+      height: calc(100dvh - 420px) !important;
+      min-height: 320px !important;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    /* ===== 移动端顶部工具栏 ===== */
+    .wf-mobile-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, rgba(15,15,15,0.95), rgba(20,30,20,0.95));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      position: relative;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .wf-mtb-back {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    .wf-mtb-back:active { background: rgba(74,222,128,0.15); }
+    .wf-mtb-title {
+      flex: 1;
+      min-width: 0;
+      font-weight: 700;
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .wf-mtb-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .wf-mtb-btn {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      cursor: pointer;
+      min-height: 44px;
+      min-width: 44px;
+      transition: all 0.15s;
+    }
+    .wf-mtb-btn:active { background: rgba(74,222,128,0.2); transform: scale(0.95); }
+    .wf-mtb-btn.primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-color: rgba(74,222,128,0.5);
+      color: white;
+    }
+
+    /* 更多菜单 */
+    .wf-mobile-more-menu {
+      position: absolute;
+      top: 100%;
+      right: 8px;
+      margin-top: 4px;
+      background: rgba(15,15,15,0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 12px;
+      min-width: 160px;
+      padding: 6px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 200;
+    }
+    .wf-mmi {
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+    }
+    .wf-mmi:active { background: rgba(74,222,128,0.15); }
+    .wf-mmi.danger { color: var(--danger); }
+    .wf-mmi.danger:active { background: rgba(239,68,68,0.15); }
+
+    /* ===== 底部操作栏 ===== */
+    .wf-mobile-bottom-bar {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      background: linear-gradient(135deg, rgba(15,15,15,0.95), rgba(20,30,20,0.95));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 12px;
+      margin-top: 8px;
+    }
+    .wf-bb-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px 4px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      min-height: 56px;
+      font-size: 11px;
+      color: var(--text-primary);
+      transition: all 0.15s;
+    }
+    .wf-bb-item:active { background: rgba(74,222,128,0.15); transform: scale(0.95); }
+    .wf-bb-item.primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-color: rgba(74,222,128,0.5);
+      color: white;
+    }
+    .wf-bb-icon { font-size: 18px; line-height: 1; }
+
+    /* ===== 底部抽屉 ===== */
+    .wf-bottom-drawer-mask {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 155;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .wf-bottom-drawer-mask.show { opacity: 1; pointer-events: auto; }
+    .wf-bottom-drawer {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      max-height: 70vh;
+      background: rgba(15,15,15,0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      z-index: 160;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .wf-bottom-drawer.show { transform: translateY(0); }
+    .wf-drawer-handle {
+      width: 40px; height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      margin: 8px auto 4px;
+      flex-shrink: 0;
+    }
+    .wf-drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .wf-drawer-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .wf-drawer-close {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      cursor: pointer;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    .wf-drawer-close:active { background: rgba(74,222,128,0.15); }
+    .wf-drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .wf-drawer-footer {
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+
+    /* 抽屉内节点/模板列表样式调整 */
+    .wf-drawer-body .node-cat {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin: 8px 0 6px;
+      padding-left: 4px;
+    }
+    .wf-drawer-body .node-item {
+      min-height: 44px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    .wf-drawer-body .template-item {
+      min-height: 44px;
+      padding: 10px 12px;
+    }
+    .wf-drawer-body .template-item-title { font-size: 14px; }
+
+    /* 抽屉内搜索框 */
+    .wf-drawer-search {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .wf-drawer-search input {
+      flex: 1;
+      height: 44px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--text-primary);
+      padding: 0 14px;
+      font-size: 14px;
+    }
+    .wf-drawer-search input:focus {
+      outline: none;
+      border-color: rgba(74,222,128,0.5);
+    }
+
+    /* ===== 节点参数右侧抽屉 ===== */
+    .wf-node-param-drawer {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 88%;
+      max-width: 360px;
+      background: rgba(15,15,15,0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-left: 1px solid rgba(255,255,255,0.1);
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+      z-index: 170;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+    }
+    .wf-node-param-drawer.show { transform: translateX(0); }
+    .wf-npd-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .wf-npd-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .wf-npd-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .wf-npd-footer {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .wf-npd-footer .btn { flex: 1; min-height: 44px; }
+
+    /* 参数面板内字段样式优化 */
+    .wf-npd-body .n-field {
+      margin-bottom: 14px;
+    }
+    .wf-npd-body .n-field-label {
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .wf-npd-body .n-field-input,
+    .wf-npd-body .n-field-select,
+    .wf-npd-body .n-field-textarea {
+      min-height: 44px;
+      font-size: 14px;
+      padding: 10px 12px;
+    }
+    .wf-npd-body .n-field-textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    /* ===== 节点卡片在画布中优化 ===== */
+    .n-flow-node {
+      min-width: 180px;
+    }
+    .n-flow-node .n-flow-node-body {
+      padding: 8px;
+    }
+    .n-flow-node .n-field-input,
+    .n-flow-node .n-field-select {
+      min-height: 36px;
+      font-size: 13px;
+    }
+    .n-flow-node .n-field-textarea {
+      min-height: 60px;
+      font-size: 13px;
+    }
+    .n-port {
+      width: 18px; height: 18px;
+    }
+
+    /* ===== 日志面板精简 ===== */
+    .wf-log-panel {
+      margin-top: 8px;
+      max-height: 120px;
+      overflow: hidden;
+    }
+    .wf-log-panel-header {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .wf-log-panel-header .btn { display: none; }
+    .wf-log-area {
+      padding: 6px 12px;
+      max-height: 80px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    /* ===== 缩放按钮优化 ===== */
+    .comfyui-zoom-controls {
+      bottom: auto;
+      top: 12px;
+      right: 12px;
+      flex-direction: row;
+    }
+    .comfyui-zoom-btn {
+      width: 44px; height: 44px;
+      font-size: 16px;
+    }
+
+    /* 隐藏缩放信息 */
     .wf-mode-tabs { padding: 3px; }
     .wf-mode-tab { padding: 8px 10px; font-size: 12px; }
-    .comfyui-minimap { display: none; }
     .apikey-grid { grid-template-columns: 1fr; }
     .stat-cards-row { grid-template-columns: repeat(2, 1fr); }
+
+    /* 工作流页面header在移动端精简 */
+    .content-area > .page-header[style*="flex-direction"] .page-actions { display: none; }
+    .content-area > .page-header { margin-bottom: 10px; }
+    .content-area > .page-header .page-title { font-size: 16px; }
   }
+
   @media (max-width: 480px) {
-    .node-palette, .template-panel { max-height: 50%; }
-    .wf-info-chip { display: none; }
+    .wf-mobile-toolbar { padding: 6px 8px; gap: 4px; }
+    .wf-mtb-btn, .wf-mtb-back { width: 40px; height: 40px; }
+    .wf-mtb-title { font-size: 13px; }
+    .wf-mobile-bottom-bar { padding: 8px; gap: 4px; }
+    .wf-bb-item { font-size: 10px; padding: 6px 2px; min-height: 52px; }
+    .wf-bb-icon { font-size: 16px; }
+    .comfyui-wrap { height: calc(100dvh - 400px) !important; }
+    .wf-log-panel { max-height: 100px; }
   }
 </style>
 </head>
@@ -7028,10 +7818,19 @@ function createCardParticles(inst) {
 }
 
 let _gResizeTimer = null;
+let _wfLastMobileMode = null;
 window.addEventListener('resize', () => {
   clearTimeout(_gResizeTimer);
   _gResizeTimer = setTimeout(() => { for (const inst of cardParticleSystems) { resizeCardParticleSystem(inst); createCardParticles(inst); }
     if (currentPage === 'bookmarks' && bookmarkParticle.canvas) resizeBookmarkParticles();
+    // ComfyUI画布响应式重渲染：检测是否跨越768px断点
+    if (currentPage === 'workflow' && appData.currentNodeWf) {
+      const isNowMobile = window.innerWidth < 768;
+      if (_wfLastMobileMode !== null && _wfLastMobileMode !== isNowMobile) {
+        renderComfyUIWorkflow($('contentArea'));
+      }
+      _wfLastMobileMode = isNowMobile;
+    }
   }, 200);
 });
 
@@ -9538,7 +10337,102 @@ function renderComfyUIWorkflow(area) {
   const wf = appData.nodeWorkflows.find(w => w.id === appData.currentNodeWf);
   if (!wf) { appData.currentNodeWf = null; saveData(); renderComfyUIWorkflow(area); return; }
 
-  area.innerHTML = `
+  const isMobile = window.innerWidth < 768;
+
+  if (isMobile) {
+    // ============ 移动端布局 ============
+    area.innerHTML = `
+      <!-- 移动端顶部工具栏 -->
+      <div class="wf-mobile-toolbar" id="wfMobileToolbar">
+        <button class="wf-mtb-back" onclick="backToNodeList()" title="返回列表">←</button>
+        <div class="wf-mtb-title">🎨 ${escapeHtml(wf.name)}</div>
+        <div class="wf-mtb-actions">
+          <button class="wf-mtb-btn" onclick="openWorkflowHistory()" title="执行记录">📜</button>
+          <button class="wf-mtb-btn" onclick="openWorkflowApiKeys()" title="模型配置">🔑</button>
+          <button class="wf-mtb-btn primary" onclick="runNodeWf()" title="执行工作流">▶</button>
+          <button class="wf-mtb-btn" onclick="exportNodeWf('${wf.id}')" title="导出JSON">📤</button>
+          <button class="wf-mtb-btn" onclick="toggleWfMoreMenu()" title="更多">⋯</button>
+        </div>
+        <!-- 更多菜单 -->
+        <div class="wf-mobile-more-menu" id="wfMoreMenu" style="display:none;">
+          <div class="wf-mmi" onclick="openNodeWfModal('${wf.id}');toggleWfMoreMenu()">✏️ 改名</div>
+          <div class="wf-mmi" onclick="confirmWfClearCanvas()">🧹 清空画布</div>
+          <div class="wf-mmi" onclick="saveAsCustomTemplate();toggleWfMoreMenu()">💾 另存为模板</div>
+          <div class="wf-mmi danger" onclick="confirmWfDelete()">🗑️ 删除</div>
+        </div>
+      </div>
+
+      <!-- 画布容器 -->
+      <div class="comfyui-wrap" id="comfyuiWrap">
+        <div class="comfyui-canvas-bg" id="comfyuiBg"></div>
+        <svg class="comfyui-svg-layer" id="comfyuiSvg"><defs><marker id="arrGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4ade80"/></marker></defs></svg>
+        <div class="comfyui-nodes-layer" id="comfyuiNodesLayer"></div>
+
+        <!-- 缩放控制（移动端） -->
+        <div class="comfyui-zoom-controls">
+          <button class="comfyui-zoom-btn" onclick="zoomNodeCanvas(1.2)">➕</button>
+          <button class="comfyui-zoom-btn" onclick="zoomNodeCanvas(1/1.2)">➖</button>
+          <button class="comfyui-zoom-btn" onclick="resetNodeCanvas()" title="重置视图">⌂</button>
+        </div>
+      </div>
+
+      <!-- 移动端底部操作栏 -->
+      <div class="wf-mobile-bottom-bar">
+        <div class="wf-bb-item" onclick="openBottomDrawer('palette')">
+          <span class="wf-bb-icon">🧩</span><span>节点库</span>
+        </div>
+        <div class="wf-bb-item" onclick="openBottomDrawer('template')">
+          <span class="wf-bb-icon">📚</span><span>模板预设</span>
+        </div>
+        <div class="wf-bb-item" onclick="openBottomDrawer('history')">
+          <span class="wf-bb-icon">📜</span><span>执行记录</span>
+        </div>
+        <div class="wf-bb-item primary" onclick="runNodeWf()">
+          <span class="wf-bb-icon">▶️</span><span>执行</span>
+        </div>
+      </div>
+
+      <!-- 执行日志面板（精简版） -->
+      <div class="wf-log-panel" style="margin-top:6px;">
+        <div class="wf-log-panel-header">
+          <span>📡 控制台</span>
+          <span class="wf-log-status-pill idle" id="wfStatusPill" style="margin-left:auto;">🕒</span>
+        </div>
+        <div class="wf-log-area" id="wfNodeLogArea">
+          <div class="wf-log-line wf-log-info">画布就绪。点击底部「节点库」拖入节点，或加载模板快速开始。</div>
+        </div>
+      </div>
+
+      <!-- 底部抽屉遮罩 -->
+      <div class="wf-bottom-drawer-mask" id="wfDrawerMask" onclick="closeBottomDrawer()"></div>
+      <!-- 底部抽屉 -->
+      <div class="wf-bottom-drawer" id="wfBottomDrawer">
+        <div class="wf-drawer-handle"></div>
+        <div class="wf-drawer-header">
+          <div class="wf-drawer-title" id="wfDrawerTitle">🧩 节点库</div>
+          <button class="wf-drawer-close" onclick="closeBottomDrawer()">✕</button>
+        </div>
+        <div class="wf-drawer-body" id="wfDrawerBody"></div>
+        <div class="wf-drawer-footer" id="wfDrawerFooter" style="display:none;"></div>
+      </div>
+
+      <!-- 节点参数右侧抽屉 -->
+      <div class="wf-node-param-drawer-mask" id="wfNpdMask" onclick="closeNodeParamDrawer()" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:165;opacity:0;pointer-events:none;transition:opacity 0.25s;"></div>
+      <div class="wf-node-param-drawer" id="wfNodeParamDrawer">
+        <div class="wf-npd-header">
+          <div class="wf-npd-title" id="wfNpdTitle">⚙️ 节点参数</div>
+          <button class="wf-drawer-close" onclick="closeNodeParamDrawer()">✕</button>
+        </div>
+        <div class="wf-npd-body" id="wfNpdBody"></div>
+        <div class="wf-npd-footer">
+          <button class="btn btn-secondary" onclick="closeNodeParamDrawer()">关闭</button>
+          <button class="btn btn-danger" id="wfNpdDelBtn" onclick="">🗑️ 删除节点</button>
+        </div>
+      </div>
+    `;
+  } else {
+    // ============ 桌面端布局（保持原有） ============
+    area.innerHTML = `
     <div class="wf-top-bar">
       <button class="btn btn-secondary btn-sm" onclick="backToNodeList()">← 返回列表</button>
       <div style="font-weight:700;font-size:15px;">🎨 ${escapeHtml(wf.name)}</div>
@@ -9609,6 +10503,7 @@ function renderComfyUIWorkflow(area) {
 
   // 初始化画布运行态
   initNodeCanvasRuntime(wf);
+}
 }
 
 function backToNodeList() {
@@ -9861,6 +10756,254 @@ function renderTemplatePanel() {
   `;
   body.innerHTML = html;
 }
+
+// ========== 移动端工作流交互函数 ==========
+
+// 切换更多菜单显示
+function toggleWfMoreMenu() {
+  const menu = $('wfMoreMenu');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+// 打开底部抽屉（节点库/模板/历史）
+function openBottomDrawer(type) {
+  const drawer = $('wfBottomDrawer');
+  const mask = $('wfDrawerMask');
+  const title = $('wfDrawerTitle');
+  const body = $('wfDrawerBody');
+  const footer = $('wfDrawerFooter');
+  if (!drawer || !mask) return;
+
+  // 关闭节点参数抽屉（互斥）
+  closeNodeParamDrawer();
+
+  if (type === 'palette') {
+    title.innerHTML = '🧩 节点库';
+    const kw = $('wfDrawerSearchInput') ? ($('wfDrawerSearchInput').value || '').toLowerCase() : '';
+    body.innerHTML = `
+      <div class="wf-drawer-search">
+        <input type="text" id="wfDrawerSearchInput" placeholder="搜索节点..." oninput="renderDrawerPalette()">
+      </div>
+      <div id="wfDrawerPaletteBody"></div>
+    `;
+    footer.style.display = 'none';
+    drawer._type = 'palette';
+    setTimeout(() => renderDrawerPalette(), 0);
+  } else if (type === 'template') {
+    title.innerHTML = '📚 模板 & 预设';
+    body.innerHTML = `<div id="wfDrawerTemplateBody"></div>`;
+    footer.style.display = 'flex';
+    footer.innerHTML = `
+      <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="openImportTemplate();closeBottomDrawer()">📥 导入模板</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;margin-left:8px;" onclick="saveAsCustomTemplate();closeBottomDrawer()">💾 另存</button>
+    `;
+    drawer._type = 'template';
+    setTimeout(() => renderDrawerTemplates(), 0);
+  } else if (type === 'history') {
+    title.innerHTML = '📜 执行记录';
+    const logArea = $('wfNodeLogArea');
+    body.innerHTML = logArea ? logArea.innerHTML : '<div style="color:var(--text-tertiary);padding:20px;text-align:center;">暂无执行记录</div>';
+    footer.style.display = 'none';
+    drawer._type = 'history';
+  }
+
+  mask.classList.add('show');
+  drawer.classList.add('show');
+}
+
+// 关闭底部抽屉
+function closeBottomDrawer() {
+  const drawer = $('wfBottomDrawer');
+  const mask = $('wfDrawerMask');
+  if (drawer) drawer.classList.remove('show');
+  if (mask) mask.classList.remove('show');
+}
+
+// 抽屉内节点库搜索渲染
+function renderDrawerPalette() {
+  const body = $('wfDrawerPaletteBody');
+  if (!body) return;
+  const input = $('wfDrawerSearchInput');
+  const kw = (input ? input.value : '').toLowerCase();
+  const html = NODE_CATS.map(cat => {
+    const items = Object.entries(NODE_DEFS).filter(([k, d]) => d.cat === cat.key &&
+      (!kw || d.name.toLowerCase().includes(kw) || k.toLowerCase().includes(kw)));
+    if (items.length === 0) return '';
+    return `
+      <div class="node-cat">${cat.label}</div>
+      ${items.map(([k, d]) => `
+        <div class="node-item" onclick="quickCreateNode('${k}');closeBottomDrawer()" title="点击添加到画布">
+          <div class="node-item-icon ${d.cat}">${d.icon}</div>
+          <div>${d.name}</div>
+        </div>
+      `).join('')}
+    `;
+  }).join('');
+  body.innerHTML = html || `<div style="padding:20px;color:var(--text-tertiary);text-align:center;">无匹配节点</div>`;
+}
+
+// 抽屉内模板渲染
+function renderDrawerTemplates() {
+  const body = $('wfDrawerTemplateBody');
+  if (!body) return;
+  const customs = appData.workflowTemplates || [];
+  const html = `
+    <div class="node-cat">内置示例模板</div>
+    ${BUILTIN_TEMPLATES.map(t => `
+      <div class="template-item" onclick="loadBuiltinTpl('${t.id}');closeBottomDrawer()">
+        <div class="template-item-title">${t.name}</div>
+        <div class="template-item-desc">${t.desc}</div>
+      </div>
+    `).join('')}
+    <div class="node-cat" style="margin-top:10px;">我的自定义模板 (${customs.length})</div>
+    ${customs.length === 0 ? '<div style="color:var(--text-tertiary);font-size:12px;padding:0 4px;">编排完成后点击「💾另存为模板」即可在这里复用</div>' :
+      customs.map(t => `
+        <div class="template-item">
+          <div class="template-item-title">${escapeHtml(t.name)}</div>
+          <div class="template-item-desc">${escapeHtml(t.desc || '')}</div>
+          <div style="display:flex;gap:6px;margin-top:10px;">
+            <button class="btn btn-primary btn-sm" style="flex:1;min-height:44px;" onclick="loadCustomTpl('${t.id}');closeBottomDrawer()">加载</button>
+            <button class="btn btn-danger btn-sm" style="min-height:44px;" onclick="deleteCustomTpl('${t.id}')">🗑️</button>
+          </div>
+        </div>
+      `).join('')}
+  `;
+  body.innerHTML = html;
+}
+
+// 打开节点参数面板（右侧抽屉）
+function openNodeParamDrawer(nid) {
+  if (!_nc) return;
+  const node = _nc.wf.nodes.find(n => n.id === nid);
+  if (!node) return;
+  const def = NODE_DEFS[node.typeKey];
+  if (!def) return;
+
+  const drawer = $('wfNodeParamDrawer');
+  const mask = $('wfNpdMask');
+  const title = $('wfNpdTitle');
+  const body = $('wfNpdBody');
+  const delBtn = $('wfNpdDelBtn');
+  if (!drawer || !mask) return;
+
+  // 关闭底部抽屉（互斥）
+  closeBottomDrawer();
+
+  title.innerHTML = `${def.icon} ${def.name} · 参数配置`;
+
+  // 生成参数字段表单
+  const fieldsHTML = (def.fields || []).map(f => {
+    const val = (node.data && node.data[f.key] != null) ? node.data[f.key] : (f.default != null ? f.default : '');
+    if (f.type === 'textarea') {
+      return `<div class="n-field">
+        <div class="n-field-label">${f.label}</div>
+        <textarea class="n-field-textarea" data-nid="${nid}" data-fk="${f.key}" onchange="onNodeFieldChange(this)">${escapeHtml(String(val))}</textarea>
+      </div>`;
+    } else if (f.type === 'select') {
+      let optsHTML;
+      if (f.key === 'vendor' && typeof API_VENDORS !== 'undefined') {
+        optsHTML = API_VENDORS.map(v => {
+          const c = (appData.workflowApiKeys||{})[v.key] || {};
+          const configured = c.key ? '●' : '○';
+          const modelLabel = c.model || v.model || '';
+          return `<option value="${v.key}" ${v.key===val?'selected':''}>${configured} ${v.name}${modelLabel?' · '+modelLabel:''}</option>`;
+        }).join('');
+      } else {
+        optsHTML = (f.options||[]).map(o => `<option ${o===val?'selected':''}>${escapeHtml(String(o))}</option>`).join('');
+      }
+      return `<div class="n-field">
+        <div class="n-field-label">${f.label}</div>
+        <select class="n-field-select" data-nid="${nid}" data-fk="${f.key}" onchange="onNodeFieldChange(this)">
+          ${optsHTML}
+        </select>
+      </div>`;
+    } else {
+      return `<div class="n-field">
+        <div class="n-field-label">${f.label}</div>
+        <input class="n-field-input" type="${f.type==='number'?'number':'text'}" ${f.type==='number'?'step="any"':''} value="${escapeHtml(String(val))}" data-nid="${nid}" data-fk="${f.key}" onchange="onNodeFieldChange(this)">
+      </div>`;
+    }
+  }).join('');
+
+  // 端口信息
+  const portsInfo = `
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">端口连接</div>
+      ${(def.inputs||[]).map((p,i) => `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span>⬅️ ${p.label}</span><span style="color:var(--text-tertiary);">输入</span></div>`).join('')}
+      ${(def.outputs||[]).map((p,i) => `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span>➡️ ${p.label}</span><span style="color:var(--text-tertiary);">输出</span></div>`).join('')}
+    </div>
+  `;
+
+  body.innerHTML = fieldsHTML + portsInfo;
+
+  // 设置删除按钮
+  delBtn.setAttribute('onclick', `deleteNodeById('${nid}');closeNodeParamDrawer()`);
+
+  mask.style.opacity = '1';
+  mask.style.pointerEvents = 'auto';
+  drawer.classList.add('show');
+}
+
+// 关闭节点参数面板
+function closeNodeParamDrawer() {
+  const drawer = $('wfNodeParamDrawer');
+  const mask = $('wfNpdMask');
+  if (drawer) drawer.classList.remove('show');
+  if (mask) {
+    mask.style.opacity = '0';
+    mask.style.pointerEvents = 'none';
+  }
+}
+
+// 确认清空画布
+function confirmWfClearCanvas() {
+  const wf = _nc ? _nc.wf : null;
+  if (!wf) return;
+  toggleWfMoreMenu();
+  if (!wf.nodes.length) { toast('画布已经是空的了', 'info'); return; }
+  confirmDialog('🧹 清空画布', `将删除当前工作流「${wf.name}」中全部 ${wf.nodes.length} 个节点和连线，此操作不可撤销。`, () => {
+    // 直接清空，避免clearNodeWfCanvas内的二次confirm
+    wf.nodes = []; wf.connections = []; wf.viewport = { x: 0, y: 0, zoom: 1 };
+    _nc.selectedIds.clear();
+    saveData();
+    renderAllNodes(); renderAllWires(); applyViewportStyle();
+    toast('画布已清空', 'success');
+  });
+}
+
+// 确认删除工作流
+function confirmWfDelete() {
+  const wf = _nc ? _nc.wf : null;
+  if (!wf) return;
+  toggleWfMoreMenu();
+  confirmDialog('🗑️ 删除工作流', `将删除整个工作流「${wf.name}」，此操作不可撤销。`, () => {
+    appData.nodeWorkflows = (appData.nodeWorkflows || []).filter(w => w.id !== wf.id);
+    appData.currentNodeWf = null;
+    _wfLastMobileMode = null; // 重置以触发下一次正确渲染
+    saveData();
+    toast('工作流已删除', 'success');
+    renderWorkflow();
+  });
+}
+
+// 打开执行记录
+function openWorkflowHistory() {
+  openBottomDrawer('history');
+}
+
+// 跳转到模型配置
+function openWorkflowApiKeys() {
+  closeBottomDrawer();
+  closeNodeParamDrawer();
+  switchPage('profile');
+  toast('请在「个人账号」页面配置模型 API', 'info');
+}
+
+// 移动端长按识别（用于区分点击和拖拽节点）
+let _mobileLongPressTimer = null;
+let _mobileLongPressTriggered = false;
+let _mobileTouchStart = null;
 
 function loadCustomTpl(id) {
   const t = (appData.workflowTemplates || []).find(x => x.id === id);
@@ -10195,9 +11338,19 @@ function onCanvasPointerDown(e) {
       return;
     }
   }
-  // 点击节点非头部 → 仅选中
+  // 点击节点非头部 → 选中 + 移动端打开参数面板
   const nodeEl = e.target.closest && e.target.closest('.n-flow-node');
-  if (nodeEl) { selectNode(nodeEl.getAttribute('data-nid'), e.shiftKey); return; }
+  if (nodeEl) {
+    const nid = nodeEl.getAttribute('data-nid');
+    selectNode(nid, e.shiftKey);
+    // 移动端：点击节点打开参数面板
+    if (window.innerWidth < 768) {
+      // 清除可能的画布平移状态
+      _nc.pan.active = false;
+      openNodeParamDrawer(nid);
+    }
+    return;
+  }
 
   // 点击空白 → 平移/框选
   if (e.shiftKey) {
@@ -10321,6 +11474,8 @@ function onTouchStart(e) {
   if (!_nc) return;
   if (e.touches.length === 2) {
     e.preventDefault();
+    // 取消长按
+    if (_mobileLongPressTimer) { clearTimeout(_mobileLongPressTimer); _mobileLongPressTimer = null; }
     const t1 = e.touches[0], t2 = e.touches[1];
     const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
     _nc.pinch = {
@@ -10335,9 +11490,57 @@ function onTouchStart(e) {
   }
   if (e.touches.length === 1) {
     const t = e.touches[0];
-    const fake = { clientX: t.clientX, clientY: t.clientY, target: document.elementFromPoint(t.clientX, t.clientY), shiftKey: false,
-      closest: (sel) => { const el = document.elementFromPoint(t.clientX, t.clientY); return el ? el.closest(sel) : null; } };
-    onCanvasPointerDown(fake);
+    const targetEl = document.elementFromPoint(t.clientX, t.clientY);
+    _mobileTouchStart = { x: t.clientX, y: t.clientY, time: Date.now(), target: targetEl };
+    _mobileLongPressTriggered = false;
+
+    // 端口连接（输出端口按下）
+    if (targetEl && targetEl.classList.contains('n-port') && targetEl.getAttribute('data-io') === 'out') {
+      const nid = targetEl.getAttribute('data-nid');
+      const pk = targetEl.getAttribute('data-portkey');
+      _nc.tempWire = { fromNodeId: nid, fromPort: pk, x: t.clientX, y: t.clientY };
+      renderAllWires();
+      return;
+    }
+
+    // 节点头部 → 直接进入拖拽（桌面端同样行为）
+    const dragHead = targetEl && targetEl.closest && targetEl.closest('[data-drag]');
+    if (dragHead) {
+      const nid = dragHead.getAttribute('data-drag');
+      const node = _nc.wf.nodes.find(n => n.id === nid);
+      if (node) {
+        selectNode(nid, false);
+        const c = screenToCanvas(t.clientX, t.clientY);
+        _nc.dragNode = { ids: [nid], offsetX: c.x - node.x, offsetY: c.y - node.y, moved: false };
+        return;
+      }
+    }
+
+    // 长按检测（节点区域）
+    const isNodeArea = targetEl && (targetEl.closest('.n-flow-node') || targetEl.classList.contains('n-flow-node'));
+    if (isNodeArea) {
+      _mobileLongPressTimer = setTimeout(() => {
+        if (!_mobileTouchStart) return;
+        const el = _mobileTouchStart.target;
+        if (!el) return;
+        const nodeEl = el.closest('.n-flow-node');
+        if (nodeEl) {
+          _mobileLongPressTriggered = true;
+          const nid = nodeEl.getAttribute('data-nid');
+          const node = _nc.wf.nodes.find(n => n.id === nid);
+          if (node) {
+            selectNode(nid, false);
+            const c = screenToCanvas(_mobileTouchStart.x, _mobileTouchStart.y);
+            _nc.dragNode = { ids: [nid], offsetX: c.x - node.x, offsetY: c.y - node.y, moved: false };
+          }
+        }
+      }, 350);
+    } else {
+      // 非节点区域 → 画布平移
+      const fake = { clientX: t.clientX, clientY: t.clientY, target: targetEl, shiftKey: false,
+        closest: (sel) => { return targetEl ? targetEl.closest(sel) : null; } };
+      onCanvasPointerDown(fake);
+    }
   }
 }
 
@@ -10345,6 +11548,8 @@ function onTouchMove(e) {
   if (!_nc) return;
   if (_nc.pinch && e.touches.length === 2) {
     e.preventDefault();
+    // 取消长按
+    if (_mobileLongPressTimer) { clearTimeout(_mobileLongPressTimer); _mobileLongPressTimer = null; }
     const t1 = e.touches[0], t2 = e.touches[1];
     const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
     const k = dist / _nc.pinch.dist;
@@ -10359,6 +11564,15 @@ function onTouchMove(e) {
   }
   if (e.touches.length === 1) {
     const t = e.touches[0];
+    // 检测移动幅度，超过阈值则取消长按
+    if (_mobileTouchStart && _mobileLongPressTimer) {
+      const dx = Math.abs(t.clientX - _mobileTouchStart.x);
+      const dy = Math.abs(t.clientY - _mobileTouchStart.y);
+      if (dx > 8 || dy > 8) {
+        clearTimeout(_mobileLongPressTimer);
+        _mobileLongPressTimer = null;
+      }
+    }
     const fake = { clientX: t.clientX, clientY: t.clientY };
     onCanvasPointerMove(fake);
   }
@@ -10366,9 +11580,79 @@ function onTouchMove(e) {
 
 function onTouchEnd(e) {
   if (!_nc) return;
-  if (_nc.pinch) { _nc.pinch = null; saveData(); return; }
-  const fake = { clientX: 0, clientY: 0, target: null };
-  onCanvasPointerUp(fake);
+  // 清理长按定时器
+  if (_mobileLongPressTimer) {
+    clearTimeout(_mobileLongPressTimer);
+    _mobileLongPressTimer = null;
+  }
+
+  if (_nc.pinch) { _nc.pinch = null; saveData(); _mobileTouchStart = null; return; }
+
+  // 长按触发了拖拽 → 结束拖拽
+  if (_mobileLongPressTriggered) {
+    _mobileLongPressTriggered = false;
+    _mobileTouchStart = null;
+    const fake = { clientX: 0, clientY: 0, target: null };
+    onCanvasPointerUp(fake);
+    return;
+  }
+
+  // 端口连线：输出端口按下后，手指抬到输入端口 → 完成连接
+  if (_nc.tempWire && e.changedTouches.length === 1) {
+    const t = e.changedTouches[0];
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if (el && el.classList.contains('n-port') && el.getAttribute('data-io') === 'in') {
+      const toNid = el.getAttribute('data-nid');
+      const toPk = el.getAttribute('data-portkey');
+      // 检查是否已存在相同连接
+      const exists = _nc.wf.connections.some(c => c.from === _nc.tempWire.fromNodeId && c.fromPort === _nc.tempWire.fromPort && c.to === toNid && c.toPort === toPk);
+      if (!exists) {
+        _nc.wf.connections.push({
+          from: _nc.tempWire.fromNodeId,
+          fromPort: _nc.tempWire.fromPort,
+          to: toNid,
+          toPort: toPk
+        });
+        saveData();
+      }
+      _nc.tempWire = null;
+      renderAllWires();
+      _mobileTouchStart = null;
+      return;
+    } else {
+      // 没有连到输入端口 → 取消连线
+      _nc.tempWire = null;
+      renderAllWires();
+    }
+  }
+
+  // 短按 → 模拟点击
+  if (_mobileTouchStart) {
+    const t = _mobileTouchStart;
+    const targetEl = t.target;
+    const isNodeArea = targetEl && (targetEl.closest('.n-flow-node') || targetEl.classList.contains('n-flow-node'));
+    const isDragArea = targetEl && targetEl.closest('[data-drag]');
+
+    if (isNodeArea && !isDragArea) {
+      // 点击节点非头部 → 移动端打开参数面板
+      const nodeEl = targetEl.closest('.n-flow-node');
+      if (nodeEl) {
+        const nid = nodeEl.getAttribute('data-nid');
+        selectNode(nid, false);
+        if (window.innerWidth < 768) {
+          openNodeParamDrawer(nid);
+        }
+      }
+    } else {
+      // 其余按原有逻辑处理
+      const fake = { clientX: 0, clientY: 0, target: null };
+      onCanvasPointerUp(fake);
+    }
+  } else {
+    const fake = { clientX: 0, clientY: 0, target: null };
+    onCanvasPointerUp(fake);
+  }
+  _mobileTouchStart = null;
 }
 
 // ========== 11. 节点头拖动绑定 ==========
