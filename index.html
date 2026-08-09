@@ -9692,11 +9692,11 @@ function doAppInit() {
   // 初始化全局粒子系统（作用于全部卡片）
   initGlobalParticles();
 
-  // 隐藏启动动画
+  // 隐藏启动动画（给足够时间播完Logo脉冲、标题、下划线动画）
   setTimeout(function() {
     var splash = document.getElementById('splashScreen');
     if (splash) { splash.classList.add('splash-hide'); setTimeout(function() { splash.remove(); }, 600); }
-  }, 100);
+  }, 1800);
 }
 
 /* ================================================================
