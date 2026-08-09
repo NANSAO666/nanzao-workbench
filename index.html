@@ -1757,6 +1757,10 @@
   .wf-card-v2 { padding: 18px; position: relative; }
   .wf-card-v2-tag { position: absolute; top: 12px; right: 12px; font-size: 10px; padding: 2px 8px; border-radius: 6px; background: rgba(34,197,94,0.15); color: #4ade80; }
   .wf-card-v2-tag.node { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .wf-card-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .wf-card-action { flex: 1; padding: 6px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; font-size: 13px; transition: all 0.15s; display: flex; align-items: center; justify-content: center; min-height: 34px; }
+  .wf-card-action:hover { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: #4ade80; }
+  .wf-card-action.danger:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #f87171; }
   .wf-task-drag { cursor: grab; }
   .wf-task-drag:active { cursor: grabbing; }
   .wf-task-item.dragging { opacity: 0.4; }
@@ -2636,11 +2640,20 @@
   /* 移动端适配 */
   /* ========== ComfyUI 节点画布移动端适配 (<768px) ========== */
   @media (max-width: 768px) {
-    .wf-top-bar { display: none !important; }
+    .wf-top-bar { display: flex !important; flex-wrap: wrap; gap: 8px; }
+    .wf-top-bar > .btn { flex: 1; min-width: 140px; font-size: 13px; padding: 8px 10px; }
+    .wf-info-chip { display: none !important; }
     .node-palette { display: none !important; }
     .template-panel { display: none !important; }
     .comfyui-minimap { display: none !important; }
     .wf-browser-notice { display: none !important; }
+
+    /* 工作流列表卡片移动端优化 */
+    .wf-list-v2 { grid-template-columns: 1fr; gap: 12px; }
+    .wf-card-v2 { padding: 16px; }
+    .wf-card-name { font-size: 15px; }
+    .wf-card-actions { flex-wrap: nowrap; }
+    .wf-card-action { min-height: 40px; font-size: 15px; padding: 8px; }
 
     /* 画布容器 */
     .comfyui-wrap {
@@ -6669,7 +6682,43 @@ function renderWorkflow() {
     saveData();
   }
   // 初始化节点工作流（仅首次）
-  if (!appData.nodeWorkflows) appData.nodeWorkflows = [];
+  if (!appData.nodeWorkflows) {
+    appData.nodeWorkflows = [
+      {
+        id: 'nw_builtin_manju',
+        name: 'AI漫剧三渲二 · 美妆商品主图批量生产',
+        desc: '美妆护肤品牌电商概念图批量生成，极简轻奢北欧风格，支持多角色多角度',
+        nodes: [
+          { id: 'n_1', type: 't2i', name: '文生图·多角色主图', x: 60, y: 80, params: { prompt: '北欧极简轻奢风格，美妆产品，柔和自然光线，白色大理石台面，4k高质量', model: 'doubao', w: 768, h: 768, seed: 12345 } },
+          { id: 'n_2', type: 't2i', name: '文生图·场景图', x: 60, y: 280, params: { prompt: '电商产品场景图，ins风格，自然光线，生活化背景', model: 'doubao', w: 768, h: 768, seed: 67890 } },
+          { id: 'n_3', type: 'i2v', name: '图生视频·动态展示', x: 320, y: 180, params: { prompt: '产品360度旋转展示，轻柔镜头运动，5秒循环', model: 'doubao', duration: 5, motion: '中' } },
+        ],
+        connections: [
+          { from: 'n_1', fromPort: 'out', to: 'n_3', toPort: 'in' },
+          { from: 'n_2', fromPort: 'out', to: 'n_3', toPort: 'in' },
+        ],
+        viewport: { x: 0, y: 0, zoom: 1 },
+        createdAt: Date.now(),
+      },
+      {
+        id: 'nw_builtin_ecom',
+        name: '电商新品发布 · 概念图+短视频制作',
+        desc: '新品上市视觉包：概念图+品牌故事短视频，支持多平台尺寸',
+        nodes: [
+          { id: 'n_1', type: 't2i', name: '文生图·新品概念图', x: 60, y: 80, params: { prompt: '新品发布概念图，潮流时尚风格，渐变背景，产品特写，4k', model: 'doubao', w: 768, h: 768, seed: 11111 } },
+          { id: 'n_2', type: 'txt', name: '文案·品牌故事', x: 60, y: 280, params: { prompt: '为新品撰写一段100字品牌故事，情感化表达，适合社交媒体', model: 'deepseek' } },
+          { id: 'n_3', type: 't2v', name: '文生视频·品牌短片', x: 320, y: 180, params: { prompt: '品牌产品展示短视频，5秒，电影级调色，慢镜头', model: 'kimi', duration: 5, motion: '低' } },
+        ],
+        connections: [
+          { from: 'n_1', fromPort: 'out', to: 'n_3', toPort: 'in' },
+          { from: 'n_2', fromPort: 'out', to: 'n_3', toPort: 'prompt' },
+        ],
+        viewport: { x: 0, y: 0, zoom: 1 },
+        createdAt: Date.now(),
+      },
+    ];
+    saveData();
+  }
   if (!appData.workflowTemplates) appData.workflowTemplates = [];
   if (!appData.workflowApiKeys) appData.workflowApiKeys = {};
   if (!appData.workflowExecHistory) appData.workflowExecHistory = [];
@@ -6746,7 +6795,10 @@ function renderWorkflowListV2(area) {
       </div>
     </div>
 
-    <div style="margin-top:18px;margin-bottom:8px;font-size:12px;color:var(--text-secondary);font-weight:600;">📋 通用工作流（顺序任务）</div>
+    <div style="margin-top:18px;margin-bottom:8px;font-size:12px;color:var(--text-secondary);font-weight:600;display:flex;align-items:center;justify-content:space-between;">
+      <span>📋 通用工作流（顺序任务）</span>
+      ${workflows.length > 0 ? `<span style="font-size:11px;color:var(--text-tertiary);">共 ${workflows.length} 个</span>` : ''}
+    </div>
     <div class="wf-list-v2">
       ${workflows.length === 0 ? `<div class="wf-empty" style="grid-column:1/-1;"><div class="wf-empty-icon">📭</div>暂无通用工作流，点击上方按钮新建</div>` :
         workflows.map(wf => `
@@ -6758,13 +6810,21 @@ function renderWorkflowListV2(area) {
               <span>${wf.tasks.length} 个任务</span>
               <span class="wf-card-badge">${wf.tasks.filter(t => t.type === 'ai').length} AI任务</span>
             </div>
+            <div class="wf-card-actions" onclick="event.stopPropagation();">
+              <button class="wf-card-action" onclick="quickEditWf('${wf.id}')" title="编辑">✏️</button>
+              <button class="wf-card-action" onclick="quickDuplicateWf('${wf.id}')" title="复制">📋</button>
+              <button class="wf-card-action danger" onclick="quickDeleteWf('${wf.id}')" title="删除">🗑️</button>
+            </div>
           </div>
         `).join('')}
     </div>
 
-    <div style="margin:22px 0 8px;font-size:12px;color:var(--text-secondary);font-weight:600;">🔗 节点工作流（ComfyUI画布）</div>
+    <div style="margin:22px 0 8px;font-size:12px;color:var(--text-secondary);font-weight:600;display:flex;align-items:center;justify-content:space-between;">
+      <span>🔗 节点工作流（ComfyUI画布）</span>
+      ${nodeWfs.length > 0 ? `<span style="font-size:11px;color:var(--text-tertiary);">共 ${nodeWfs.length} 个</span>` : ''}
+    </div>
     <div class="wf-list-v2">
-      ${nodeWfs.length === 0 ? `<div class="wf-empty" style="grid-column:1/-1;"><div class="wf-empty-icon">🎬</div>暂无节点工作流，点击上方「新建节点工作流」体验AI漫剧/电商物料编排</div>` :
+      ${nodeWfs.length === 0 ? `<div class="wf-empty" style="grid-column:1/-1;"><div class="wf-empty-icon">🎬</div>暂无节点工作流，点击上方「新建节点工作流」或「加载内置模板」开始体验</div>` :
         nodeWfs.map(wf => `
           <div class="card wf-card wf-card-v2" onclick="openNodeWf('${wf.id}')">
             <span class="wf-card-v2-tag node">节点</span>
@@ -6773,6 +6833,11 @@ function renderWorkflowListV2(area) {
             <div class="wf-card-meta">
               <span>${(wf.nodes||[]).length} 个节点</span>
               <span class="wf-card-badge">${(wf.connections||[]).length} 条连线</span>
+            </div>
+            <div class="wf-card-actions" onclick="event.stopPropagation();">
+              <button class="wf-card-action" onclick="openNodeWfModal('${wf.id}')" title="编辑">✏️</button>
+              <button class="wf-card-action" onclick="exportNodeWf('${wf.id}')" title="导出">📤</button>
+              <button class="wf-card-action danger" onclick="deleteNodeWf('${wf.id}')" title="删除">🗑️</button>
             </div>
           </div>
         `).join('')}
@@ -7123,6 +7188,38 @@ function deleteWorkflow() {
   currentWorkflow = null;
   renderWorkflow();
   toast('工作流已删除', 'success');
+}
+
+// 通用工作流卡片快捷操作
+function quickEditWf(id) {
+  const wf = appData.workflows.find(w => w.id === id);
+  if (!wf) return;
+  currentWorkflow = wf;
+  renderWorkflow();
+}
+
+function quickDuplicateWf(id) {
+  const wf = appData.workflows.find(w => w.id === id);
+  if (!wf) return;
+  const newWf = JSON.parse(JSON.stringify(wf));
+  newWf.id = 'wf_' + uid();
+  newWf.name = wf.name + ' (副本)';
+  newWf.createdAt = Date.now();
+  appData.workflows.push(newWf);
+  saveData();
+  toast('已复制：' + newWf.name, 'success');
+  renderWorkflow();
+}
+
+function quickDeleteWf(id) {
+  const wf = appData.workflows.find(w => w.id === id);
+  if (!wf) return;
+  if (!confirm('确定删除工作流「' + wf.name + '」？此操作不可恢复。')) return;
+  appData.workflows = appData.workflows.filter(w => w.id !== id);
+  saveData();
+  if (currentWorkflow && currentWorkflow.id === id) currentWorkflow = null;
+  toast('已删除', 'success');
+  renderWorkflow();
 }
 
 function editTaskModal(taskIndex) {
