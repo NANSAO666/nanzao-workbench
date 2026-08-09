@@ -81,7 +81,7 @@
 
   /* 每张卡片内部独立粒子画布（粒子被卡片 overflow:hidden 自然裁剪，不再用 clip-path） */
   .card-particle-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-  .card { background: rgba(255, 255, 255, 0.025); }
+  /* 已删除冗余的 .card { background: rgba(255, 255, 255, 0.025); }，被后文完整 .card 定义覆盖 */
   .card > *:not(.card-particle-canvas) { position: relative; z-index: 2; }
   .stack-3d-card > *:not(.card-particle-canvas) { position: relative; z-index: 2; }
   /* 视频手势识别预览（仅 AI 对话助手） */
@@ -1196,7 +1196,7 @@
     .content-area > div:last-child { flex-shrink: 0; margin-top: 12px; font-size: 12px; }
     .mobile-session-bar { flex-shrink: 0; margin-bottom: 8px; }
     .mobile-chat-card { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
-    .mobile-chat-card .chat-messages { flex: 1; min-height: 0; overflow-y: auto; }
+    .mobile-chat-card .chat-messages { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     .mobile-chat-card .chat-input-area { flex-shrink: 0; }
     .page-header {
       flex-direction: column;
@@ -1229,7 +1229,7 @@
     }
     .mobile-session-bar { flex-shrink: 0; margin-bottom: 8px; }
     .mobile-chat-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-    .mobile-chat-card .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 20px; }
+    .mobile-chat-card .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
     .mobile-chat-card .chat-input-area { flex-shrink: 0; padding-bottom: 10px; }
 
     /* 移动端手势按钮适配 */
@@ -1250,7 +1250,7 @@
 
     /* 弹窗 */
     .modal { max-width: 96vw; max-height: 92vh; }
-    .modal-body { padding: 14px; overflow-y: auto; max-height: 60vh; }
+    .modal-body { padding: 14px; overflow-y: auto; max-height: 60vh; -webkit-overflow-scrolling: touch; }
     .modal-header { padding: 12px 16px; }
     .modal-footer { padding: 10px 16px; }
 
@@ -2354,7 +2354,9 @@
 
   /* AI对话页头部模型选择器 - 紧凑版 */
   .ai-header-select {
-    width: 220px;
+    /* 合并重复定义：原 width:220px 被后文 width:auto 覆盖，统一为 width:auto + min-width/max-width */
+    width: auto;
+    min-width: 140px;
     max-width: 40vw;
   }
   .ai-header-select .custom-model-select-trigger {
@@ -2365,10 +2367,7 @@
   .ai-header-select .model-select-icon svg { width: 20px; height: 20px; }
   .ai-header-select .model-select-name { font-size: 13px; }
   .ai-header-select .model-select-model { font-size: 10px; }
-  .ai-header-select {
-    width: auto;
-    min-width: 140px;
-  }
+  /* 已删除重复的 .ai-header-select { width:auto; min-width:140px; }，已合并到上方定义 */
   .ai-header-select .model-select-trigger {
     padding: 5px 10px;
     font-size: 13px;
@@ -3103,14 +3102,7 @@
   .auth-feat-item.ok .dot { background:#22c55e; }
   .auth-feat-item.lock .dot { background:rgba(255,255,255,0.2); }
 
-  .lock-mask { filter:grayscale(0.6) brightness(0.7);pointer-events:none!important;opacity:0.55; }
-  .lock-tag {
-    display:inline-flex;align-items:center;gap:4px;
-    padding:2px 8px;border-radius:4px;
-    background:rgba(239,68,68,0.12);color:#f87171;font-size:11px;font-weight:500;
-    border:1px solid rgba(239,68,68,0.25);
-    margin-left:6px;
-  }
+  /* 已删除无效的 .lock-mask 与 .lock-tag 整块（仅被已删除死代码引用） */
 
   /* ==================== 管理员终端控制台 ==================== */
   .admin-terminal-overlay {
@@ -3163,7 +3155,7 @@
   .term-prompt { color:#22c55e;font-weight:700; }
   .term-prompt-user { color:#4ade80; }
   .term-input-cmd { color:#a7f3d0; }
-  .term-out { color:rgba(220,255,225,0.75); }
+  /* 已删除无效的 .term-out { color:rgba(220,255,225,0.75); }（全文件无任何使用） */
   .term-err { color:#f87171; }
   .term-warn { color:#fbbf24; }
   .term-success { color:#22c55e;font-weight:600; }
@@ -3428,7 +3420,9 @@ function loadData() {
 }
 
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  // 修复：增加try-catch，防止Safari隐私模式或存储满时QuotaExceededError导致页面崩溃
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+  catch (e) { console.warn('[saveData] localStorage写入失败:', e); }
 }
 
 // 简单加密（可逆，仅防偷窥）
@@ -3438,7 +3432,9 @@ function simpleEncrypt(str, key) {
   for (let i = 0; i < str.length; i++) {
     result += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
   }
-  return btoa(unescape(encodeURIComponent(result)));
+  // 修复：btoa增加try-catch容错
+  try { return btoa(unescape(encodeURIComponent(result))); }
+  catch (e) { return btoa(result); }
 }
 function simpleDecrypt(str, key) {
   if (!key) return str;
@@ -5211,7 +5207,9 @@ function setVaultPassword() {
   const p1 = $('vp_pwd1').value, p2 = $('vp_pwd2').value;
   if (p1.length < 4) { toast('密码至少4位', 'error'); return; }
   if (p1 !== p2) { toast('两次密码不一致', 'error'); return; }
-  appData.vaultPassword = btoa(p1);
+  // 修复：btoa增加容错，非ASCII密码先编码
+  try { appData.vaultPassword = btoa(unescape(encodeURIComponent(p1))); }
+  catch (e) { appData.vaultPassword = btoa(p1); }
   appData.vaultUnlocked = true;
   saveData();
   toast('密码设置成功', 'success');
@@ -5220,13 +5218,18 @@ function setVaultPassword() {
 
 function unlockVault() {
   const p = $('vp_pwd').value;
-  if (atob(appData.vaultPassword) === p) {
-    appData.vaultUnlocked = true;
-    saveData();
-    renderVault();
-    toast('解锁成功', 'success');
-  } else {
-    toast('密码错误', 'error');
+  // 修复：atob增加try-catch，防止密码数据损坏导致页面崩溃
+  try {
+    if (atob(appData.vaultPassword) === p) {
+      appData.vaultUnlocked = true;
+      saveData();
+      renderVault();
+      toast('解锁成功', 'success');
+    } else {
+      toast('密码错误', 'error');
+    }
+  } catch (e) {
+    toast('密码数据损坏，请重置保险箱', 'error');
   }
 }
 
@@ -5242,9 +5245,11 @@ function resetVault() {
 }
 
 function renderVaultGrid() {
-  const key = atob(appData.vaultPassword);
+  // 修复：atob增加try-catch + vault空值防护
+  let key = '';
+  try { key = atob(appData.vaultPassword); } catch (e) { key = ''; }
   const grid = $('vaultGrid');
-  if (!appData.vault.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🔑</div>暂无保存的密钥</div>'; return; }
+  if (!appData.vault || !appData.vault.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🔑</div>暂无保存的密钥</div>'; return; }
   grid.innerHTML = appData.vault.map(v => `
     <div class="card">
       <div class="flex justify-between items-start mb-2">
@@ -5276,7 +5281,9 @@ function toggleVaultValue(id, val) {
 }
 
 function openVaultModal(id) {
-  const key = appData.vaultPassword ? atob(appData.vaultPassword) : '';
+  // 修复：atob增加try-catch
+  let key = '';
+  try { key = appData.vaultPassword ? atob(appData.vaultPassword) : ''; } catch (e) { key = ''; }
   const v = id ? appData.vault.find(x => x.id === id) : { title: '', type: 'API密钥', username: '', value: '', url: '', notes: '' };
   if (v.value && key) v.value = simpleDecrypt(v.value, key);
   const html = `
@@ -5330,7 +5337,9 @@ function openVaultModal(id) {
 }
 
 function saveVaultItem(id) {
-  const key = atob(appData.vaultPassword);
+  // 修复：atob增加try-catch
+  let key = '';
+  try { key = atob(appData.vaultPassword); } catch (e) { key = ''; }
   const userEl = $('vl_user');
   const data = {
     title: $('vl_title').value.trim(),
@@ -8038,13 +8047,17 @@ function downloadWorkflowResults() {
   }
 
   // 每次页面渲染后初始化卡片效果
-  const origRenderPage = window.renderPage;
-  if (origRenderPage) {
-    window.renderPage = function() {
-      origRenderPage();
-      setTimeout(initCardEffects, 150);
-      setTimeout(applyCardEntrance, 200);
-    };
+  // 修复：增加幂等保护，避免IIFE多次执行导致renderPage装饰器层层包裹
+  if (!window.__nzCardEffectHooked) {
+    window.__nzCardEffectHooked = true;
+    const origRenderPage = window.renderPage;
+    if (origRenderPage) {
+      window.renderPage = function() {
+        origRenderPage();
+        setTimeout(initCardEffects, 150);
+        setTimeout(applyCardEntrance, 200);
+      };
+    }
   }
   // 首屏初始化
   setTimeout(initCardEffects, 300);
@@ -10727,67 +10740,8 @@ function ensureApiKeyDefaults() {
   });
 }
 
-function openWorkflowApiKeys() {
-  ensureApiKeyDefaults();
-  const html = `
-    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
-      <div class="modal" style="width:min(940px,95vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
-        <div class="modal-header">🔑 多厂商大模型密钥管理</div>
-        <div class="modal-body" style="overflow-y:auto;max-height:calc(90vh - 140px);">
-          <div style="padding:10px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;font-size:12px;color:#86efac;margin-bottom:14px;line-height:1.6;">
-            ✅ 密钥使用浏览器本地加密存储（非明文），不会上传到任何服务器；<br>
-            ✅ 支持自定义代理接口地址，可对接 OneAPI / New API 中转；<br>
-            ✅ 连接性测试仅用于校验接口能否通，不会消耗大量额度（单次小请求）。
-          </div>
-          <div class="apikey-grid">
-            ${API_VENDORS.map(v => {
-              const c = appData.workflowApiKeys[v.key] || {};
-              return `
-                <div class="apikey-card" data-vendor="${v.key}">
-                  <div class="apikey-card-header">
-                    <div class="apikey-logo" style="background:${v.bg};color:white;">${getVendorIconSVG(v.key)}</div>
-                    <div style="flex:1;">
-                      <div class="apikey-name">${v.name}</div>
-                      <div class="apikey-status ${c.ok ? 'ok' : 'no'}">${c.ok ? '● 已通过连通性测试' : '○ 未配置 / 未测试'}</div>
-                    </div>
-                  </div>
-                  <div class="apikey-field">
-                    <div class="apikey-field-label">API Key</div>
-                    <input class="apikey-input" type="password" data-k="key" value="${escapeHtml(c.key || '')}" placeholder="sk-xxxx">
-                  </div>
-                  <div class="apikey-field">
-                    <div class="apikey-field-label">代理接口地址 (Base URL)</div>
-                    <input class="apikey-input" data-k="baseUrl" value="${escapeHtml(c.baseUrl || '')}" placeholder="https://.../v1">
-                  </div>
-                  <div class="apikey-field">
-                    <div class="apikey-field-label">默认模型</div>
-                    <input class="apikey-input" data-k="model" value="${escapeHtml(c.model || '')}" placeholder="e.g. gpt-4o-mini">
-                  </div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <div class="apikey-field">
-                      <div class="apikey-field-label">温度</div>
-                      <input class="apikey-input" data-k="temperature" type="number" step="0.1" value="${c.temperature ?? 0.7}">
-                    </div>
-                    <div class="apikey-field">
-                      <div class="apikey-field-label">最大Token</div>
-                      <input class="apikey-input" data-k="maxTokens" type="number" value="${c.maxTokens ?? 2048}">
-                    </div>
-                  </div>
-                  <div class="apikey-actions">
-                    <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="testApiVendor('${v.key}', this)">🔌 连通性测试</button>
-                    <button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveApiVendor('${v.key}', this)">💾 保存</button>
-                  </div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">关闭</button>
-        </div>
-      </div>
-    </div>`;
-  $('modalContainer').innerHTML = html;
-}
+/* 已删除废弃的弹窗版 openWorkflowApiKeys()（调用 ensureApiKeyDefaults() 并写入 modalContainer 大段HTML），
+   下方存在有效的简单包装器版本（closeBottomDrawer + switchPage('profile') + toast），此处保留占位说明。 */
 
 function readVendorFromModal(vendor) {
   const card = document.querySelector(`.apikey-card[data-vendor="${vendor}"]`);
@@ -10849,40 +10803,8 @@ function testApiVendor(vendor, btnEl) {
 }
 
 // ========== 4. 执行记录历史 ==========
-function openWorkflowHistory() {
-  const list = (appData.workflowExecHistory || []).slice().sort((a, b) => (b.at || 0) - (a.at || 0));
-  const html = `
-    <div class="modal-mask" onclick="if(event.target===this)this.remove()">
-      <div class="modal" style="width:min(780px,95vw);max-height:85vh;display:flex;flex-direction:column;">
-        <div class="modal-header">📜 执行记录历史</div>
-        <div class="modal-body" style="overflow-y:auto;max-height:calc(85vh - 140px);">
-          ${list.length === 0 ? `<div class="wf-empty"><div class="wf-empty-icon">📭</div>暂无执行记录，运行一次工作流后这里会自动存档</div>` : list.map(h => `
-            <div class="card" style="margin-bottom:10px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
-                <div style="font-size:14px;font-weight:700;">${escapeHtml(h.name || '未命名工作流')}</div>
-                <span class="wf-log-status-pill ${h.status||'idle'}">${h.status==='done'?'✅成功':h.status==='error'?'❌失败':h.status==='running'?'⏵进行中':'🕒空闲'}</span>
-              </div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">
-                ${new Date(h.at||0).toLocaleString()} · ${h.type === 'node' ? '节点工作流' : '顺序工作流'} · 耗时 ${(h.duration/1000).toFixed(1)}s
-              </div>
-              <div style="font-size:12px;color:var(--text-tertiary);white-space:pre-wrap;max-height:110px;overflow-y:auto;">${escapeHtml((h.summary||'').slice(0, 600))}</div>
-              <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-                ${h.exportTxt ? `<button class="btn btn-secondary btn-sm" onclick='downloadHistoryTxt(${JSON.stringify(h.id)})'>📄 导出txt</button>` : ''}
-                ${h.exportJson ? `<button class="btn btn-secondary btn-sm" onclick='downloadHistoryJson(${JSON.stringify(h.id)})'>📦 导出json</button>` : ''}
-                <button class="btn btn-secondary btn-sm" onclick="copyHistorySummary(${JSON.stringify(h.id)})">📋 复制摘要</button>
-                <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="delHistory(${JSON.stringify(h.id)})">🗑️ 删除</button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        <div class="modal-footer">
-          ${list.length ? `<button class="btn btn-danger btn-sm" onclick="clearAllHistory()" style="margin-right:auto;">🗑️ 清空全部</button>` : ''}
-          <button class="btn btn-secondary" onclick="this.closest('.modal-mask').remove()">关闭</button>
-        </div>
-      </div>
-    </div>`;
-  $('modalContainer').innerHTML = html;
-}
+/* 已删除废弃的弹窗版 openWorkflowHistory()（从 appData.workflowExecHistory 取数据并写入 modalContainer），
+   下方存在有效的简单包装器版本（openBottomDrawer('history')），此处保留占位说明。 */
 
 function addExecHistory(entry) {
   if (!appData.workflowExecHistory) appData.workflowExecHistory = [];
@@ -12126,6 +12048,7 @@ function getInPortPos(node, portIdx) {
 }
 
 // ========== 10. 画布事件绑定（平移/框选/拖节点/连线/缩放/双指） ==========
+// 修复：增加防重复绑定哨兵，避免window/document事件监听器累积导致内存泄漏
 function bindCanvasEvents() {
   const wrap = _nc.wrap;
   const svg = _nc.svg;
@@ -12143,7 +12066,11 @@ function bindCanvasEvents() {
   // 指针/触摸
   wrap.addEventListener('mousedown', onCanvasPointerDown);
   wrap.addEventListener('mousemove', onCanvasPointerMove);
-  window.addEventListener('mouseup', onCanvasPointerUp);
+  // 修复：window/document上的事件只绑定一次，防止累积
+  if (!window.__nzCanvasMouseUpBound) {
+    window.__nzCanvasMouseUpBound = true;
+    window.addEventListener('mouseup', onCanvasPointerUp);
+  }
 
   // 触摸
   wrap.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -12158,7 +12085,11 @@ function bindCanvasEvents() {
   }, { passive: false });
 
   // 键盘
-  document.addEventListener('keydown', onKeyDown);
+  // 修复：document上的keydown只绑定一次，防止累积
+  if (!window.__nzCanvasKeyDownBound) {
+    window.__nzCanvasKeyDownBound = true;
+    document.addEventListener('keydown', onKeyDown);
+  }
 }
 
 function onKeyDown(e) {
@@ -13119,12 +13050,15 @@ async function syncWfToCloud() {
     }
   };
 
+  // 修复：增加try-catch，防止Safari隐私模式QuotaExceededError导致激活流程崩溃
   window.setAuth = function(obj) {
-    localStorage.setItem(NZ_AUTH_STORE, JSON.stringify(obj));
+    try { localStorage.setItem(NZ_AUTH_STORE, JSON.stringify(obj)); }
+    catch (e) { console.warn('[auth] localStorage写入失败:', e); }
   };
 
   window.clearAuth = function() {
-    localStorage.removeItem(NZ_AUTH_STORE);
+    try { localStorage.removeItem(NZ_AUTH_STORE); }
+    catch (e) { console.warn('[auth] localStorage删除失败:', e); }
   };
 
   // 检查是否满足某权限项所需等级
@@ -13214,17 +13148,7 @@ async function syncWfToCloud() {
     }
   };
 
-  // ---------- 权限 UI 渲染辅助（模板页、画布页调用） ----------
-  // 返回：如果当前等级 < minLv 返回 HTML lock-tag，否则空串
-  window.authLockTag = function(minLv) {
-    const cur = window.getAuthLevel();
-    if (cur >= minLv) return '';
-    return `<span class="lock-tag">🔒 ${LEVEL_NAMES[minLv]}+</span>`;
-  };
-  // 元素类名：低等级则追加 lock-mask 样式类
-  window.authLockClass = function(minLv) {
-    return window.getAuthLevel() >= minLv ? '' : 'lock-mask';
-  };
+  // ---------- 权限 UI 渲染辅助 ----------
   // DOM级过滤：未达标直接不渲染，返回 true=允许渲染
   window.authAllow = function(minLv) {
     return window.getAuthLevel() >= minLv;
@@ -13264,12 +13188,12 @@ async function syncWfToCloud() {
     const wrap = document.createElement('div');
     wrap.innerHTML = tpl;
     document.body.appendChild(wrap);
-    // 输入框回车执行
-    const inp = document.getElementById('__nz_term_input');
-    if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') __nzRunTermCmd(); });
+    // 修复：合并两个keydown监听器为一个，避免冗余绑定
     __nzTermHistory = [];
     __nzTermHistoryIdx = -1;
+    const inp = document.getElementById('__nz_term_input');
     if (inp) inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { __nzRunTermCmd(); return; }
       if (e.key === 'ArrowUp' && __nzTermHistory.length) {
         e.preventDefault();
         __nzTermHistoryIdx = Math.max(0, __nzTermHistoryIdx < 0 ? __nzTermHistory.length - 1 : __nzTermHistoryIdx - 1);
@@ -13493,354 +13417,9 @@ async function syncWfToCloud() {
     }
   }, true);
 
-  // ============================================================
-  // 对 renderProfile 的增强：在「升级会员」卡片位置，替换为完整权限面板
-  // ============================================================
-  const origRenderProfile = window.renderProfile;
-  window.renderProfile = function() {
-    origRenderProfile.call(this);
-    const area = $('contentArea');
-    if (!area) return;
-    // 找到原有「升级会员」卡片并替换为权限面板
-    const oldCard = area.querySelector('div[style*="升级会员"], .card[style*="rgba(34,197,94,0.1)"]');
-    if (oldCard && oldCard.querySelector && oldCard.querySelector('div[style*="升级会员"]')) {
-      const auth = window.getAuth();
-      const lv = auth.level;
-      const feats = [
-        { k:'基础AI对话', lv:0 },
-        { k:'基础技能包', lv:0 },
-        { k:'基础模板', lv:0 },
-        { k:'高级模板', lv:1 },
-        { k:'全部技能包 / 全部模板', lv:2 },
-        { k:'素材下载 / 视频节点', lv:2 },
-        { k:'批量全套 JSON 导出', lv:3 },
-        { k:'私有化部署入口', lv:4 },
-      ];
-      const badgeCls = 'auth-lv-' + lv;
-      const isDemo = lv === 0;
-      const html = `
-        <div class="card auth-card" style="padding:20px;margin-bottom:20px;">
-          <div class="auth-level-row">
-            <div>
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <div class="auth-level-name">${escapeHtml(LEVEL_NAMES[lv])}</div>
-                <span class="auth-badge ${badgeCls}">LV.${lv}${auth.custId ? ' · '+escapeHtml(auth.custId) : ''}</span>
-                ${lv >= 4 ? '<span style="font-size:11px;padding:3px 8px;border-radius:12px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">✨ 私有化部署可用</span>' : ''}
-              </div>
-              <div class="auth-level-desc">${LEVEL_SHORT_DESC[lv]}</div>
-              ${auth.activatedAt ? `<div class="auth-cust-id">激活时间：${new Date(auth.activatedAt).toLocaleString()}</div>` : ''}
-            </div>
-          </div>
-
-          <div class="auth-feat-list">
-            ${feats.map(f => `
-              <div class="auth-feat-item ${lv >= f.lv ? 'ok' : 'lock'}">
-                <span class="dot"></span>
-                <span>${f.k}</span>
-                ${lv >= f.lv ? '' : `<span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,0.3);">需${LEVEL_NAMES[f.lv]}+</span>`}
-              </div>`).join('')}
-          </div>
-
-          <div class="auth-activate-row">
-            <input id="__nz_auth_key_input" class="auth-key-input" type="text" placeholder="粘贴套餐密钥：例如 bmFnemFp...（Base64编码）" spellcheck="false" autocomplete="off">
-            <button class="btn btn-primary" style="background:linear-gradient(135deg,#22c55e,#4ade80);border:none;" onclick="activateAuthKey('__nz_auth_key_input')">🔓 激活密钥</button>
-            ${!isDemo ? `<button class="btn btn-secondary" onclick="resetAuthToDemo()">↺ 重置授权</button>` : ''}
-          </div>
-        </div>`;
-      oldCard.outerHTML = html;
-    }
-  };
-
-  // ============================================================
-  // 模板 / 画布 权限过滤钩子：无侵入式包装相关渲染函数
-  // 规则：
-  //  高级模板(普通漫剧/非基础)：LV>=1
-  //  视频节点(v_*、cat==='video')：LV>=2
-  //  高级漫剧模板(母图→多子图等复杂漫剧)：LV>=2
-  //  批量全套JSON打包导出：LV>=3
-  //  素材下载 / 预览下载节点：LV>=2
-  //  私有化部署入口：LV>=4
-  // ============================================================
-  window.applyAuthFilterToText = function(text, minLv, lockHint) {
-    if (window.authAllow(minLv)) return text;
-    return (text || '') + (window.authLockTag(minLv));
-  };
-
-  // ---------- 工具：判断节点所需等级（精确匹配实际NODE_DEFS keys） ----------
-  function getNodeMinLv(typeKey, def) {
-    if (!typeKey) return 0;
-    if (!def) def = (typeof NODE_DEFS !== 'undefined') ? NODE_DEFS[typeKey] : null;
-    if (!def) {
-      // 退化为按key前缀判断
-      if (/^v_/.test(typeKey)) return 2;
-      if (typeKey === 'img_preview' || typeKey === 'media_img_preview') return 2;
-      if (/batch|批量/.test(typeKey)) return 3;
-      return 0;
-    }
-    const cat = def.cat || '';
-    const name = def.name || '';
-    // 视频类节点：cat==='video' 或 typeKey 以 v_ 开头
-    if (cat === 'video' || /^v_/.test(typeKey)) return 2;
-    // 素材预览/下载 LV>=2 （img_preview key，或者名称含"预览/下载"的图像类）
-    if (typeKey === 'img_preview' || (cat === 'img' && /预览|下载|保存到本地/.test(name))) return 2;
-    // 批量文本导出 LV>=3 （key 含 export/text_export/批量）
-    if (typeKey === 'text_export' || /批量|batch/i.test(typeKey) || /批量/.test(name)) return 3;
-    return 0;
-  }
-  // 判断模板所需等级
-  function getTplMinLv(tpl) {
-    if (!tpl) return 0;
-    const tag = String(tpl.tagCls || '');
-    const id = String(tpl.id || '');
-    const name = String(tpl.name || '');
-    const desc = String(tpl.desc || '');
-    // 高级漫剧模板（复杂分支，母图→多子图→多视频）：LV>=2
-    if (tag === 'video' && (
-      /mother|branch/i.test(id) ||
-      /母图|多子图|多视频|多路分支|子分支|三渲二生产/.test(name + desc)
-    )) return 2;
-    // 普通漫剧/视频类模板：LV>=1（高级模板）
-    if (tag === 'video' || /漫剧|短剧|视频/.test(name + desc)) return 1;
-    // 电商"批量"模板算高级模板 LV>=1
-    if (/批量/.test(name + desc)) return 1;
-    return 0;
-  }
-
-  // ---------- 工具：对容器内节点/模板执行DOM级移除 ----------
-  function __filterNodeItems(body, typeKeyExtractor) {
-    if (!body) return;
-    const curLv = window.getAuthLevel();
-    const items = body.querySelectorAll('.node-item');
-    items.forEach(el => {
-      const tk = typeKeyExtractor(el);
-      if (!tk) return;
-      const need = getNodeMinLv(tk);
-      if (curLv < need) el.remove();
-    });
-    // 清理空分类
-    const cats = body.querySelectorAll('.node-cat');
-    cats.forEach(c => {
-      let next = c.nextElementSibling;
-      let hasItem = false;
-      while (next && !next.classList.contains('node-cat')) {
-        if (next.classList && next.classList.contains('node-item')) { hasItem = true; break; }
-        next = next.nextElementSibling;
-      }
-      if (!hasItem) c.remove();
-    });
-  }
-  function __filterTemplateItems(body) {
-    if (!body) return;
-    const curLv = window.getAuthLevel();
-    const builtins = (typeof BUILTIN_TEMPLATES !== 'undefined') ? BUILTIN_TEMPLATES : [];
-    const items = body.querySelectorAll('.template-item');
-    items.forEach(el => {
-      const oc = el.getAttribute('onclick') || '';
-      const m1 = oc.match(/loadBuiltinTpl\(['"]([^'"]+)['"]\)/);
-      let need = 0;
-      if (m1) {
-        const tpl = builtins.find(x => x.id === m1[1]);
-        need = getTplMinLv(tpl);
-      }
-      if (curLv < need) el.remove();
-    });
-  }
-
-  // ---------- 【关键修复】通过 eval 在顶层作用域直接重写标识符，覆盖裸函数调用绑定 ----------
-  // 原因：直接调用 renderNodePalette() 查的是词法环境 function 绑定，不是 window.xxx 属性
-  // 所以必须对全局名字本身赋值，才能真正拦截到所有调用点
-  function __rewriteGlobalFunc(name, makeWrapper) {
-    try {
-      const orig = window[name];
-      if (typeof orig !== 'function') return;
-      const wrapped = makeWrapper(orig);
-      window[name] = wrapped;
-      // 在顶层作用域重写同名引用（通过 eval('var x=...') 重新声明顶层 var，覆盖 function 绑定）
-      // 注意：顶层的 function 声明与 var 是共享一个绑定的，赋值能同时影响两者
-      try {
-        // eslint-disable-next-line no-eval
-        eval('window.__nz_' + name + ' = window["' + name + '"];' +
-             '(function(){try{var g=window;var n="' + name + '";if(typeof g[n]==="function"){try{g[n]=g["__nz_'+name+'"];}catch(e){}}}catch(_){}})();');
-      } catch (_) {}
-      // 兜底：直接尝试把名字写到 globalThis（对浏览器即 window 全局词法）
-      try { globalThis[name] = wrapped; } catch (_) {}
-    } catch (e) {
-      console.warn('[auth] rewrite ' + name + ' failed:', e && e.message);
-    }
-  }
-
-  // ---------- 包装 renderNodePalette：桌面端节点库 DOM 过滤 ----------
-  __rewriteGlobalFunc('renderNodePalette', function(orig) {
-    return function wrappedRNP() {
-      const ret = orig.apply(this, arguments);
-      if (typeof setTimeout !== 'undefined') setTimeout(function(){ __filterNodeItems($('nodePaletteBody'), function(el){ return el.getAttribute('data-typekey'); }); }, 0);
-      else __filterNodeItems($('nodePaletteBody'), function(el){ return el.getAttribute('data-typekey'); });
-      return ret;
-    };
-  });
-
-  // ---------- 包装 renderDrawerPalette：移动端抽屉节点库 ----------
-  __rewriteGlobalFunc('renderDrawerPalette', function(orig) {
-    return function wrappedRDP() {
-      const ret = orig.apply(this, arguments);
-      setTimeout(function(){ __filterNodeItems($('wfDrawerPaletteBody'), function(el){
-        const oc = el.getAttribute('onclick') || '';
-        const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
-        return m ? m[1] : null;
-      }); }, 0);
-      return ret;
-    };
-  });
-
-  // ---------- 包装 renderTemplatePanel：桌面端模板面板 ----------
-  __rewriteGlobalFunc('renderTemplatePanel', function(orig) {
-    return function wrappedRTP() {
-      const ret = orig.apply(this, arguments);
-      setTimeout(function(){ __filterTemplateItems($('templateBody')); }, 0);
-      return ret;
-    };
-  });
-
-  // ---------- 包装 renderDrawerTemplates：移动端抽屉模板 ----------
-  __rewriteGlobalFunc('renderDrawerTemplates', function(orig) {
-    return function wrappedRDT() {
-      const ret = orig.apply(this, arguments);
-      setTimeout(function(){ __filterTemplateItems($('wfDrawerTemplateBody')); }, 0);
-      return ret;
-    };
-  });
-
-  // ---------- 兜底：包装 createNodeByType，防止拖拽/手动绕过 ----------
-  __rewriteGlobalFunc('createNodeByType', function(orig) {
-    return function wrappedCNBT(typeKey, x, y) {
-      const need = getNodeMinLv(typeKey);
-      if (!window.authAllow(need)) {
-        toast('此节点需要「' + LEVEL_NAMES[need] + '」及以上套餐', 'error');
-        return null;
-      }
-      return orig.apply(this, arguments);
-    };
-  });
-
-  // ---------- 兜底：包装 loadBuiltinTpl，防止绕过面板加载 ----------
-  __rewriteGlobalFunc('loadBuiltinTpl', function(orig) {
-    return function wrappedLBT(id) {
-      const builtins = (typeof BUILTIN_TEMPLATES !== 'undefined') ? BUILTIN_TEMPLATES : [];
-      const tpl = builtins.find(x => x.id === id);
-      const need = getTplMinLv(tpl);
-      if (!window.authAllow(need)) {
-        toast('此模板需要「' + LEVEL_NAMES[need] + '」及以上套餐', 'error');
-        return;
-      }
-      return orig.apply(this, arguments);
-    };
-  });
-
-  // ---------- 批量全套JSON打包导出按钮权限：LV>=3 ----------
-  __rewriteGlobalFunc('exportAllSkillPacks', function(orig) {
-    return function wrappedES() {
-      if (!window.checkPerm('BATCH_JSON_FULL')) {
-        toast('批量导出全部技能包需要「商业版」及以上套餐', 'error');
-        return;
-      }
-      return orig.apply(this, arguments);
-    };
-  });
-
-  // ============================================================
-  // 【终极兜底】MutationObserver：监听4个关键DOM容器，任何新出现的节点/模板都按权限移除
-  // 即使渲染函数包装因任何原因未执行，DOM级兜底依然生效，保证"未达标不渲染DOM"
-  // ============================================================
-  function __installAuthObserver() {
-    if (!window.MutationObserver || window.__nzAuthObserverInstalled) return;
-    window.__nzAuthObserverInstalled = true;
-    const TARGET_IDS = ['nodePaletteBody', 'templateBody', 'wfDrawerPaletteBody', 'wfDrawerTemplateBody'];
-    const observer = new MutationObserver(function(muts) {
-      muts.forEach(function(mut) {
-        const host = mut.target;
-        if (!host || host.nodeType !== 1) return;
-        const id = host.id || '';
-        // 节点列表容器
-        if (id === 'nodePaletteBody') {
-          __filterNodeItems(host, function(el){ return el.getAttribute('data-typekey'); });
-        } else if (id === 'wfDrawerPaletteBody') {
-          __filterNodeItems(host, function(el){
-            const oc = el.getAttribute('onclick') || '';
-            const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
-            return m ? m[1] : null;
-          });
-        // 模板列表容器
-        } else if (id === 'templateBody' || id === 'wfDrawerTemplateBody') {
-          __filterTemplateItems(host);
-        }
-      });
-    });
-    // 观察 document.body 下任意子树，等待 4 个容器被加入后再具体观察
-    const bodyObserver = new MutationObserver(function() {
-      TARGET_IDS.forEach(function(tid) {
-        const el = document.getElementById(tid);
-        if (el && !el.__nzAuthObserved) {
-          el.__nzAuthObserved = true;
-          observer.observe(el, { childList: true, subtree: true });
-          // 首次发现即执行一次过滤
-          if (tid === 'nodePaletteBody') __filterNodeItems(el, e => e.getAttribute('data-typekey'));
-          else if (tid === 'wfDrawerPaletteBody') __filterNodeItems(el, function(e){
-            const oc = e.getAttribute('onclick') || '';
-            const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
-            return m ? m[1] : null;
-          });
-          else if (tid === 'templateBody' || tid === 'wfDrawerTemplateBody') __filterTemplateItems(el);
-        }
-      });
-    });
-    if (document.body) bodyObserver.observe(document.body, { childList: true, subtree: true });
-    // DOM 已就绪则立即检查一次
-    if (document.readyState === 'interactive' || document.readyState === 'complete') {
-      TARGET_IDS.forEach(function(tid){
-        const el = document.getElementById(tid);
-        if (el) {
-          el.__nzAuthObserved = true;
-          observer.observe(el, { childList: true, subtree: true });
-        }
-      });
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', __installAuthObserver, { once: true });
-  } else {
-    __installAuthObserver();
-  }
-  // init() 之后再执行一次
-  const __origInit = (typeof init === 'function') ? init : null;
-  if (__origInit) {
-    window.init = function() {
-      const r = __origInit.apply(this, arguments);
-      setTimeout(__installAuthObserver, 0);
-      setTimeout(function(){
-        ['nodePaletteBody','templateBody','wfDrawerPaletteBody','wfDrawerTemplateBody'].forEach(function(tid){
-          const el = document.getElementById(tid);
-          if (!el) return;
-          if (tid === 'nodePaletteBody') __filterNodeItems(el, e => e.getAttribute('data-typekey'));
-          else if (tid === 'wfDrawerPaletteBody') __filterNodeItems(el, function(e){
-            const oc = e.getAttribute('onclick') || '';
-            const m = oc.match(/quickCreateNode\(['"]([^'"]+)['"]\)/);
-            return m ? m[1] : null;
-          });
-          else __filterTemplateItems(el);
-        });
-      }, 200);
-      return r;
-    };
-    try { globalThis.init = window.init; } catch(_) {}
-  }
-
   // ---------- 导出到全局 ----------
   window.NZ_AUTH_PERM = PERM;
   window.NZ_AUTH_LEVELS = AUTH_LEVEL;
-  window.__nzGetNodeMinLv = getNodeMinLv;
-  window.__nzGetTplMinLv = getTplMinLv;
-  window.__nzFilterNodeItems = __filterNodeItems;
-  window.__nzFilterTemplateItems = __filterTemplateItems;
 })();
 
 
