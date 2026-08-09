@@ -8704,64 +8704,66 @@ function renderModelConfigPanel() {
   ensureApiKeyDefaults();
   const area = $('contentArea');
   area.innerHTML = `
-    <div class="page-header">
+    <div class="page-header" style="flex-shrink:0;">
       <div class="page-title">🔑 全局模型配置</div>
       <button class="btn btn-secondary btn-sm" onclick="renderProfile()">← 返回个人账号</button>
     </div>
-    <div class="card" style="padding:10px 14px;margin-bottom:16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);">
-      <div style="font-size:12px;color:#86efac;line-height:1.7;">
-        ✅ 所有API密钥、Base接口地址<b>仅在此页面录入</b>，AI对话助手、AI工作流等模块共享此配置<br>
-        ✅ 密钥存储于浏览器LocalStorage，登录后自动同步云端，不上传到任何第三方服务器<br>
-        ✅ 支持 OpenAI / DeepSeek / 豆包 / Kimi / 通义千问，可自定义Base API对接OneAPI/NewAPI中转<br>
-        ✅ 本产品不中转、不售卖任何大模型算力Token，算力费用由用户直接向模型厂商结算
+    <div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div class="card" style="padding:10px 14px;margin-bottom:16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);">
+        <div style="font-size:12px;color:#86efac;line-height:1.7;">
+          ✅ 所有API密钥、Base接口地址<b>仅在此页面录入</b>，AI对话助手、AI工作流等模块共享此配置<br>
+          ✅ 密钥存储于浏览器LocalStorage，登录后自动同步云端，不上传到任何第三方服务器<br>
+          ✅ 支持 OpenAI / DeepSeek / 豆包 / Kimi / 通义千问，可自定义Base API对接OneAPI/NewAPI中转<br>
+          ✅ 本产品不中转、不售卖任何大模型算力Token，算力费用由用户直接向模型厂商结算
+        </div>
       </div>
-    </div>
-    <div class="apikey-grid" id="modelConfigGrid">
-      ${API_VENDORS.map(v => {
-        const c = appData.workflowApiKeys[v.key] || {};
-        const iconSvg = getVendorIconSVG(v.key);
-        return `
-          <div class="apikey-card" data-vendor="${v.key}">
-            <div class="apikey-card-header">
-              <div class="apikey-logo" style="background:${v.bg};color:white;">${iconSvg}</div>
-              <div style="flex:1;">
-                <div class="apikey-name">${v.name}</div>
-                <div class="apikey-status ${c.ok ? 'ok' : 'no'}">${c.ok ? '● 已通过连通性测试' : (c.key ? '● 已保存，请测试连通性' : '○ 未配置 / 未测试')}</div>
-              </div>
-            </div>
-            <div class="apikey-field">
-              <div class="apikey-field-label">API Key</div>
-              <input class="apikey-input" type="password" data-k="key" value="${escapeHtml(c.key || '')}" placeholder="sk-xxxx">
-            </div>
-            <div class="apikey-field">
-              <div class="apikey-field-label">接口地址 (Base URL)</div>
-              <input class="apikey-input" data-k="baseUrl" value="${escapeHtml(c.baseUrl || '')}" placeholder="https://.../v1">
-            </div>
-            <div class="apikey-field">
-              <div class="apikey-field-label">模型名称</div>
-              <input class="apikey-input" data-k="model" value="${escapeHtml(c.model || '')}" placeholder="e.g. gpt-4o-mini">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div class="apikey-field">
-                <div class="apikey-field-label">默认温度</div>
-                <input class="apikey-input" data-k="temperature" type="number" step="0.1" value="${c.temperature ?? 0.7}">
+      <div class="apikey-grid" id="modelConfigGrid">
+        ${API_VENDORS.map(v => {
+          const c = appData.workflowApiKeys[v.key] || {};
+          const iconSvg = getVendorIconSVG(v.key);
+          return `
+            <div class="apikey-card" data-vendor="${v.key}">
+              <div class="apikey-card-header">
+                <div class="apikey-logo" style="background:${v.bg};color:white;">${iconSvg}</div>
+                <div style="flex:1;">
+                  <div class="apikey-name">${v.name}</div>
+                  <div class="apikey-status ${c.ok ? 'ok' : 'no'}">${c.ok ? '● 已通过连通性测试' : (c.key ? '● 已保存，请测试连通性' : '○ 未配置 / 未测试')}</div>
+                </div>
               </div>
               <div class="apikey-field">
-                <div class="apikey-field-label">默认最大Token</div>
-                <input class="apikey-input" data-k="maxTokens" type="number" value="${c.maxTokens ?? 2048}">
+                <div class="apikey-field-label">API Key</div>
+                <input class="apikey-input" type="password" data-k="key" value="${escapeHtml(c.key || '')}" placeholder="sk-xxxx">
               </div>
-            </div>
-            <div class="apikey-actions">
-              <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="testApiVendor('${v.key}', this)">🔌 连通性测试</button>
-              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveApiVendor('${v.key}', this)">💾 保存</button>
-            </div>
-          </div>`;
-      }).join('')}
-    </div>
-    <div class="card" style="margin-top:16px;padding:14px;text-align:center;">
-      <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;">
-        📌 各AI功能模块（AI对话助手、AI工作流节点等）会读取此处的模型配置<br>
-        每个模块可独立选择使用哪个模型、调节温度和最大Token，但<b>密钥和接口地址统一复用此处的全局配置</b>
+              <div class="apikey-field">
+                <div class="apikey-field-label">接口地址 (Base URL)</div>
+                <input class="apikey-input" data-k="baseUrl" value="${escapeHtml(c.baseUrl || '')}" placeholder="https://.../v1">
+              </div>
+              <div class="apikey-field">
+                <div class="apikey-field-label">模型名称</div>
+                <input class="apikey-input" data-k="model" value="${escapeHtml(c.model || '')}" placeholder="e.g. gpt-4o-mini">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="apikey-field">
+                  <div class="apikey-field-label">默认温度</div>
+                  <input class="apikey-input" data-k="temperature" type="number" step="0.1" value="${c.temperature ?? 0.7}">
+                </div>
+                <div class="apikey-field">
+                  <div class="apikey-field-label">默认最大Token</div>
+                  <input class="apikey-input" data-k="maxTokens" type="number" value="${c.maxTokens ?? 2048}">
+                </div>
+              </div>
+              <div class="apikey-actions">
+                <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="testApiVendor('${v.key}', this)">🔌 连通性测试</button>
+                <button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveApiVendor('${v.key}', this)">💾 保存</button>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <div class="card" style="margin-top:16px;padding:14px;text-align:center;">
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;">
+          📌 各AI功能模块（AI对话助手、AI工作流节点等）会读取此处的模型配置<br>
+          每个模块可独立选择使用哪个模型、调节温度和最大Token，但<b>密钥和接口地址统一复用此处的全局配置</b>
+        </div>
       </div>
     </div>
   `;
