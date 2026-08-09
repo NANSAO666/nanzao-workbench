@@ -168,7 +168,7 @@
     background-clip: text;
   }
   .nav-item {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; justify-content: flex-start;
     padding: 10px 16px; margin: 2px 10px; cursor: pointer;
     color: var(--text-secondary);
     font-size: 14px;
@@ -176,6 +176,7 @@
     border-radius: 10px;
     font-weight: 500;
     border: 1px solid transparent;
+    letter-spacing: 1px;
   }
   .nav-item:hover {
     background: rgba(255, 255, 255, 0.04);
@@ -3082,45 +3083,21 @@
       </div>
 
       <div class="nav-section">通用工具</div>
-      <div class="nav-item active" data-page="prompts" onclick="switchPage('prompts')">
-        <span>💡</span><span>提示词库</span>
-      </div>
-      <div class="nav-item" data-page="notes" onclick="switchPage('notes')">
-        <span>📝</span><span>笔记备忘录</span>
-      </div>
-      <div class="nav-item" data-page="snippets" onclick="switchPage('snippets')">
-        <span>💻</span><span>代码片段</span>
-      </div>
-      <div class="nav-item" data-page="ai" onclick="switchPage('ai')">
-        <span>🌚</span><span>AI对话助手</span>
-      </div>
-      <div class="nav-item" data-page="todos" onclick="switchPage('todos')">
-        <span>✅</span><span>待办任务管理</span>
-      </div>
-      <div class="nav-item" data-page="timer" onclick="switchPage('timer')">
-        <span>⏱️</span><span>时间记录计时器</span>
-      </div>
-      <div class="nav-item" data-page="vault" onclick="switchPage('vault')">
-        <span>🔐</span><span>密码&密钥保险箱</span>
-      </div>
+      <div class="nav-item active" data-page="prompts" onclick="switchPage('prompts')">提示词库</div>
+      <div class="nav-item" data-page="notes" onclick="switchPage('notes')">笔记备忘录</div>
+      <div class="nav-item" data-page="snippets" onclick="switchPage('snippets')">代码片段</div>
+      <div class="nav-item" data-page="ai" onclick="switchPage('ai')">AI对话助手</div>
+      <div class="nav-item" data-page="todos" onclick="switchPage('todos')">待办任务管理</div>
+      <div class="nav-item" data-page="timer" onclick="switchPage('timer')">时间记录计时器</div>
+      <div class="nav-item" data-page="vault" onclick="switchPage('vault')">密码&密钥保险箱</div>
 
       <div class="nav-section">行业应用</div>
-      <div class="nav-item" data-page="business" onclick="switchPage('business')">
-        <span>🏢</span><span>行业工作台</span>
-      </div>
-      <div class="nav-item" data-page="bookmarks" onclick="switchPage('bookmarks')">
-        <span>🔗</span><span>快捷书签工具</span>
-      </div>
-      <div class="nav-item" data-page="folders" onclick="switchPage('folders')">
-        <span></span><span>文件夹卡片</span>
-      </div>
-      <div class="nav-item" data-page="workflow" onclick="switchPage('workflow')">
-        <span></span><span>AI自动化工作流</span>
-      </div>
+      <div class="nav-item" data-page="business" onclick="switchPage('business')">行业工作台</div>
+      <div class="nav-item" data-page="bookmarks" onclick="switchPage('bookmarks')">快捷书签工具</div>
+      <div class="nav-item" data-page="folders" onclick="switchPage('folders')">文件夹卡片</div>
+      <div class="nav-item" data-page="workflow" onclick="switchPage('workflow')">AI自动化工作流</div>
       <div class="nav-section">我的</div>
-      <div class="nav-item" data-page="profile" onclick="switchPage('profile')">
-        <span>👤</span><span>个人账号</span>
-      </div>
+      <div class="nav-item" data-page="profile" onclick="switchPage('profile')">个人账号</div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
